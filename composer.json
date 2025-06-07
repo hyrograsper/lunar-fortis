@@ -1,5 +1,5 @@
 {
-  "name": "hyrograsper/lunarphp-fortis",
+  "name": "hyrograsper/lunar-fortis",
   "description": "Fortis payment gateway integration for Lunar.",
   "type": "library",
   "license": "MIT",
