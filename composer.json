@@ -1,0 +1,47 @@
+{
+  "name": "hyrograsper/lunarphp-fortis",
+  "description": "Fortis payment gateway integration for Lunar.",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Alec Garcia",
+      "email": "alec@hyrograsper.com"
+    }
+  ],
+  "require": {
+    "php": "^8.3",
+    "apimatic-sdks/fortisapi": "@dev",
+    "lunarphp/core": "^1.0",
+    "livewire/livewire": "^3.0",
+    "illuminate/support": "^10.0 || ^11.0",
+    "illuminate/view": "^10.0 || ^11.0",
+    "illuminate/log": "^10.0 || ^11.0",
+    "illuminate/cache": "^10.0 || ^11.0",
+    "illuminate/config": "^10.0 || ^11.0",
+    "illuminate/events": "^10.0 || ^11.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Hyrograsper\\LunarFortis\\": "src/"
+    }
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Hyrograsper\\LunarFortis\\LunarFortisServiceProvider"
+      ]
+    }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "repositories": {
+    "fortisapi": {
+      "type": "path",
+      "url": "./src/packages/apimatic-sdks/fortisapi",
+      "options": {
+        "symlink": true
+      }
+    }
+  }
+}

@@ -1,0 +1,55 @@
+
+# Field 27 Enum
+
+## Enumeration
+
+`Field27Enum`
+
+## Fields
+
+| Name |
+|  --- |
+| `LOCATION_ID` |
+| `ACCOUNT_NUMBER` |
+| `CONTACT_API_ID` |
+| `FIRST_NAME` |
+| `LAST_NAME` |
+| `CELL_PHONE` |
+| `BALANCE` |
+| `ADDRESS` |
+| `COMPANY_NAME` |
+| `HEADER_MESSAGE` |
+| `DATE_OF_BIRTH` |
+| `EMAIL_TRX_RECEIPT` |
+| `HOME_PHONE` |
+| `OFFICE_PHONE` |
+| `OFFICE_PHONE_EXT` |
+| `HOME_PHONE_COUNTRY_CODE` |
+| `OFFICE_PHONE_COUNTRY_CODE` |
+| `CELL_PHONE_COUNTRY_CODE` |
+| `HEADER_MESSAGE_TYPE` |
+| `UPDATE_IF_EXISTS` |
+| `CONTACT_C1` |
+| `CONTACT_C2` |
+| `CONTACT_C3` |
+| `PARENT_ID` |
+| `EMAIL` |
+| `TOKEN_IMPORT_ID` |
+| `ID` |
+| `CREATED_TS` |
+| `MODIFIED_TS` |
+| `ACTIVE` |
+| `CREATED_USER_ID` |
+| `RECEIVED_EMAILS` |
+| `IS_DELETABLE` |
+| `LOCATION` |
+| `USER` |
+| `RECURRINGS` |
+| `EMAIL_BLACKLIST` |
+| `SMS_BLACKLIST` |
+| `CHANGELOGS` |
+| `POSTBACK_LOGS` |
+| `CREATED_USER` |
+| `PARENT_` |
+| `CHILDREN` |
+
