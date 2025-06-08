@@ -24,4 +24,13 @@ return [
     */
     'js_url_sandbox' => env('FORTIS_JS_URL_SANDBOX', 'https://js.sandbox.fortis.tech/commercejs-v1.0.0.min.js'),
     'js_url_production' => env('FORTIS_JS_URL_PRODUCTION', 'https://js.fortis.tech/commercejs-v1.0.0.min.js'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Status mapping
+    |--------------------------------------------------------------------------
+    */
+    'status_mapping' => [
+        'payment-received' => 'payment-received',
+    ],
 ];
