@@ -1,6 +1,6 @@
 <?php
 
-namespace Hyrograsper\LunarFortis\Concerns;
+namespace Hyrograsper\LunarFortis\Enums;
 
 enum AvsResponseCode: string
 {
