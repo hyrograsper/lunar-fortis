@@ -5,7 +5,7 @@ namespace Hyrograsper\LunarFortis;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
 use Lunar\Facades\Payments;
-use Hyrograsper\LunarFortis\Livewire\PaymentForm as FortisPaymentLivewireForm;
+use Hyrograsper\LunarFortis\Livewire\PaymentForm;
 use Hyrograsper\LunarFortis\PaymentTypes\FortisPaymentType;
 
 class LunarFortisServiceProvider extends ServiceProvider
@@ -39,6 +39,6 @@ class LunarFortisServiceProvider extends ServiceProvider
         ], 'lunar-fortis-config');
 
         // Register Livewire components
-        Livewire::component('lunar-fortis.payment-form', FortisPaymentLivewireForm::class);
+        Livewire::component('lunar-fortis.payment-form', PaymentForm::class);
     }
 }
