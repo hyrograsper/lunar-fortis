@@ -4,25 +4,25 @@ namespace Hyrograsper\LunarFortis;
 
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
-use Lunar\Facades\Payments;
+use Lunar\Managers\PaymentManager;
 use Hyrograsper\LunarFortis\Livewire\PaymentForm;
 use Hyrograsper\LunarFortis\PaymentTypes\FortisPaymentType;
 
 class LunarFortisServiceProvider extends ServiceProvider
 {
-    public function register()
+    public function register(): void
     {
         // Merge package config with application's config
         $this->mergeConfigFrom(__DIR__.'/../config/fortis.php', 'lunar.fortis');
         $this->mergeConfigFrom(__DIR__.'/../config/fortis_services.php', 'services.fortis');
 
         // Register the payment type with Lunar
-        Payments::extend('fortis', function ($app) {
+        PaymentManager::extend('fortis', function ($app) {
             return $app->make(FortisPaymentType::class);
         });
     }
 
-    public function boot()
+    public function boot(): void
     {
         // Load views
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'lunar-fortis');
