@@ -79,7 +79,9 @@
                 });
 
                 elements.on('error', (event) => {
-                    Flux.modal('payment-processing').close();
+                    setTimeout(() => {
+                        Flux.modal('payment-processing').close();
+                    }, 500)
 
                     this.$nextTick(() => {
                         this.loading = false;
