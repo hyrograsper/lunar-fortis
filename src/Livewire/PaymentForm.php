@@ -2,7 +2,7 @@
 
 namespace Hyrograsper\LunarFortis\Livewire;
 
-use Hyrograsper\LunarFortis\Fortis;
+use Hyrograsper\LunarFortis\Facades\LunarFortis;
 use Hyrograsper\LunarFortis\PaymentTypes\FortisPaymentType;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -18,6 +18,7 @@ use Lunar\Models\OrderAddress;
 class PaymentForm extends Component
 {
     public Cart $cart;
+
     public string $policy;
 
     public function mount(): void
@@ -25,12 +26,12 @@ class PaymentForm extends Component
         $this->policy = config('lunar.fortis.policy', 'automatic');
     }
 
-//    public function rules(): array
-//    {
-//        return [
-//            'identifier' => 'string|required',
-//        ];
-//    }
+    //    public function rules(): array
+    //    {
+    //        return [
+    //            'identifier' => 'string|required',
+    //        ];
+    //    }
 
     #[On('handle-payment-response')]
     public function handlePaymentResponse(array $response): void
@@ -40,6 +41,7 @@ class PaymentForm extends Component
         if (! isset($response['data'])) {
             Log::error('Fortis Payment response missing "data" key.', $response);
             $this->dispatch('payment-error', 'Invalid payment response from gateway.');
+
             return;
         }
 
@@ -65,7 +67,7 @@ class PaymentForm extends Component
         $this->cart->calculate();
 
         return Cache::remember($this->clientTokenCacheKey(), 5, function () {
-            return (new Fortis)->getClientTokenForSaleAmount($this->cart->total->value);
+            return LunarFortis::getClientTokenForSaleAmount($this->cart->total->value);
         });
     }
 

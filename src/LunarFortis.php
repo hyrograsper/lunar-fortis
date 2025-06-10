@@ -2,7 +2,6 @@
 
 namespace Hyrograsper\LunarFortis;
 
-use Exception;
 use FortisAPILib\Authentication\DeveloperIdCredentialsBuilder;
 use FortisAPILib\Authentication\UserApiKeyCredentialsBuilder;
 use FortisAPILib\Authentication\UserIdCredentialsBuilder;
@@ -22,7 +21,7 @@ use Lunar\Models\Order;
 use Lunar\Models\OrderAddress;
 use Lunar\Models\Transaction;
 
-class Fortis
+class LunarFortis
 {
     protected ?FortisAPIClient $client = null;
 

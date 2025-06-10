@@ -7,7 +7,7 @@ use Hyrograsper\LunarFortis\Enums\AvsResponseCode;
 use Hyrograsper\LunarFortis\Enums\CvvResponseCode;
 use Hyrograsper\LunarFortis\Enums\ReasonCode;
 use Hyrograsper\LunarFortis\Events\OrderPlaced;
-use Hyrograsper\LunarFortis\Fortis;
+use Hyrograsper\LunarFortis\LunarFortis;
 use Illuminate\Support\Facades\Log;
 use Lunar\Base\DataTransferObjects\PaymentAuthorize;
 use Lunar\Base\DataTransferObjects\PaymentCapture;
@@ -21,9 +21,10 @@ use Lunar\PaymentTypes\AbstractPayment;
 class FortisPaymentType extends AbstractPayment
 {
     protected string $policy;
+
     public const string PAYMENT_TYPE = 'fortis';
 
-    public function __construct(protected Fortis $fortis)
+    public function __construct(protected LunarFortis $fortis)
     {
         $this->policy = config('lunar.fortis.policy', 'automatic');
     }
@@ -112,13 +113,13 @@ class FortisPaymentType extends AbstractPayment
         try {
             $result = $this->fortis->refund($transaction, $amount);
         } catch (ApiException $exception) {
-            Log::error('Unable to process refund: ' . $exception->getMessage() . ' '. print_r($exception->getHttpResponse(), true));
+            Log::error('Unable to process refund: '.$exception->getMessage().' '.print_r($exception->getHttpResponse(), true));
+
             return new PaymentRefund(
                 success: false,
                 message: $exception->getMessage()
             );
         }
-
 
         if ($result->getData()->getStatusCode() !== 111 || $result->getData()->getReasonCodeId() !== 1000) {
             Transaction::create([
@@ -212,7 +213,7 @@ class FortisPaymentType extends AbstractPayment
             $avsCode = AvsResponseCode::tryFrom($data['avs']);
             if ($avsCode && $avsCode != AvsResponseCode::GOOD) {
                 $errors = 'AVS Failed: '.$avsCode->value;
-            } elseif (!$avsCode) {
+            } elseif (! $avsCode) {
                 $errors = "AVS Failed: Unknown code ({$data['avs']})";
             }
         }
@@ -246,7 +247,7 @@ class FortisPaymentType extends AbstractPayment
         }
 
         if (isset($data['reason_code_id'])) {
-            $meta['reason_code_message'] = ReasonCode::fromCode((int)$data['reason_code_id']);
+            $meta['reason_code_message'] = ReasonCode::fromCode((int) $data['reason_code_id']);
         }
 
         // List of potential meta fields
