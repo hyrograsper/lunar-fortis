@@ -11,7 +11,7 @@
   ],
   "require": {
     "php": "^8.3",
-    "apimatic-sdks/fortisapi": "@dev",
+    "hyrograsper/fortis-php-sdk": "dev-main",
     "lunarphp/core": "^1.0",
     "livewire/livewire": "^3.0",
     "illuminate/support": "^10.0 || ^11.0",
@@ -35,13 +35,12 @@
   },
   "minimum-stability": "dev",
   "prefer-stable": true,
-  "repositories": {
-    "fortisapi": {
-      "type": "path",
-      "url": "./src/packages/apimatic-sdks/fortisapi",
-      "options": {
-        "symlink": true
-      }
+  "repositories": [
+    {
+      "type": "vcs",
+      "name": "hyrograsper/fortis-php-sdk",
+      "url": "git@github.com:hyrograsper/fortis-php-sdk",
+      "branch": "main"
     }
-  }
+  ]
 }

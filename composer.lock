@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3436e16a1d1898f511dbead37d7373f2",
+    "content-hash": "54ba80ea9796a8421a4aacab508b54e1",
     "packages": [
         {
             "name": "amphp/amp",
@@ -813,86 +813,6 @@
                 }
             ],
             "time": "2024-08-03T19:31:26+00:00"
-        },
-        {
-            "name": "apimatic-sdks/fortisapi",
-            "version": "dev-main",
-            "dist": {
-                "type": "path",
-                "url": "./src/packages/apimatic-sdks/fortisapi",
-                "reference": "8245c7a249f4449916378a86e99ea1a3b9ac62c5"
-            },
-            "require": {
-                "apimatic/core": "~0.3.13",
-                "apimatic/core-interfaces": "~0.1.5",
-                "apimatic/unirest-php": "^4.0.0",
-                "ext-json": "*",
-                "php": "^7.2 || ^8.0"
-            },
-            "require-dev": {
-                "phan/phan": "5.4.5",
-                "phpunit/phpunit": "^7.5 || ^8.5 || ^9.5",
-                "squizlabs/php_codesniffer": "^3.5"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "FortisAPILib\\": "src/"
-                }
-            },
-            "autoload-dev": {
-                "psr-4": {
-                    "FortisAPILib\\Tests\\": "tests/"
-                }
-            },
-            "scripts": {
-                "test": [
-                    "phpunit"
-                ],
-                "test-coverage": [
-                    "phpunit --coverage-html=coverage"
-                ],
-                "lint-src": [
-                    "phpcs --standard=phpcs-ruleset.xml src/"
-                ],
-                "lint-src-fix": [
-                    "phpcbf --standard=phpcs-ruleset.xml src/"
-                ],
-                "lint-tests": [
-                    "phpcs --standard=phpcs-ruleset.xml tests/"
-                ],
-                "lint-tests-fix": [
-                    "phpcbf --standard=phpcs-ruleset.xml tests/"
-                ],
-                "analyze": [
-                    "phan --allow-polyfill-parser -p"
-                ],
-                "lint": [
-                    "@lint-src",
-                    "@lint-tests"
-                ]
-            },
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "APIMatic Code Generator",
-                    "email": "support@apimatic.io",
-                    "homepage": "https://www.apimatic.io",
-                    "role": "API Tool"
-                }
-            ],
-            "homepage": "https://www.apimatic.io",
-            "keywords": [
-                "API",
-                "Fortis API",
-                "SDK"
-            ],
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
         },
         {
             "name": "apimatic/core",
@@ -2700,6 +2620,94 @@
                 }
             ],
             "time": "2025-02-03T10:55:03+00:00"
+        },
+        {
+            "name": "hyrograsper/fortis-php-sdk",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/hyrograsper/fortis-php-sdk.git",
+                "reference": "f0c2a2eb5525e858c31e908efd1c789612387247"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/hyrograsper/fortis-php-sdk/zipball/f0c2a2eb5525e858c31e908efd1c789612387247",
+                "reference": "f0c2a2eb5525e858c31e908efd1c789612387247",
+                "shasum": ""
+            },
+            "require": {
+                "apimatic/core": "~0.3.13",
+                "apimatic/core-interfaces": "~0.1.5",
+                "apimatic/unirest-php": "^4.0.0",
+                "ext-json": "*",
+                "php": "^7.2 || ^8.0"
+            },
+            "require-dev": {
+                "phan/phan": "5.4.5",
+                "phpunit/phpunit": "^7.5 || ^8.5 || ^9.5",
+                "squizlabs/php_codesniffer": "^3.5"
+            },
+            "default-branch": true,
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "FortisAPILib\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "FortisAPILib\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "phpunit"
+                ],
+                "test-coverage": [
+                    "phpunit --coverage-html=coverage"
+                ],
+                "lint-src": [
+                    "phpcs --standard=phpcs-ruleset.xml src/"
+                ],
+                "lint-src-fix": [
+                    "phpcbf --standard=phpcs-ruleset.xml src/"
+                ],
+                "lint-tests": [
+                    "phpcs --standard=phpcs-ruleset.xml tests/"
+                ],
+                "lint-tests-fix": [
+                    "phpcbf --standard=phpcs-ruleset.xml tests/"
+                ],
+                "analyze": [
+                    "phan --allow-polyfill-parser -p"
+                ],
+                "lint": [
+                    "@lint-src",
+                    "@lint-tests"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "APIMatic Code Generator",
+                    "email": "support@apimatic.io",
+                    "homepage": "https://www.apimatic.io",
+                    "role": "API Tool"
+                }
+            ],
+            "homepage": "https://www.apimatic.io",
+            "keywords": [
+                "API",
+                "Fortis API",
+                "SDK"
+            ],
+            "support": {
+                "source": "https://github.com/hyrograsper/fortis-php-sdk/tree/main",
+                "issues": "https://github.com/hyrograsper/fortis-php-sdk/issues"
+            },
+            "time": "2025-06-10T18:05:17+00:00"
         },
         {
             "name": "kalnoy/nestedset",
@@ -8560,7 +8568,7 @@
     "aliases": [],
     "minimum-stability": "dev",
     "stability-flags": {
-        "apimatic-sdks/fortisapi": 20
+        "hyrograsper/fortis-php-sdk": 20
     },
     "prefer-stable": true,
     "prefer-lowest": false,
