@@ -41,7 +41,7 @@ class LunarFortisServiceProvider extends ServiceProvider
         // Publish config files
         $this->publishes([
             __DIR__.'/../config/fortis.php' => config_path('lunar/fortis.php'),
-            __DIR__.'/../config/fortis_services.php' => config_path('services/fortis.php'),
+            __DIR__.'/../config/fortis_services.php' => config_path('services.php'),
         ], 'lunar-fortis-config');
 
         // Register Livewire components
