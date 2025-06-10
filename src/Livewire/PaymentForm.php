@@ -2,7 +2,8 @@
 
 namespace Hyrograsper\LunarFortis\Livewire;
 
-use App\Concerns\Fortis\Fortis;
+use Hyrograsper\LunarFortis\Fortis;
+use Hyrograsper\LunarFortis\PaymentTypes\FortisPaymentType;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
@@ -12,12 +13,11 @@ use Lunar\Base\DataTransferObjects\PaymentAuthorize;
 use Lunar\Facades\Payments;
 use Lunar\Models\Cart;
 use Lunar\Models\Order;
-use Lunar\Models\OrderAddress;
+//use Lunar\Models\OrderAddress;
 
 class PaymentForm extends Component
 {
     public Cart $cart;
-
     public string $policy;
 
     public function mount(): void
@@ -25,20 +25,26 @@ class PaymentForm extends Component
         $this->policy = config('lunar.fortis.policy', 'automatic');
     }
 
-    public function rules(): array
-    {
-        return [
-            'identifier' => 'string|required',
-        ];
-    }
+//    public function rules(): array
+//    {
+//        return [
+//            'identifier' => 'string|required',
+//        ];
+//    }
 
     #[On('handle-payment-response')]
     public function handlePaymentResponse(array $response): void
     {
-        Log::debug('Payment response: '.print_r($response, true));
+        Log::debug('Forits Payment response: '.print_r($response, true));
+
+        if (! isset($response['data'])) {
+            Log::error('Fortis Payment response missing "data" key.', $response);
+            $this->dispatch('payment-error', 'Invalid payment response from gateway.');
+            return;
+        }
 
         /** @var PaymentAuthorize $paymentAuthorize */
-        $paymentAuthorize = Payments::driver('card')
+        $paymentAuthorize = Payments::driver(FortisPaymentType::PAYMENT_TYPE)
             ->cart($this->cart)
             ->withData($response['data'])
             ->authorize();
