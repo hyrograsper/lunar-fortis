@@ -2,6 +2,9 @@
 
 namespace Hyrograsper\LunarFortis\Enums;
 
+use Error;
+use Illuminate\Support\Facades\Log;
+
 enum ReasonCode: string
 {
     public const string ENUM_1000 = 'CC - Approved';
@@ -85,8 +88,13 @@ enum ReasonCode: string
     public const string ENUM_1804 = 'No Transactions in Batch';
     public const string ENUM_1805 = 'Batch Does Not Exist';
 
-    public static function fromCode(int $code){
+    public static function fromCode(int $code): ?string
+    {
+        if (defined("self::ENUM_{$code}"))
+        {
+            return constant("self::ENUM_{$code}");
+        }
 
-        return constant("self::ENUM_{$code}");
+        return null;
     }
 }
