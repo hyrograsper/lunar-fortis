@@ -2,12 +2,12 @@
 
 namespace Hyrograsper\LunarFortis\PaymentTypes;
 
-use Hyrograsper\LunarFortis\Concerns\AvsResponseCode;
-use Hyrograsper\LunarFortis\Concerns\CvvResponseCode;
+use FortisAPILib\Exceptions\ApiException;
+use Hyrograsper\LunarFortis\Enums\AvsResponseCode;
+use Hyrograsper\LunarFortis\Enums\CvvResponseCode;
+use Hyrograsper\LunarFortis\Enums\ReasonCode;
 use Hyrograsper\LunarFortis\Events\OrderPlaced;
 use Hyrograsper\LunarFortis\Fortis;
-use Hyrograsper\LunarFortis\Concerns\ReasonCode;
-use FortisAPILib\Exceptions\ApiException;
 use Illuminate\Support\Facades\Log;
 use Lunar\Base\DataTransferObjects\PaymentAuthorize;
 use Lunar\Base\DataTransferObjects\PaymentCapture;
@@ -21,6 +21,7 @@ use Lunar\PaymentTypes\AbstractPayment;
 class FortisPaymentType extends AbstractPayment
 {
     protected string $policy;
+    public const string PAYMENT_TYPE = 'fortis';
 
     public function __construct(protected Fortis $fortis)
     {
@@ -39,7 +40,7 @@ class FortisPaymentType extends AbstractPayment
                     success: false,
                     message: $e->getMessage(),
                     orderId: $this->order?->id,
-                    paymentType: 'fortis',
+                    paymentType: self::PAYMENT_TYPE,
                 );
                 PaymentAttemptEvent::dispatch($failure);
 
@@ -55,7 +56,7 @@ class FortisPaymentType extends AbstractPayment
                 success: false,
                 message: 'This order has already been placed',
                 orderId: $this->order->id,
-                paymentType: 'fortis',
+                paymentType: self::PAYMENT_TYPE,
             );
 
             PaymentAttemptEvent::dispatch($failedResponse);
@@ -70,7 +71,7 @@ class FortisPaymentType extends AbstractPayment
                 success: false,
                 message: $transaction->meta['errors'] ?? 'Unknown Error.',
                 orderId: $this->order->id,
-                paymentType: 'fortis',
+                paymentType: self::PAYMENT_TYPE,
             );
 
             PaymentAttemptEvent::dispatch($failedResponse);
@@ -79,7 +80,7 @@ class FortisPaymentType extends AbstractPayment
         }
 
         $this->order->placed_at = now();
-        $this->order->status = 'payment-received';
+        $this->order->status = config('lunar.fortis.status_mapping.payment-received', 'payment-received');
         $this->order->save();
 
         OrderPlaced::dispatch($this->order);
@@ -88,7 +89,7 @@ class FortisPaymentType extends AbstractPayment
             success: true,
             message: 'Payment Captured',
             orderId: $this->order->id,
-            paymentType: 'fortis',
+            paymentType: self::PAYMENT_TYPE,
         );
 
         PaymentAttemptEvent::dispatch($paymentAuthorize);
@@ -125,7 +126,7 @@ class FortisPaymentType extends AbstractPayment
                 'order_id' => $transaction->order->id,
                 'success' => false,
                 'type' => 'refund',
-                'driver' => 'fortis',
+                'driver' => self::PAYMENT_TYPE,
                 'amount' => $amount,
                 'reference' => $result->getData()->getId() ?? now()->timestamp,
                 'status' => 'declined',
@@ -151,7 +152,7 @@ class FortisPaymentType extends AbstractPayment
             'order_id' => $transaction->order->id,
             'success' => true,
             'type' => 'refund',
-            'driver' => 'fortis',
+            'driver' => self::PAYMENT_TYPE,
             'amount' => $amount,
             'reference' => $result->getData()->getId() ?? now()->timestamp,
             'status' => 'refunded',
@@ -181,7 +182,7 @@ class FortisPaymentType extends AbstractPayment
             'order_id' => $this->order->id,
             'success' => $success,
             'type' => $data['@action'] == 'sale' ? 'capture' : 'intent',
-            'driver' => 'fortis',
+            'driver' => self::PAYMENT_TYPE,
             'amount' => $data['transaction_amount'] ?? $this->cart->total->value,
             'reference' => $data['id'] ?? now()->timestamp,
             'status' => $success ? 'approved' : 'declined',
@@ -206,15 +207,30 @@ class FortisPaymentType extends AbstractPayment
 
         $errors = null;
 
-        if (isset($data['avs']) && $data['avs'] != AvsResponseCode::GOOD->name) {
-            $errors = 'AVS Failed: '.AvsResponseCode::{$data['avs']}->value;
+        // AVS Check
+        if (isset($data['avs'])) {
+            $avsCode = AvsResponseCode::tryFrom($data['avs']);
+            if ($avsCode && $avsCode != AvsResponseCode::GOOD) {
+                $errors = 'AVS Failed: '.$avsCode->value;
+            } elseif (!$avsCode) {
+                $errors = "AVS Failed: Unknown code ({$data['avs']})";
+            }
         }
 
-        if (isset($data['cvv_response']) && $data['cvv_response'] == CvvResponseCode::N->name) {
-            if ($errors) {
-                $errors .= '. ';
+        // CVV Check
+        if (isset($data['cvv_response'])) {
+            $cvvCode = CvvResponseCode::tryFrom($data['cvv_response']);
+            if ($cvvCode && $cvvCode == CvvResponseCode::N) { // Only 'N' is typically a hard failure for CVV
+                if ($errors) {
+                    $errors .= '. ';
+                }
+                $errors .= 'CVV Failed: '.$cvvCode->value;
+            } elseif ($cvvCode === null && $data['cvv_response'] !== null) { // If tryFrom returns null but there was a value
+                if ($errors) {
+                    $errors .= '. ';
+                }
+                $errors .= "CVV Info: Unknown code ({$data['cvv_response']})";
             }
-            $errors .= 'CVV Failed: '.CvvResponseCode::{$data['cvv_response']}->value;
         }
 
         if (! $errors && $data['status_code'] != 101) {
@@ -227,6 +243,10 @@ class FortisPaymentType extends AbstractPayment
 
         if ($errors) {
             $meta['errors'] = $errors;
+        }
+
+        if (isset($data['reason_code_id'])) {
+            $meta['reason_code_message'] = ReasonCode::fromCode((int)$data['reason_code_id']);
         }
 
         // List of potential meta fields
