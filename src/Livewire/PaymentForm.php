@@ -13,7 +13,7 @@ use Lunar\Base\DataTransferObjects\PaymentAuthorize;
 use Lunar\Facades\Payments;
 use Lunar\Models\Cart;
 use Lunar\Models\Order;
-//use Lunar\Models\OrderAddress;
+use Lunar\Models\OrderAddress;
 
 class PaymentForm extends Component
 {
@@ -64,24 +64,34 @@ class PaymentForm extends Component
     {
         $this->cart->calculate();
 
-        return Cache::remember('fortis:'.auth()->user()->id, 5, function () {
+        return Cache::remember($this->clientTokenCacheKey(), 5, function () {
             return (new Fortis)->getClientTokenForSaleAmount($this->cart->total->value);
         });
     }
 
     #[On('regenerate-client-token')]
     public function regenerateClientToken(): void
-    {
-        // Clear the cached token
-        Cache::forget('fortis:'.auth()->user()->id);
+    {// Clear the cached token
+        Cache::forget($this->clientTokenCacheKey());
 
         // Generate and return a new token
         $this->dispatch('token-regenerated', $this->clientToken());
     }
 
+    public function clientTokenCacheKey(): string
+    {
+        $key = 'fortis_client_token:';
+
+        if ($this->cart->user_id) {
+            return $key.$this->cart->user_id;
+        }
+
+        return $key.$this->cart->id;
+    }
+
     public function getFortisEnvironmentProperty(): string
     {
-        return config('lunar.fortis.environment');
+        return config('lunar.fortis.environment', 'sandbox');
     }
 
     public function getFortisJSUrlProperty(): string
@@ -91,16 +101,13 @@ class PaymentForm extends Component
             : 'https://js.sandbox.fortis.tech/commercejs-v1.0.0.min.js';
     }
 
-    /**
-     * Return the carts billing address.
-     */
-    public function getBillingProperty(): OrderAddress
+    public function getBillingProperty(): ?OrderAddress
     {
         return $this->cart->billingAddress;
     }
 
     public function render(): View
     {
-        return view('fortis.components.payment-form');
+        return view('lunar-fortis::components.payment-form');
     }
 }
