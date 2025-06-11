@@ -26,13 +26,6 @@ class PaymentForm extends Component
         $this->policy = config('lunar.fortis.policy', 'automatic');
     }
 
-    //    public function rules(): array
-    //    {
-    //        return [
-    //            'identifier' => 'string|required',
-    //        ];
-    //    }
-
     #[On('handle-payment-response')]
     public function handlePaymentResponse(array $response): void
     {
