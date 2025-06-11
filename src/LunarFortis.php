@@ -2,6 +2,7 @@
 
 namespace Hyrograsper\LunarFortis;
 
+use Exception;
 use FortisAPILib\Authentication\DeveloperIdCredentialsBuilder;
 use FortisAPILib\Authentication\UserApiKeyCredentialsBuilder;
 use FortisAPILib\Authentication\UserIdCredentialsBuilder;
@@ -73,9 +74,7 @@ class LunarFortis
                     body: $this->buildTransactionIntentionRequest($amount)
                 )->getData();
 
-            $token = $data->getClientToken();
-
-            return $token;
+            return $data->getClientToken();
         } catch (Exception $e) {
             Log::error("Unable to get client token for sale: {$e->getMessage()}");
 
