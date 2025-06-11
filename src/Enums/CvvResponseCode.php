@@ -10,4 +10,13 @@ enum CvvResponseCode: string
     case S = 'Unreadable';
     case U = 'Unknown, Issuer does not participate';
     case X = 'Service Provider did not respond';
+
+    public static function fromCode(string $code): ?self
+    {
+        if (defined("self::{$code}")) {
+            return constant("self::{$code}");
+        }
+
+        return null;
+    }
 }

@@ -210,7 +210,7 @@ class FortisPaymentType extends AbstractPayment
 
         // AVS Check
         if (isset($data['avs'])) {
-            $avsCode = AvsResponseCode::tryFrom($data['avs']);
+            $avsCode = AvsResponseCode::fromCode($data['avs']);
             if ($avsCode && $avsCode != AvsResponseCode::GOOD) {
                 $errors = 'AVS Failed: '.$avsCode->value;
             } elseif (! $avsCode) {
@@ -220,7 +220,7 @@ class FortisPaymentType extends AbstractPayment
 
         // CVV Check
         if (isset($data['cvv_response'])) {
-            $cvvCode = CvvResponseCode::tryFrom($data['cvv_response']);
+            $cvvCode = CvvResponseCode::fromCode($data['cvv_response']);
             if ($cvvCode && $cvvCode == CvvResponseCode::N) { // Only 'N' is typically a hard failure for CVV
                 if ($errors) {
                     $errors .= '. ';
@@ -235,7 +235,7 @@ class FortisPaymentType extends AbstractPayment
         }
 
         if (! $errors && $data['status_code'] != 101) {
-            $errors = ReasonCode::fromCode($data['reason_code_id']);
+            $errors = ReasonCode::fromCode((int) $data['reason_code_id']);
 
             if (isset($data['verbiage'])) {
                 $errors .= '. '.$data['verbiage'];
