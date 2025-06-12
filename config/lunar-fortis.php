@@ -56,9 +56,11 @@ return [
     |--------------------------------------------------------------------------
     | The URL or Route name to redirect to after successful payment.
     | The \Lunar\Models\Order $order->reference will be added as a query parameter of 'reference'.
+    | If using a route, the url will be signed. Set false to disable.
     |
     */
     'success_redirect' => null,
+    'signed_route' => true,
 
     /*
     |--------------------------------------------------------------------------

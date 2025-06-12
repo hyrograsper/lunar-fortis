@@ -79,7 +79,13 @@ class PaymentForm extends Component
                     return;
                 }
 
-                $this->redirect(Uri::signedRoute($success_redirect, ['reference' => $order->reference]));
+                if (config('lunar-fortis.signed_route', true)) {
+                    $this->redirect(Uri::signedRoute($success_redirect, ['reference' => $order->reference])->value());
+
+                    return;
+                }
+
+                $this->redirect(route($success_redirect, ['reference' => $order->reference]));
             }
         }
     }
