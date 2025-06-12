@@ -139,7 +139,7 @@
                     container: '#elements',
                     theme: Flux.dark ? 'dark' : 'default',
                     environment: this.environment,
-                    view: 'card-single-field',
+                    view: 'default',
                     language: 'en-us',
                     defaultCountry: 'US',
                     floatingLabels: true,
@@ -151,20 +151,40 @@
                     digitalWallets: ['ApplePay', 'GooglePay'],
                     fields: {
                         billing: [
-                            {name: 'address', required: true, value: '{{ $this->cart->billingAddress?->line_one }}'},
+                            {
+                                name: 'address',
+                                required: true,
+                                value: '{{ $this->cart->billingAddress?->line_one }}',
+                                hidden: true,
+                            },
                             {
                                 name: 'country',
                                 required: true,
-                                value: '{{ $this->cart->billingAddress?->country?->iso3 }}'
+                                value: '{{ $this->cart->billingAddress?->country?->iso2 }}',
+                                hidden: true,
                             },
-                            {name: 'state', required: true, value: '{{ $this->cart->billingAddress?->state }}'},
-                            {name: 'city', required: true, value: '{{ $this->cart->billingAddress?->city }}'},
+                            {
+                                name: 'state',
+                                required: true,
+                                value: '{{ $this->cart->billingAddress?->state }}',
+                                hidden: true,
+                            },
+                            {
+                                name: 'city',
+                                required: true,
+                                value: '{{ $this->cart->billingAddress?->city }}',
+                                hidden: true,
+                            },
                             {
                                 name: 'postal_code',
                                 required: true,
-                                value: '{{ $this->cart->billingAddress?->postcode }}'
+                                value: '{{ $this->cart->billingAddress?->postcode }}',
+                                hidden: true,
                             },
                         ]
+                    },
+                    sectionHeaderLabels: {
+                        main: ' ',
                     },
                     appearance: this.getAppearanceSettings()
                 });
