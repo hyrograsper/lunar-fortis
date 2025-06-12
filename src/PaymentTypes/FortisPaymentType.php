@@ -84,8 +84,6 @@ class FortisPaymentType extends AbstractPayment
         $this->order->status = config('lunar.fortis.status_mapping.payment-received', 'payment-received');
         $this->order->save();
 
-        OrderPlaced::dispatch($this->order);
-
         $paymentAuthorize = new PaymentAuthorize(
             success: true,
             message: 'Payment Captured',
