@@ -87,7 +87,7 @@ class PaymentForm extends Component
 
                 if ($redirectUri = config('lunar-fortis.success_redirect.uri')) {
                     $this->redirect(Uri::of($redirectUri)
-                        ->withQueryIfMissing(['reference' => $order->reference]));
+                        ->withQueryIfMissing(['reference' => $order->reference])->value());
 
                     return;
                 }
