@@ -57,7 +57,7 @@ return [
     | Where to redirect when successful. Set false to disable.
     | If 'route_name' is set, it will redirect using routes.
     | If you do not want your route to be a signed route set 'use_signed_routes' to false (default: true)
-    | If 'route_name' is not set, will try and use 'uri' to redirect.
+    | If 'route_name' is not set, will try and use 'uri' to redirect. The 'uri' can be a full url or just uri.
     |
     | NOTE: A 'reference' query parameter will be passed along set to the \Lunar\Models\Order $order->reference.
     |
