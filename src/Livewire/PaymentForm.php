@@ -84,6 +84,16 @@ class PaymentForm extends Component
         return $key.$this->cart->id;
     }
 
+    public function getBillingProperty(): ?OrderAddress
+    {
+        return $this->cart->billingAddress;
+    }
+
+    public function getElementsAppearanceSettingsProperty(): string
+    {
+        return json_encode(config('lunar-fortis.elements.appearance'));
+    }
+
     public function getFortisEnvironmentProperty(): string
     {
         return config('lunar.fortis.environment', 'sandbox');
@@ -94,11 +104,6 @@ class PaymentForm extends Component
         return $this->getFortisEnvironmentProperty() == 'production'
             ? 'https://js.fortis.tech/commercejs-v1.0.0.min.js'
             : 'https://js.sandbox.fortis.tech/commercejs-v1.0.0.min.js';
-    }
-
-    public function getBillingProperty(): ?OrderAddress
-    {
-        return $this->cart->billingAddress;
     }
 
     public function render(): View

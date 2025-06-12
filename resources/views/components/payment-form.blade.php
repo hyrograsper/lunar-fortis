@@ -116,6 +116,24 @@
                 return Flux.dark;
             },
 
+            getAppearanceSettings() {
+                const appearanceSettings = @js(json_decode($this->elementsAppearanceSettings, true));
+                const mode = this.isDarkMode() ? 'dark' : 'light';
+                const settings = appearanceSettings[mode];
+
+                console.debug('appearanceSettings', appearanceSettings);
+
+                // Only include properties that are set
+                const result = {};
+                for (const [key, value] of Object.entries(settings)) {
+                    if (value !== undefined && value !== null && value !== '') {
+                        result[key] = value;
+                    }
+                }
+
+                return result;
+            },
+
             createPaymentForm() {
                 elements.create({
                     container: '#elements',
@@ -148,14 +166,7 @@
                             },
                         ]
                     },
-                    appearance: {
-                        colorBackground: this.isDarkMode() ? '#3d3d40' : '#ffffff',
-                        colorFieldBackground: this.isDarkMode() ? '#515153' : '#ffffff',
-                        colorFieldBorder: this.isDarkMode() ? '#626265' : '#e4e4e7',
-                        colorText: this.isDarkMode() ? '#d4d4d8' : '#363636',
-                        fontSize: '1.0rem',
-                        borderRadius: '8px',
-                    }
+                    appearance: this.getAppearanceSettings()
                 });
             }
     }">

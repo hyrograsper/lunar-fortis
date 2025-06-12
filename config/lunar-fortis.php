@@ -34,4 +34,19 @@ return [
     'status_mapping' => [
         'payment-received' => 'payment-received',
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Elements Appearance Settings
+    |
+    | Settings will be applied separately for dark and light mode.
+    | See Fortis Docs for all settings: https://docs.fortis.tech/v/1_0_0#/rest/elements/configuration-options/appearance-option
+    |--------------------------------------------------------------------------
+    */
+    'elements' => [
+        'appearance' => [
+            'light' => [],
+            'dark' => [],
+        ]
+    ]
 ];
