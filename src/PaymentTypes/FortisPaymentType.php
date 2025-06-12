@@ -6,7 +6,6 @@ use FortisAPILib\Exceptions\ApiException;
 use Hyrograsper\LunarFortis\Enums\AvsResponseCode;
 use Hyrograsper\LunarFortis\Enums\CvvResponseCode;
 use Hyrograsper\LunarFortis\Enums\ReasonCode;
-use Hyrograsper\LunarFortis\Events\OrderPlaced;
 use Hyrograsper\LunarFortis\LunarFortis;
 use Illuminate\Support\Facades\Log;
 use Lunar\Base\DataTransferObjects\PaymentAuthorize;
