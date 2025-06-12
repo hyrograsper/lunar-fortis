@@ -54,7 +54,6 @@ class PaymentForm extends Component
 
         $success_event_class = config('lunar-fortis.success_event_class');
         $success_livewire_event = config('lunar-fortis.success_livewire_event');
-        $success_redirect = config('lunar-fortis.success_redirect');
 
         $order = Order::find($paymentAuthorize->orderId);
 
@@ -71,21 +70,27 @@ class PaymentForm extends Component
                 $this->dispatch($success_livewire_event, $order);
             }
 
-            if ($success_redirect) {
-                if (str($success_redirect)->startsWith('http')) {
-                    $this->redirect(Uri::of($success_redirect)
+            if (config('lunar-fortis.success_redirect', false)) {
+                $routeName = config('lunar-fortis.success_redirect.route_name');
+
+                if ($routeName && config('lunar-fortis.success_redirect.use_signed_route', true)) {
+                    $this->redirect(Uri::signedRoute($routeName, ['reference' => $order->reference])->value());
+
+                    return;
+                }
+
+                if ($routeName) {
+                    $this->redirect(route($routeName, ['reference' => $order->reference]));
+
+                    return;
+                }
+
+                if ($redirectUri = config('lunar-fortis.success_redirect.uri')) {
+                    $this->redirect(Uri::of($redirectUri)
                         ->withQueryIfMissing(['reference' => $order->reference]));
 
                     return;
                 }
-
-                if (config('lunar-fortis.signed_route', true)) {
-                    $this->redirect(Uri::signedRoute($success_redirect, ['reference' => $order->reference])->value());
-
-                    return;
-                }
-
-                $this->redirect(route($success_redirect, ['reference' => $order->reference]));
             }
         }
     }
