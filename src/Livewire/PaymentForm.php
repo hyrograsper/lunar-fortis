@@ -2,10 +2,13 @@
 
 namespace Hyrograsper\LunarFortis\Livewire;
 
+use http\Url;
+use Hyrograsper\LunarFortis\Events\OrderPlaced;
 use Hyrograsper\LunarFortis\Facades\LunarFortis;
 use Hyrograsper\LunarFortis\PaymentTypes\FortisPaymentType;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Uri;
 use Illuminate\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -51,8 +54,35 @@ class PaymentForm extends Component
             return;
         }
 
+        $success_event_class = config('lunar-fortis.success_event_class');
+        $success_livewire_event = config('lunar-fortis.success_livewire_event');
+        $success_redirect = config('lunar-fortis.success_redirect');
+
         $order = Order::find($paymentAuthorize->orderId);
-        $this->redirect(route('order-summary', ['reference' => $order->reference]));
+
+        if ($order) {
+            if (class_exists($success_event_class)) {
+                try {
+                    $success_event_class::dispatch($order);
+                } catch (\Exception $exception) {
+                    Log::error('Unable to dispatch Success Event Class: '.$exception->getMessage());
+                }
+            }
+
+            if ($success_livewire_event) {
+                $this->dispatch($success_livewire_event, $order);
+            }
+
+            if ($success_redirect) {
+                if (str($success_redirect)->startsWith('http')) {
+                    $this->redirect(Uri::of($success_redirect)
+                        ->withQueryIfMissing(['reference' => $order->reference]));
+                    return;
+                }
+
+                $this->redirect(Uri::signedRoute($success_redirect, ['reference' => $order->reference]));
+            }
+        }
     }
 
     public function clientToken(): ?string

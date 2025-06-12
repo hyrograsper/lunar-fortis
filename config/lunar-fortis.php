@@ -49,4 +49,34 @@ return [
             'dark' => [],
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Success Redirect URL
+    |--------------------------------------------------------------------------
+    | The URL or Route name to redirect to after successful payment.
+    | The \Lunar\Models\Order $order->reference will be added as a query parameter of 'reference'.
+    |
+    */
+    'success_redirect' => null,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Success Laravel Event
+    |--------------------------------------------------------------------------
+    | The Laravel Event Class to be dispatched. \Lunar\Models\Order $order will be passed in.
+    | To disable set to null.
+    |
+    */
+    'success_event_class' => null,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Success Livewire Event
+    |--------------------------------------------------------------------------
+    | The livewire event to be dispatched. \Lunar\Models\Order $order will be passed in.
+    | To disable set to null.
+    |
+    */
+    'success_livewire_event' => null,
 ];
