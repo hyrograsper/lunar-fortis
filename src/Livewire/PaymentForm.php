@@ -2,8 +2,6 @@
 
 namespace Hyrograsper\LunarFortis\Livewire;
 
-use http\Url;
-use Hyrograsper\LunarFortis\Events\OrderPlaced;
 use Hyrograsper\LunarFortis\Facades\LunarFortis;
 use Hyrograsper\LunarFortis\PaymentTypes\FortisPaymentType;
 use Illuminate\Support\Facades\Cache;
@@ -77,6 +75,7 @@ class PaymentForm extends Component
                 if (str($success_redirect)->startsWith('http')) {
                     $this->redirect(Uri::of($success_redirect)
                         ->withQueryIfMissing(['reference' => $order->reference]));
+
                     return;
                 }
 
