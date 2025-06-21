@@ -15,6 +15,7 @@ use Lunar\Events\PaymentAttemptEvent;
 use Lunar\Exceptions\Carts\CartException;
 use Lunar\Exceptions\DisallowMultipleCartOrdersException;
 use Lunar\Models\Contracts\Transaction as TransactionContract;
+use Lunar\Models\Transaction;
 use Lunar\PaymentTypes\AbstractPayment;
 
 class FortisPaymentType extends AbstractPayment
