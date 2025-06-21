@@ -14,7 +14,7 @@ use Lunar\Base\DataTransferObjects\PaymentRefund;
 use Lunar\Events\PaymentAttemptEvent;
 use Lunar\Exceptions\Carts\CartException;
 use Lunar\Exceptions\DisallowMultipleCartOrdersException;
-use Lunar\Models\Transaction;
+use Lunar\Models\Contracts\Transaction as TransactionContract;
 use Lunar\PaymentTypes\AbstractPayment;
 
 class FortisPaymentType extends AbstractPayment
@@ -95,7 +95,7 @@ class FortisPaymentType extends AbstractPayment
         return $paymentAuthorize;
     }
 
-    public function capture(Transaction $transaction, $amount = 0): PaymentCapture
+    public function capture(TransactionContract $transaction, $amount = 0): PaymentCapture
     {
         // Fortis payments are captured immediately during authorization
         // This method exists to satisfy the AbstractPayment interface
@@ -105,7 +105,7 @@ class FortisPaymentType extends AbstractPayment
         );
     }
 
-    public function refund(Transaction $transaction, int $amount = 0, $notes = null): PaymentRefund
+    public function refund(TransactionContract $transaction, int $amount = 0, $notes = null): PaymentRefund
     {
         try {
             $result = $this->fortis->refund($transaction, $amount);
