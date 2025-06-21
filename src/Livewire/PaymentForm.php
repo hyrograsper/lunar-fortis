@@ -24,7 +24,7 @@ class PaymentForm extends Component
 
     public function mount(): void
     {
-        $this->policy = config('lunar.fortis.policy', 'automatic');
+        $this->policy = config('lunar-fortis.policy', 'automatic');
     }
 
     #[On('handle-payment-response')]
@@ -136,7 +136,7 @@ class PaymentForm extends Component
 
     public function getFortisEnvironmentProperty(): string
     {
-        return config('lunar.fortis.environment', 'sandbox');
+        return config('lunar-fortis.environment', 'sandbox');
     }
 
     public function getFortisJSUrlProperty(): string

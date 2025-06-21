@@ -26,7 +26,7 @@ class FortisPaymentType extends AbstractPayment
 
     public function __construct(protected LunarFortis $fortis)
     {
-        $this->policy = config('lunar.fortis.policy', 'automatic');
+        $this->policy = config('lunar-fortis.policy', 'automatic');
     }
 
     public function authorize(): ?PaymentAuthorize
@@ -81,7 +81,7 @@ class FortisPaymentType extends AbstractPayment
         }
 
         $this->order->placed_at = now();
-        $this->order->status = config('lunar.fortis.status_mapping.payment-received', 'payment-received');
+        $this->order->status = config('lunar-fortis.status_mapping.payment-received', 'payment-received');
         $this->order->save();
 
         $paymentAuthorize = new PaymentAuthorize(

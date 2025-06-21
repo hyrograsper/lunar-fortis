@@ -33,7 +33,7 @@ class LunarFortis
         }
 
         return $this->client = FortisAPIClientBuilder::init()
-            ->environment(config('lunar.fortis.environment') == 'production'
+            ->environment(config('lunar-fortis.environment') == 'production'
                 ? Environment::PRODUCTION
                 : Environment::SANDBOX
             )
