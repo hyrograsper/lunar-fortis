@@ -81,10 +81,16 @@
     "prefer-stable": true,
     "repositories": [
         {
-            "type": "vcs",
-            "name": "hyrograsper/fortis-php-sdk",
-            "url": "git@github.com:hyrograsper/fortis-php-sdk",
-            "branch": "main"
+            "type": "package",
+            "package": {
+                "name": "hyrograsper/fortis-php-sdk",
+                "version": "dev-main",
+                "source": {
+                    "url": "git@github.com:hyrograsper/fortis-php-sdk.git",
+                    "type": "git",
+                    "reference": "main"
+                }
+            }
         }
     ]
 }
