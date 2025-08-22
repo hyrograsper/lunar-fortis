@@ -171,4 +171,14 @@ enum ReasonCode: string
 
         return null;
     }
+
+    public static function isApproved(int $code): bool
+    {
+        return self::fromCode($code) === self::ENUM_1000;
+    }
+
+    public static function isAuthorized(int $code): bool
+    {
+        return self::fromCode($code) === self::ENUM_1001;
+    }
 }

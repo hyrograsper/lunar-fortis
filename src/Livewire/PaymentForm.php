@@ -2,6 +2,7 @@
 
 namespace Hyrograsper\LunarFortis\Livewire;
 
+use FortisAPILib\Models\ActionEnum;
 use Hyrograsper\LunarFortis\Facades\LunarFortis;
 use Hyrograsper\LunarFortis\PaymentTypes\FortisPaymentType;
 use Illuminate\Support\Facades\Cache;
@@ -30,8 +31,6 @@ class PaymentForm extends Component
     #[On('handle-payment-response')]
     public function handlePaymentResponse(array $response): void
     {
-        Log::debug('Forits Payment response: '.print_r($response, true));
-
         if (! isset($response['data'])) {
             Log::error('Fortis Payment response missing "data" key.', $response);
             $this->dispatch('payment-error', 'Invalid payment response from gateway.');
@@ -100,7 +99,7 @@ class PaymentForm extends Component
         $this->cart->calculate();
 
         return Cache::remember($this->clientTokenCacheKey(), 5, function () {
-            return LunarFortis::getClientTokenForSaleAmount($this->cart->total->value);
+            return LunarFortis::getClientTokenForSaleAmount($this->cart->total->value, ActionEnum::AUTHONLY);
         });
     }
 
