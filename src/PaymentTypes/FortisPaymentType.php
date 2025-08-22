@@ -166,7 +166,7 @@ class FortisPaymentType extends AbstractPayment
                 message: 'Payment captured successfully'
             );
         } catch (\Exception $e) {
-            Log::error('Capture failed: ' . $e->getMessage());
+            Log::error('Capture failed: '.$e->getMessage());
 
             return new PaymentCapture(
                 success: false,
@@ -409,7 +409,7 @@ class FortisPaymentType extends AbstractPayment
         if ($data->getAvs()) {
             $avsCode = AvsResponseCode::fromCode($data->getAvs());
             if ($avsCode && $avsCode != AvsResponseCode::GOOD) {
-                $errors = 'AVS Failed: ' . $avsCode->value;
+                $errors = 'AVS Failed: '.$avsCode->value;
             } elseif (! $avsCode) {
                 $errors = "AVS Failed: Unknown code ({$data->getAvs()})";
             }
@@ -422,7 +422,7 @@ class FortisPaymentType extends AbstractPayment
                 if ($errors) {
                     $errors .= '. ';
                 }
-                $errors .= 'CVV Failed: ' . $cvvCode->value;
+                $errors .= 'CVV Failed: '.$cvvCode->value;
             } elseif ($cvvCode === null && $data->getCvvResponse() !== null) {
                 if ($errors) {
                     $errors .= '. ';
@@ -435,7 +435,7 @@ class FortisPaymentType extends AbstractPayment
             $errors = ReasonCode::fromCode((int) $data->getReasonCodeId());
 
             if ($data->getVerbiage()) {
-                $errors .= '. ' . $data->getVerbiage();
+                $errors .= '. '.$data->getVerbiage();
             }
         }
 
