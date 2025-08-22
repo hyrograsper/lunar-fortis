@@ -15,6 +15,7 @@ use FortisAPILib\Models\Builders\BillingAddress1Builder;
 use FortisAPILib\Models\Builders\V1ElementsTransactionIntentionRequestBuilder;
 use FortisAPILib\Models\Builders\V1TransactionsCcAuthOnlyTokenRequestBuilder;
 use FortisAPILib\Models\Builders\V1TransactionsCcRefundKeyedRequestBuilder;
+use FortisAPILib\Models\Builders\V1TransactionsCcSalePrevTrxnRequestBuilder;
 use FortisAPILib\Models\ResponseTransaction;
 use FortisAPILib\Models\V1ElementsTransactionIntentionRequest;
 use Illuminate\Support\Facades\Log;
@@ -55,37 +56,61 @@ class LunarFortis
             ->build();
     }
 
-    protected function buildTransactionIntentionRequest(int $amount): V1ElementsTransactionIntentionRequest
+    /**
+     * @throws ApiException|Exception
+     */
+    protected function buildTransactionIntentionRequest(int $amount, string $action = ActionEnum::SALE): V1ElementsTransactionIntentionRequest
     {
+        ActionEnum::checkValue($action);
+
         return V1ElementsTransactionIntentionRequestBuilder::init()
-            ->action(ActionEnum::SALE)
+            ->action($action)
             ->digitalWalletsOnly(false)
             ->amount($amount)
             ->locationId(config('services.fortis.locationId'))
             ->build();
     }
 
-    public function getClientTokenForSaleAmount(int $amount): ?string
+    /**
+     * @throws ApiException|Exception
+     */
+    public function getClientTokenForSaleAmount(int $amount, string $action = ActionEnum::SALE): ?string
     {
         try {
             $data = $this->getClientInstance()
                 ->getElementsController()
                 ->transactionIntention(
-                    body: $this->buildTransactionIntentionRequest($amount)
+                    body: $this->buildTransactionIntentionRequest($amount, $action)
                 )->getData();
 
             return $data->getClientToken();
-        } catch (Exception $e) {
-            Log::error("Unable to get client token for sale: {$e->getMessage()}");
-
-            return null;
+        } catch (ApiException|Exception $e) {
+            $message = "Unable to get client token for {$action}: {$e->getMessage()}";
+            Log::error($message);
+            throw new Exception($message);
         }
     }
 
-    public function capturePreviousTransaction() {}
+    /**
+     * @throws ApiException|Exception
+     */
+    public function capturePreviousTransaction(Transaction $transaction, int $amount = 0): ResponseTransaction
+    {
+        return $this->getClientInstance()
+            ->getTransactionsCreditCardController()
+            ->cCSalePreviousTransaction(
+                V1TransactionsCcSalePrevTrxnRequestBuilder::init()
+                    ->locationId(config('services.fortis.locationId'))
+                    ->previousTransactionId($transaction->reference)
+                    ->transactionAmount($amount)
+                    ->orderNumber($transaction->order?->reference)
+                    ->customerId($transaction->order?->customer_id)
+                    ->build()
+            );
+    }
 
     /**
-     * @throws ApiException
+     * @throws ApiException|Exception
      */
     public function authorizeCcFromToken(string $tokenId, Order $order): ResponseTransaction
     {
@@ -113,7 +138,7 @@ class LunarFortis
     }
 
     /**
-     * @throws ApiException
+     * @throws ApiException|Exception
      */
     public function refund(Transaction $transaction, int $amount): ResponseTransaction
     {

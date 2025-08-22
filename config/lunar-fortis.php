@@ -32,6 +32,7 @@ return [
     |--------------------------------------------------------------------------
     */
     'status_mapping' => [
+        'payment-authorized' => 'payment-authorized',
         'payment-received' => 'payment-received',
     ],
 
