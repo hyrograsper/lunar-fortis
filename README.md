@@ -5,7 +5,9 @@
 [![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/hyrograsper/lunar-fortis/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/hyrograsper/lunar-fortis/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
 [![Total Downloads](https://img.shields.io/packagist/dt/hyrograsper/lunar-fortis.svg?style=flat-square)](https://packagist.org/packages/hyrograsper/lunar-fortis)
 
-This is where your description should go. Limit it to a paragraph or two. Consider adding a small example.
+A comprehensive Fortis payment gateway integration for Lunar, providing both online and in-person terminal payment processing capabilities with a complete admin interface for terminal management.
+
+This package includes two payment types (online and terminal), terminal management tools, database synchronization with the Fortis API, and a complete Filament admin interface for managing payment terminals.
 
 ## Support us
 
@@ -30,6 +32,9 @@ php artisan vendor:publish --tag="lunar-fortis-migrations"
 php artisan migrate
 ```
 
+**Available Migrations:**
+- `create_fortis_terminals_table` - Creates the `fortis_terminals` table for storing terminal information from the Fortis API
+
 You can publish the config file with:
 
 ```bash
@@ -49,11 +54,204 @@ Optionally, you can publish the views using
 php artisan vendor:publish --tag="lunar-fortis-views"
 ```
 
-## Usage
+## Configuration
+
+### Environment Variables
+
+Add the following environment variables to your `.env` file:
+
+```env
+FORTIS_USER_ID=your_fortis_user_id
+FORTIS_USER_API_KEY=your_fortis_api_key
+FORTIS_DEVELOPER_ID=your_fortis_developer_id
+FORTIS_LOCATION_ID=your_fortis_location_id
+FORTIS_ENVIRONMENT=sandbox  # or 'production'
+```
+
+### Payment Configuration
+
+Configure the payment types in your `config/services.php`:
 
 ```php
-$lunarFortis = new Hyrograsper\LunarFortis();
-echo $lunarFortis->echoPhrase('Hello, Hyrograsper!');
+'fortis' => [
+    'userId' => env('FORTIS_USER_ID'),
+    'userApiKey' => env('FORTIS_USER_API_KEY'),
+    'developerId' => env('FORTIS_DEVELOPER_ID'),
+    'locationId' => env('FORTIS_LOCATION_ID'),
+],
+```
+
+## Admin Panel Integration
+
+### Register the Filament Plugin
+
+To enable the terminal management interface in your Lunar admin panel, register the Filament plugin in your `AppServiceProvider` or a dedicated service provider:
+
+```php
+use Lunar\Admin\Support\Facades\LunarPanel;
+use Hyrograsper\LunarFortis\Filament\LunarFortisPlugin;
+
+public function boot(): void
+{
+    LunarPanel::panel(function ($panel) {
+        return $panel->plugin(
+            LunarFortisPlugin::make()
+        );
+    })->register();
+}
+```
+
+This will add a "Payment Management" section to your Lunar admin panel with terminal management capabilities.
+
+### Admin Features
+
+Once registered, you'll have access to:
+
+- **Terminal Management**: Full CRUD operations for payment terminals
+- **Bulk Sync**: Sync all terminals from Fortis API
+- **Individual Sync**: Sync specific terminals
+- **Test Payments**: Process test transactions directly from admin
+- **Status Management**: Activate/deactivate terminals
+- **Filtering & Search**: Advanced filtering by status, manufacturer, capabilities
+- **Terminal Monitoring**: View terminal capabilities, network settings, sync status
+
+## Usage
+
+### Payment Types
+
+This package provides two payment types:
+
+#### 1. Online Payments (`fortis`)
+For e-commerce/online transactions using Fortis Elements:
+
+```php
+// Configure in Lunar payment settings
+'driver' => 'fortis',
+'policy' => 'automatic', // or 'manual'
+```
+
+#### 2. Terminal Payments (`fortis-terminal`) 
+For in-person transactions using physical terminals:
+
+```php
+// Configure in Lunar payment settings  
+'driver' => 'fortis-terminal',
+// Policy is always 'automatic' for terminal payments
+```
+
+### Terminal Management
+
+#### Database Operations
+
+```php
+use Hyrograsper\LunarFortis\Models\Terminal;
+use Hyrograsper\LunarFortis\LunarFortis;
+
+// Sync all terminals from Fortis API
+$stats = Terminal::syncFromFortis();
+// Returns: ['created' => 3, 'updated' => 2, 'errors' => 0, 'total_processed' => 5]
+
+// Sync a single terminal
+$terminal = Terminal::syncSingleFromFortis('terminal_id_123');
+
+// Query terminals
+$activeTerminals = Terminal::active()->get();
+$locationTerminals = Terminal::forLocation('location_id')->get();
+$emvTerminals = Terminal::withCapability('emv')->get();
+$readyTerminals = Terminal::where('active', true)
+    ->where('is_provisioned', true)->get();
+```
+
+#### API Operations
+
+```php
+$fortis = app(LunarFortis::class);
+
+// Create a terminal
+$terminal = $fortis->createSimpleTerminal('POS Terminal 1', '1234567890', 'app_id');
+
+// List terminals with filtering
+$terminals = $fortis->listTerminals([
+    'filterBy' => [
+        ['key' => 'active', 'operator' => '=', 'value' => '1']
+    ]
+]);
+
+// Get specific terminal
+$terminal = $fortis->getTerminal('terminal_id_123');
+
+// Update terminal
+$updated = $fortis->updateTerminal('terminal_id_123', [
+    'title' => 'Updated Terminal Name',
+    'active' => false
+]);
+```
+
+### Terminal Payment Processing
+
+#### Using Terminal Model
+
+```php
+use Hyrograsper\LunarFortis\Models\Terminal;
+
+$terminal = Terminal::where('active', true)->first();
+
+// Simple payment
+$result = $terminal->processPayment(1099, [
+    'order_number' => 'ORD-12345',
+    'description' => 'Coffee purchase'
+]);
+
+// Payment with tip
+$result = $terminal->processPaymentWithTip(
+    amount: 1099, 
+    tipAmount: 200,
+    options: ['description' => 'Restaurant bill']
+);
+
+// Lodging payment
+$result = $terminal->processLodgingPayment(
+    amount: 15000,
+    roomNumber: '205',
+    roomRate: 12000,
+    checkinDate: '2024-01-15',
+    checkoutDate: '2024-01-16'
+);
+```
+
+#### Using LunarFortis Class
+
+```php
+$fortis = app(LunarFortis::class);
+
+// Complete payment processing
+$result = $fortis->processTerminalCreditCard('terminal_123', 1099, [
+    'order_number' => 'ORD-12345',
+    'tip_amount' => 200,
+    'customer_id' => 'CUST-456'
+]);
+
+// Manual async handling
+$response = $fortis->chargeTerminalCreditCard('terminal_123', 1099);
+$statusCode = $response->getData()->getAsync()->getCode();
+$finalStatus = $fortis->waitForTerminalTransaction($statusCode);
+```
+
+### Lunar Integration
+
+#### In Your Order Processing
+
+```php
+use Lunar\Facades\Payments;
+
+// For terminal payments
+$cart->createOrder()->setPaymentData([
+    'terminal_id' => 'terminal_123',
+    'description' => 'In-store purchase',
+    'tip_amount' => 200
+]);
+
+$result = Payments::driver('fortis-terminal')->cart($cart)->authorize();
 ```
 
 ## Testing
