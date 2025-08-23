@@ -3,7 +3,10 @@
 namespace Hyrograsper\LunarFortis;
 
 use Hyrograsper\LunarFortis\Livewire\PaymentForm;
+use Hyrograsper\LunarFortis\Models\Terminal;
+use Hyrograsper\LunarFortis\Observers\TerminalObserver;
 use Hyrograsper\LunarFortis\PaymentTypes\FortisPaymentType;
+use Hyrograsper\LunarFortis\PaymentTypes\FortisTerminalPaymentType;
 use Livewire\Livewire;
 use Lunar\Base\PaymentManagerInterface;
 use Lunar\Facades\Payments;
@@ -23,7 +26,10 @@ class LunarFortisServiceProvider extends PackageServiceProvider
         $package
             ->name('lunar-fortis')
             ->hasConfigFile()
-            ->hasViews();
+            ->hasViews()
+            ->hasMigrations([
+                'create_fortis_terminals_table',
+            ]);
     }
 
     public function packageRegistered(): void
@@ -32,9 +38,13 @@ class LunarFortisServiceProvider extends PackageServiceProvider
             return $app->make(PaymentManager::class);
         });
 
-        // Register the payment type with Lunar
+        // Register the payment types with Lunar
         Payments::extend('fortis', function ($app) {
             return $app->make(FortisPaymentType::class);
+        });
+
+        Payments::extend('fortis-terminal', function ($app) {
+            return $app->make(FortisTerminalPaymentType::class);
         });
     }
 
@@ -42,5 +52,8 @@ class LunarFortisServiceProvider extends PackageServiceProvider
     {
         // Register Livewire components
         Livewire::component('lunar-fortis.payment-form', PaymentForm::class);
+
+        // Register model observers
+        Terminal::observe(TerminalObserver::class);
     }
 }
