@@ -3,8 +3,8 @@
 namespace Hyrograsper\LunarFortis\Filament\Resources\TerminalResource\Pages;
 
 use Filament\Actions;
-use Filament\Resources\Pages\EditRecord;
 use Filament\Notifications\Notification;
+use Filament\Resources\Pages\EditRecord;
 use Hyrograsper\LunarFortis\Filament\Resources\TerminalResource;
 
 class EditTerminal extends EditRecord

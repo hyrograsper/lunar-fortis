@@ -2,9 +2,9 @@
 
 namespace Hyrograsper\LunarFortis\Filament\Resources\TerminalResource\Pages;
 
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Hyrograsper\LunarFortis\Filament\Resources\TerminalResource;
-use Filament\Notifications\Notification;
 
 class CreateTerminal extends CreateRecord
 {

@@ -4,15 +4,13 @@ namespace Hyrograsper\LunarFortis\Filament\Resources;
 
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Notifications\Notification;
-use Hyrograsper\LunarFortis\Filament\Clusters\Payments;
 use Hyrograsper\LunarFortis\Filament\Resources\TerminalResource\Pages;
 use Hyrograsper\LunarFortis\Models\Terminal;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Validation\Rule;
 
 class TerminalResource extends Resource
 {
@@ -64,7 +62,7 @@ class TerminalResource extends Resource
                             ->required()
                             ->default(config('services.fortis.locationId'))
                             ->options([
-                                config('services.fortis.locationId') => 'Default Location'
+                                config('services.fortis.locationId') => 'Default Location',
                             ])
                             ->rules(['nullable', 'string', 'max:255'])
                             ->label('Location ID'),
@@ -266,7 +264,7 @@ class TerminalResource extends Resource
                     ->query(function (Builder $query): Builder {
                         return $query->where(function ($q) {
                             $q->whereNull('synced_at')
-                              ->orWhere('synced_at', '<', now()->subHours(24));
+                                ->orWhere('synced_at', '<', now()->subHours(24));
                         });
                     })
                     ->label('Needs Sync'),
@@ -300,7 +298,7 @@ class TerminalResource extends Resource
                                 ->send();
                         }
                     })
-                    ->visible(fn (Terminal $record) => !empty($record->fortis_id))
+                    ->visible(fn (Terminal $record) => ! empty($record->fortis_id))
                     ->requiresConfirmation(),
 
                 Tables\Actions\Action::make('test_payment')
@@ -323,7 +321,7 @@ class TerminalResource extends Resource
                                 amount: $data['amount'],
                                 options: [
                                     'description' => $data['description'],
-                                    'order_number' => 'TEST-' . now()->format('YmdHis'),
+                                    'order_number' => 'TEST-'.now()->format('YmdHis'),
                                 ]
                             );
 

@@ -4,8 +4,6 @@ namespace Hyrograsper\LunarFortis\Filament;
 
 use Filament\Contracts\Plugin;
 use Filament\Panel;
-use Hyrograsper\LunarFortis\Filament\Clusters\Payments;
-use Hyrograsper\LunarFortis\Filament\Resources\TerminalResource;
 
 class LunarFortisPlugin implements Plugin
 {
@@ -16,7 +14,7 @@ class LunarFortisPlugin implements Plugin
 
     public function register(Panel $panel): void
     {
-        $panel->discoverResources(in: __DIR__ . '/Resources', for: 'Hyrograsper\\LunarFortis\\Filament\\Resources');
+        $panel->discoverResources(in: __DIR__.'/Resources', for: 'Hyrograsper\\LunarFortis\\Filament\\Resources');
     }
 
     public function boot(Panel $panel): void

@@ -82,7 +82,7 @@ class FortisTerminalPaymentType extends AbstractPayment
 
         // Find and validate terminal
         $terminal = Terminal::where('fortis_id', $this->data['terminal_id'])->first();
-        if (!$terminal) {
+        if (! $terminal) {
             $failedResponse = new PaymentAuthorize(
                 success: false,
                 message: 'Terminal not found or not available',
@@ -95,7 +95,7 @@ class FortisTerminalPaymentType extends AbstractPayment
             return $failedResponse;
         }
 
-        if (!$terminal->isReadyForPayments()) {
+        if (! $terminal->isReadyForPayments()) {
             $failedResponse = new PaymentAuthorize(
                 success: false,
                 message: 'Terminal is not ready for payments (inactive or not provisioned)',
@@ -307,7 +307,7 @@ class FortisTerminalPaymentType extends AbstractPayment
     private function determineCardType(Terminal $terminal, array $data): string
     {
         // If card type is provided in data, use it
-        if (!empty($data['card_type'])) {
+        if (! empty($data['card_type'])) {
             return $data['card_type'];
         }
 
@@ -326,6 +326,7 @@ class FortisTerminalPaymentType extends AbstractPayment
     private function getTerminalIdFromMeta(TransactionContract $transaction): ?string
     {
         $meta = is_array($transaction->meta) ? $transaction->meta : [];
+
         return $meta['terminal_id'] ?? null;
     }
 }

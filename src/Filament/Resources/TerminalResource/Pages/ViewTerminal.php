@@ -6,8 +6,8 @@ use Filament\Actions;
 use Filament\Forms;
 use Filament\Infolists;
 use Filament\Infolists\Infolist;
-use Filament\Resources\Pages\ViewRecord;
 use Filament\Notifications\Notification;
+use Filament\Resources\Pages\ViewRecord;
 use Hyrograsper\LunarFortis\Filament\Resources\TerminalResource;
 use Hyrograsper\LunarFortis\Models\Terminal;
 
@@ -25,10 +25,10 @@ class ViewTerminal extends ViewRecord
                             ->schema([
                                 Infolists\Components\TextEntry::make('title')
                                     ->label('Terminal Name'),
-                                
+
                                 Infolists\Components\TextEntry::make('serial_number')
                                     ->label('Serial Number'),
-                                
+
                                 Infolists\Components\TextEntry::make('fortis_id')
                                     ->label('Fortis ID')
                                     ->placeholder('Not synced'),
@@ -39,11 +39,11 @@ class ViewTerminal extends ViewRecord
                                 Infolists\Components\IconEntry::make('active')
                                     ->boolean()
                                     ->label('Active'),
-                                
+
                                 Infolists\Components\IconEntry::make('is_provisioned')
                                     ->boolean()
                                     ->label('Provisioned'),
-                                
+
                                 Infolists\Components\TextEntry::make('isReadyForPayments')
                                     ->getStateUsing(fn (Terminal $record) => $record->isReadyForPayments() ? 'Ready' : 'Not Ready')
                                     ->badge()
@@ -52,7 +52,7 @@ class ViewTerminal extends ViewRecord
                                         'Not Ready' => 'warning',
                                     })
                                     ->label('Payment Status'),
-                                
+
                                 Infolists\Components\TextEntry::make('synced_at')
                                     ->dateTime()
                                     ->since()
@@ -77,11 +77,11 @@ class ViewTerminal extends ViewRecord
                                 Infolists\Components\TextEntry::make('local_ip_address')
                                     ->label('IP Address')
                                     ->placeholder('Not configured'),
-                                
+
                                 Infolists\Components\TextEntry::make('mac_address')
                                     ->label('MAC Address')
                                     ->placeholder('Not configured'),
-                                
+
                                 Infolists\Components\TextEntry::make('port')
                                     ->label('Port')
                                     ->placeholder('Not configured'),
@@ -92,7 +92,7 @@ class ViewTerminal extends ViewRecord
                                 Infolists\Components\TextEntry::make('communication_type')
                                     ->label('Communication Type')
                                     ->badge(),
-                                
+
                                 Infolists\Components\TextEntry::make('terminal_number')
                                     ->label('Terminal Number')
                                     ->placeholder('Not assigned'),
@@ -107,7 +107,7 @@ class ViewTerminal extends ViewRecord
                                 Infolists\Components\TextEntry::make('terminal_application_id')
                                     ->label('Application ID')
                                     ->placeholder('Not configured'),
-                                
+
                                 Infolists\Components\TextEntry::make('terminal_manufacturer_code')
                                     ->label('Manufacturer Code')
                                     ->placeholder('Not configured'),
@@ -118,7 +118,7 @@ class ViewTerminal extends ViewRecord
                                 Infolists\Components\TextEntry::make('default_product_transaction_id')
                                     ->label('Default Product Transaction ID')
                                     ->placeholder('Not configured'),
-                                
+
                                 Infolists\Components\TextEntry::make('terminal_cvm_id')
                                     ->label('CVM ID')
                                     ->placeholder('Not configured'),
@@ -137,7 +137,7 @@ class ViewTerminal extends ViewRecord
                                     ->label('Header')
                                     ->markdown(),
                             ]),
-                        
+
                         Infolists\Components\Fieldset::make('Footer Lines')
                             ->schema([
                                 Infolists\Components\TextEntry::make('trailer_lines')
@@ -158,7 +158,7 @@ class ViewTerminal extends ViewRecord
                                     ->date()
                                     ->label('Default Check-in')
                                     ->placeholder('Not configured'),
-                                
+
                                 Infolists\Components\TextEntry::make('default_checkout')
                                     ->date()
                                     ->label('Default Check-out')
@@ -171,7 +171,7 @@ class ViewTerminal extends ViewRecord
                                     ->money('USD', divideBy: 100)
                                     ->label('Default Room Rate')
                                     ->placeholder('Not configured'),
-                                
+
                                 Infolists\Components\TextEntry::make('default_room_number')
                                     ->label('Default Room Number')
                                     ->placeholder('Not configured'),
@@ -189,12 +189,12 @@ class ViewTerminal extends ViewRecord
                                     ->dateTime()
                                     ->label('Created in Fortis')
                                     ->placeholder('Not available'),
-                                
+
                                 Infolists\Components\TextEntry::make('fortis_modified_at')
                                     ->dateTime()
                                     ->label('Modified in Fortis')
                                     ->placeholder('Not available'),
-                                
+
                                 Infolists\Components\TextEntry::make('last_registration_ts')
                                     ->dateTime()
                                     ->label('Last Registration')
@@ -206,7 +206,7 @@ class ViewTerminal extends ViewRecord
                                 Infolists\Components\TextEntry::make('created_at')
                                     ->dateTime()
                                     ->label('Created Locally'),
-                                
+
                                 Infolists\Components\TextEntry::make('updated_at')
                                     ->dateTime()
                                     ->label('Last Updated'),
@@ -222,7 +222,7 @@ class ViewTerminal extends ViewRecord
         return [
             Actions\EditAction::make()
                 ->icon('heroicon-o-pencil'),
-            
+
             Actions\Action::make('sync')
                 ->icon('heroicon-o-arrow-path')
                 ->color('info')
@@ -234,7 +234,7 @@ class ViewTerminal extends ViewRecord
                                 ->title('Terminal synced successfully')
                                 ->success()
                                 ->send();
-                            
+
                             $this->refreshFormData(['*']);
                         } else {
                             Notification::make()
@@ -250,7 +250,7 @@ class ViewTerminal extends ViewRecord
                             ->send();
                     }
                 })
-                ->visible(fn () => !empty($this->record->fortis_id))
+                ->visible(fn () => ! empty($this->record->fortis_id))
                 ->requiresConfirmation(),
 
             Actions\Action::make('test_payment')
@@ -273,10 +273,10 @@ class ViewTerminal extends ViewRecord
                             amount: $data['amount'],
                             options: [
                                 'description' => $data['description'],
-                                'order_number' => 'TEST-' . now()->format('YmdHis'),
+                                'order_number' => 'TEST-'.now()->format('YmdHis'),
                             ]
                         );
-                        
+
                         if ($result['success']) {
                             Notification::make()
                                 ->title('Test payment successful')
@@ -301,7 +301,7 @@ class ViewTerminal extends ViewRecord
                 ->visible(fn () => $this->record->isReadyForPayments())
                 ->requiresConfirmation()
                 ->modalDescription('This will process a real test transaction. Make sure you are in a test environment.'),
-                
+
             Actions\DeleteAction::make()
                 ->icon('heroicon-o-trash'),
         ];
