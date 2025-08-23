@@ -1,0 +1,82 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('fortis_terminals', function (Blueprint $table) {
+            $table->id();
+            
+            // Core terminal identifiers
+            $table->string('fortis_id')->unique()->comment('Terminal ID from Fortis API');
+            $table->string('location_id')->comment('Fortis Location ID');
+            $table->string('title')->comment('Terminal display name');
+            $table->string('serial_number')->unique()->comment('Terminal serial number');
+            
+            // Terminal configuration
+            $table->string('terminal_application_id')->nullable()->comment('Terminal application ID');
+            $table->string('terminal_cvm_id')->nullable()->comment('Cardholder Verification Method ID');
+            $table->string('terminal_manufacturer_code')->nullable()->comment('Manufacturer code (1,2,4,100)');
+            $table->string('default_product_transaction_id')->nullable()->comment('Default product transaction ID');
+            
+            // Network configuration
+            $table->string('mac_address')->nullable()->comment('Terminal MAC address');
+            $table->string('local_ip_address')->nullable()->comment('Terminal IP address');
+            $table->integer('port')->nullable()->comment('Communication port');
+            $table->string('terminal_number')->nullable()->comment('Terminal number identifier');
+            $table->enum('communication_type', ['http', 'https', 'ssl'])->default('http')->comment('Communication protocol');
+            
+            // Terminal capabilities (boolean flags)
+            $table->boolean('debit')->default(false)->comment('Supports debit transactions');
+            $table->boolean('emv')->default(false)->comment('Supports EMV chip transactions');
+            $table->boolean('cashback_enable')->default(false)->comment('Supports cashback');
+            $table->boolean('print_enable')->default(false)->comment('Has printing capability');
+            $table->boolean('sig_capture_enable')->default(false)->comment('Supports signature capture');
+            $table->boolean('tip_enable')->default(false)->comment('Supports tip entry');
+            $table->boolean('is_provisioned')->default(false)->comment('Terminal is provisioned');
+            $table->boolean('validated_decryption')->default(false)->comment('Uses validated decryption');
+            $table->boolean('active')->default(true)->comment('Terminal is active');
+            
+            // Receipt customization (header lines)
+            $table->string('header_line_1')->nullable()->comment('Receipt header line 1');
+            $table->string('header_line_2')->nullable()->comment('Receipt header line 2');
+            $table->string('header_line_3')->nullable()->comment('Receipt header line 3');
+            $table->string('header_line_4')->nullable()->comment('Receipt header line 4');
+            $table->string('header_line_5')->nullable()->comment('Receipt header line 5');
+            
+            // Receipt customization (trailer lines)
+            $table->string('trailer_line_1')->nullable()->comment('Receipt trailer line 1');
+            $table->string('trailer_line_2')->nullable()->comment('Receipt trailer line 2');
+            $table->string('trailer_line_3')->nullable()->comment('Receipt trailer line 3');
+            $table->string('trailer_line_4')->nullable()->comment('Receipt trailer line 4');
+            $table->string('trailer_line_5')->nullable()->comment('Receipt trailer line 5');
+            
+            // Lodging industry specific fields
+            $table->date('default_checkin')->nullable()->comment('Default check-in date for lodging');
+            $table->date('default_checkout')->nullable()->comment('Default check-out date for lodging');
+            $table->integer('default_room_rate')->nullable()->comment('Default room rate in cents');
+            $table->string('default_room_number')->nullable()->comment('Default room number');
+            
+            // Timestamps from Fortis API
+            $table->timestamp('fortis_created_at')->nullable()->comment('Created timestamp from Fortis');
+            $table->timestamp('fortis_modified_at')->nullable()->comment('Modified timestamp from Fortis');
+            $table->timestamp('last_registration_ts')->nullable()->comment('Last registration timestamp');
+            $table->string('created_user_id')->nullable()->comment('Fortis user ID who created terminal');
+            $table->string('modified_user_id')->nullable()->comment('Fortis user ID who last modified terminal');
+            
+            // Local tracking fields
+            $table->timestamps(); // Laravel created_at and updated_at
+            $table->timestamp('synced_at')->nullable()->comment('Last sync with Fortis API');
+            $table->json('fortis_data')->nullable()->comment('Full Fortis response for reference');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('fortis_terminals');
+    }
+};
