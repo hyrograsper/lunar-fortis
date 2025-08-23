@@ -76,7 +76,7 @@ class TerminalObserver
     public function created(Terminal $terminal): void
     {
         // Skip if this terminal was created via sync (has fortis_id)
-        if (!empty($terminal->fortis_id)) {
+        if (! empty($terminal->fortis_id)) {
             return;
         }
 
@@ -157,7 +157,7 @@ class TerminalObserver
         foreach ($changedFields as $field) {
             if (isset($fieldMapping[$field])) {
                 $value = $terminal->getAttribute($field);
-                
+
                 // Convert dates to proper format for API
                 if (in_array($field, ['default_checkin', 'default_checkout']) && $value) {
                     $value = $value instanceof \DateTime ? $value->format('Y-m-d') : $value;
@@ -167,7 +167,7 @@ class TerminalObserver
             }
         }
 
-        if (!empty($updateData)) {
+        if (! empty($updateData)) {
             Log::info('Attempting to sync terminal to Fortis API', [
                 'terminal_id' => $terminal->id,
                 'fortis_id' => $terminal->fortis_id,
@@ -177,7 +177,7 @@ class TerminalObserver
             ]);
 
             $response = $this->fortis->updateTerminal($terminal->fortis_id, $updateData);
-            
+
             // Update the synced_at timestamp
             $terminal->updateQuietly(['synced_at' => now()]);
 
@@ -227,7 +227,7 @@ class TerminalObserver
         ];
 
         foreach ($optionalFields as $field) {
-            if (!is_null($terminal->getAttribute($field))) {
+            if (! is_null($terminal->getAttribute($field))) {
                 $terminalData[$field] = $terminal->getAttribute($field);
             }
         }
@@ -246,7 +246,7 @@ class TerminalObserver
         $lodgingFields = ['default_checkin', 'default_checkout', 'default_room_rate', 'default_room_number'];
         foreach ($lodgingFields as $field) {
             $value = $terminal->getAttribute($field);
-            if (!is_null($value)) {
+            if (! is_null($value)) {
                 if (in_array($field, ['default_checkin', 'default_checkout']) && $value) {
                     $value = $value instanceof \DateTime ? $value->format('Y-m-d') : $value;
                 }

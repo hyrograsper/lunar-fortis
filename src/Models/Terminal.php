@@ -2,14 +2,14 @@
 
 namespace Hyrograsper\LunarFortis\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Hyrograsper\LunarFortis\LunarFortis;
+use Exception;
 use FortisAPILib\Exceptions\ApiException;
 use FortisAPILib\Models\CommunicationTypeEnum;
 use FortisAPILib\Models\TerminalManufacturerCodeEnum;
+use Hyrograsper\LunarFortis\LunarFortis;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\Rule;
-use Exception;
 
 class Terminal extends Model
 {
@@ -108,7 +108,7 @@ class Terminal extends Model
     // Accessor for display name
     public function getDisplayNameAttribute(): string
     {
-        return $this->title . ' (' . $this->serial_number . ')';
+        return $this->title.' ('.$this->serial_number.')';
     }
 
     // Check if terminal has specific capability
@@ -130,12 +130,24 @@ class Terminal extends Model
     {
         $capabilities = [];
 
-        if ($this->debit) $capabilities[] = 'debit';
-        if ($this->emv) $capabilities[] = 'emv';
-        if ($this->cashback_enable) $capabilities[] = 'cashback';
-        if ($this->print_enable) $capabilities[] = 'print';
-        if ($this->sig_capture_enable) $capabilities[] = 'signature';
-        if ($this->tip_enable) $capabilities[] = 'tip';
+        if ($this->debit) {
+            $capabilities[] = 'debit';
+        }
+        if ($this->emv) {
+            $capabilities[] = 'emv';
+        }
+        if ($this->cashback_enable) {
+            $capabilities[] = 'cashback';
+        }
+        if ($this->print_enable) {
+            $capabilities[] = 'print';
+        }
+        if ($this->sig_capture_enable) {
+            $capabilities[] = 'signature';
+        }
+        if ($this->tip_enable) {
+            $capabilities[] = 'tip';
+        }
 
         return $capabilities;
     }
@@ -167,7 +179,7 @@ class Terminal extends Model
     // Check if terminal needs sync (hasn't been synced recently)
     public function needsSync(?int $hoursThreshold = 24): bool
     {
-        if (!$this->synced_at) {
+        if (! $this->synced_at) {
             return true;
         }
 
@@ -183,8 +195,9 @@ class Terminal extends Model
     /**
      * Sync all terminals from Fortis API
      *
-     * @param \Hyrograsper\LunarFortis\LunarFortis|null $fortisClient Optional Fortis client instance
+     * @param  \Hyrograsper\LunarFortis\LunarFortis|null  $fortisClient  Optional Fortis client instance
      * @return array Statistics about the sync operation
+     *
      * @throws \Exception
      */
     public static function syncFromFortis(?\Hyrograsper\LunarFortis\LunarFortis $fortisClient = null): array
@@ -230,7 +243,7 @@ class Terminal extends Model
 
                 } catch (\Exception $e) {
                     $stats['errors']++;
-                    \Log::error("Failed to sync terminal: " . $e->getMessage(), [
+                    \Log::error('Failed to sync terminal: '.$e->getMessage(), [
                         'terminal_data' => $terminalData ?? null,
                         'error' => $e->getMessage(),
                     ]);
@@ -238,7 +251,7 @@ class Terminal extends Model
             }
 
         } catch (\Exception $e) {
-            \Log::error("Failed to fetch terminals from Fortis API: " . $e->getMessage());
+            \Log::error('Failed to fetch terminals from Fortis API: '.$e->getMessage());
             throw $e;
         }
 
@@ -249,32 +262,33 @@ class Terminal extends Model
 
     /**
      * Process a credit card payment using this terminal
-     * 
-     * @param int $amount Amount in cents (e.g., 1099 for $10.99)
-     * @param array $options Additional transaction options
+     *
+     * @param  int  $amount  Amount in cents (e.g., 1099 for $10.99)
+     * @param  array  $options  Additional transaction options
      * @return array Transaction result with status and details
+     *
      * @throws Exception
      */
     public function processPayment(int $amount, array $options = []): array
     {
-        if (!$this->active) {
+        if (! $this->active) {
             throw new Exception("Terminal {$this->fortis_id} is not active");
         }
 
-        if (!$this->is_provisioned) {
+        if (! $this->is_provisioned) {
             throw new Exception("Terminal {$this->fortis_id} is not provisioned");
         }
 
         try {
             $fortis = app(LunarFortis::class);
-            
+
             return $fortis->processTerminalCreditCard(
                 terminalId: $this->fortis_id,
                 amount: $amount,
                 options: $options
             );
         } catch (ApiException|Exception $e) {
-            \Log::error("Terminal payment processing failed", [
+            \Log::error('Terminal payment processing failed', [
                 'terminal_id' => $this->fortis_id,
                 'terminal_title' => $this->title,
                 'amount' => $amount,
@@ -286,25 +300,26 @@ class Terminal extends Model
 
     /**
      * Initiate a payment and return async status code for manual monitoring
-     * 
-     * @param int $amount Amount in cents
-     * @param array $options Additional transaction options
+     *
+     * @param  int  $amount  Amount in cents
+     * @param  array  $options  Additional transaction options
      * @return string Async status code for monitoring
+     *
      * @throws Exception
      */
     public function initiatePayment(int $amount, array $options = []): string
     {
-        if (!$this->active) {
+        if (! $this->active) {
             throw new Exception("Terminal {$this->fortis_id} is not active");
         }
 
-        if (!$this->is_provisioned) {
+        if (! $this->is_provisioned) {
             throw new Exception("Terminal {$this->fortis_id} is not provisioned");
         }
 
         try {
             $fortis = app(LunarFortis::class);
-            
+
             $response = $fortis->chargeTerminalCreditCard(
                 terminalId: $this->fortis_id,
                 amount: $amount,
@@ -313,7 +328,7 @@ class Terminal extends Model
 
             return $response->getData()->getAsync()->getCode();
         } catch (ApiException|Exception $e) {
-            \Log::error("Terminal payment initiation failed", [
+            \Log::error('Terminal payment initiation failed', [
                 'terminal_id' => $this->fortis_id,
                 'terminal_title' => $this->title,
                 'amount' => $amount,
@@ -325,9 +340,10 @@ class Terminal extends Model
 
     /**
      * Check the status of a payment by async status code
-     * 
-     * @param string $statusCode Async status code from initiation
+     *
+     * @param  string  $statusCode  Async status code from initiation
      * @return array Status information
+     *
      * @throws Exception
      */
     public function checkPaymentStatus(string $statusCode): array
@@ -340,14 +356,14 @@ class Terminal extends Model
             return [
                 'progress' => $statusData->getProgress(),
                 'completed' => $statusData->getProgress() >= 100,
-                'success' => $statusData->getProgress() >= 100 && !$statusData->getError(),
+                'success' => $statusData->getProgress() >= 100 && ! $statusData->getError(),
                 'error' => $statusData->getError(),
                 'transaction_id' => $statusData->getId(),
                 'type' => $statusData->getType(),
                 'ttl' => $statusData->getTtl(),
             ];
         } catch (ApiException|Exception $e) {
-            \Log::error("Terminal payment status check failed", [
+            \Log::error('Terminal payment status check failed', [
                 'terminal_id' => $this->fortis_id,
                 'status_code' => $statusCode,
                 'error' => $e->getMessage(),
@@ -358,16 +374,17 @@ class Terminal extends Model
 
     /**
      * Wait for a payment to complete
-     * 
-     * @param string $statusCode Async status code from initiation
-     * @param int $timeoutSeconds Maximum wait time (default: 300 seconds)
-     * @param int $pollIntervalSeconds Polling interval (default: 2 seconds)
+     *
+     * @param  string  $statusCode  Async status code from initiation
+     * @param  int  $timeoutSeconds  Maximum wait time (default: 300 seconds)
+     * @param  int  $pollIntervalSeconds  Polling interval (default: 2 seconds)
      * @return array Final status information
+     *
      * @throws Exception
      */
     public function waitForPayment(
-        string $statusCode, 
-        int $timeoutSeconds = 300, 
+        string $statusCode,
+        int $timeoutSeconds = 300,
         int $pollIntervalSeconds = 2
     ): array {
         try {
@@ -378,15 +395,15 @@ class Terminal extends Model
             return [
                 'progress' => $statusData->getProgress(),
                 'completed' => $statusData->getProgress() >= 100,
-                'success' => $statusData->getProgress() >= 100 && !$statusData->getError(),
+                'success' => $statusData->getProgress() >= 100 && ! $statusData->getError(),
                 'error' => $statusData->getError(),
                 'transaction_id' => $statusData->getId(),
                 'type' => $statusData->getType(),
                 'ttl' => $statusData->getTtl(),
-                'timed_out' => $statusData->getProgress() < 100 && !$statusData->getError(),
+                'timed_out' => $statusData->getProgress() < 100 && ! $statusData->getError(),
             ];
         } catch (ApiException|Exception $e) {
-            \Log::error("Terminal payment wait failed", [
+            \Log::error('Terminal payment wait failed', [
                 'terminal_id' => $this->fortis_id,
                 'status_code' => $statusCode,
                 'error' => $e->getMessage(),
@@ -397,34 +414,36 @@ class Terminal extends Model
 
     /**
      * Process a payment with tip support
-     * 
-     * @param int $amount Base amount in cents
-     * @param int $tipAmount Tip amount in cents (default: 0)
-     * @param array $options Additional options
+     *
+     * @param  int  $amount  Base amount in cents
+     * @param  int  $tipAmount  Tip amount in cents (default: 0)
+     * @param  array  $options  Additional options
      * @return array Transaction result
+     *
      * @throws Exception
      */
     public function processPaymentWithTip(int $amount, int $tipAmount = 0, array $options = []): array
     {
-        if (!$this->tip_enable && $tipAmount > 0) {
+        if (! $this->tip_enable && $tipAmount > 0) {
             throw new Exception("Terminal {$this->fortis_id} does not support tips");
         }
 
         $options['tip_amount'] = $tipAmount;
-        
+
         return $this->processPayment($amount, $options);
     }
 
     /**
      * Process a lodging payment with room details
-     * 
-     * @param int $amount Amount in cents
-     * @param string $roomNumber Room number
-     * @param int $roomRate Room rate in cents
-     * @param string $checkinDate Check-in date (YYYY-MM-DD)
-     * @param string $checkoutDate Check-out date (YYYY-MM-DD)
-     * @param array $options Additional options
+     *
+     * @param  int  $amount  Amount in cents
+     * @param  string  $roomNumber  Room number
+     * @param  int  $roomRate  Room rate in cents
+     * @param  string  $checkinDate  Check-in date (YYYY-MM-DD)
+     * @param  string  $checkoutDate  Check-out date (YYYY-MM-DD)
+     * @param  array  $options  Additional options
      * @return array Transaction result
+     *
      * @throws Exception
      */
     public function processLodgingPayment(
@@ -447,7 +466,7 @@ class Terminal extends Model
 
     /**
      * Check if terminal is ready for payments
-     * 
+     *
      * @return bool True if terminal can process payments
      */
     public function isReadyForPayments(): bool
@@ -457,7 +476,7 @@ class Terminal extends Model
 
     /**
      * Get terminal capabilities as a formatted string
-     * 
+     *
      * @return string Comma-separated list of capabilities
      */
     public function getCapabilitiesString(): string
@@ -467,8 +486,8 @@ class Terminal extends Model
 
     /**
      * Check if terminal supports a specific payment method
-     * 
-     * @param string $method Payment method ('debit', 'emv', 'cashback', etc.)
+     *
+     * @param  string  $method  Payment method ('debit', 'emv', 'cashback', etc.)
      * @return bool True if supported
      */
     public function supportsPaymentMethod(string $method): bool
@@ -487,9 +506,10 @@ class Terminal extends Model
     /**
      * Sync a single terminal from Fortis API by ID
      *
-     * @param string $fortisId Fortis terminal ID
-     * @param \Hyrograsper\LunarFortis\LunarFortis|null $fortisClient Optional Fortis client instance
+     * @param  string  $fortisId  Fortis terminal ID
+     * @param  \Hyrograsper\LunarFortis\LunarFortis|null  $fortisClient  Optional Fortis client instance
      * @return static|null The synced terminal or null if not found
+     *
      * @throws \Exception
      */
     public static function syncSingleFromFortis(string $fortisId, ?\Hyrograsper\LunarFortis\LunarFortis $fortisClient = null): ?static
@@ -501,7 +521,7 @@ class Terminal extends Model
             $response = $fortisClient->getTerminal($fortisId);
             $data = $response->getData();
 
-            if (!$data) {
+            if (! $data) {
                 return null;
             }
 
@@ -520,7 +540,7 @@ class Terminal extends Model
             return $terminal;
 
         } catch (\Exception $e) {
-            \Log::error("Failed to sync terminal {$fortisId}: " . $e->getMessage());
+            \Log::error("Failed to sync terminal {$fortisId}: ".$e->getMessage());
             throw $e;
         }
     }
@@ -528,12 +548,12 @@ class Terminal extends Model
     /**
      * Map Fortis API response data to model attributes
      *
-     * @param object $data Fortis terminal data object
+     * @param  object  $data  Fortis terminal data object
      * @return array Mapped attributes for the model
      */
     /**
      * Get validation rules for Terminal fields
-     * 
+     *
      * @return array Validation rules using Fortis-allowed values
      */
     public static function getValidationRules(): array
@@ -552,7 +572,7 @@ class Terminal extends Model
                     TerminalManufacturerCodeEnum::ENUM_2,
                     TerminalManufacturerCodeEnum::ENUM_4,
                     TerminalManufacturerCodeEnum::ENUM_100,
-                ])
+                ]),
             ],
             'default_product_transaction_id' => ['nullable', 'string', 'max:255'],
             'mac_address' => ['nullable', 'string', 'max:255'],
@@ -566,7 +586,7 @@ class Terminal extends Model
                     CommunicationTypeEnum::HTTP,
                     CommunicationTypeEnum::ENUM_TCPIP,
                     CommunicationTypeEnum::ENUM_USBSERIAL,
-                ])
+                ]),
             ],
             'debit' => ['boolean'],
             'emv' => ['boolean'],
@@ -596,8 +616,6 @@ class Terminal extends Model
 
     /**
      * Get the allowed values for terminal manufacturer codes
-     * 
-     * @return array
      */
     public static function getAllowedManufacturerCodes(): array
     {
@@ -611,8 +629,6 @@ class Terminal extends Model
 
     /**
      * Get the allowed values for communication types
-     * 
-     * @return array
      */
     public static function getAllowedCommunicationTypes(): array
     {
@@ -625,14 +641,12 @@ class Terminal extends Model
 
     /**
      * Get display names for manufacturer codes
-     * 
-     * @return array
      */
     public static function getManufacturerCodeLabels(): array
     {
         return [
             TerminalManufacturerCodeEnum::ENUM_1 => 'Manufacturer 1',
-            TerminalManufacturerCodeEnum::ENUM_2 => 'Manufacturer 2', 
+            TerminalManufacturerCodeEnum::ENUM_2 => 'Manufacturer 2',
             TerminalManufacturerCodeEnum::ENUM_4 => 'Manufacturer 4',
             TerminalManufacturerCodeEnum::ENUM_100 => 'Manufacturer 100',
         ];
@@ -640,8 +654,6 @@ class Terminal extends Model
 
     /**
      * Get display names for communication types
-     * 
-     * @return array
      */
     public static function getCommunicationTypeLabels(): array
     {
