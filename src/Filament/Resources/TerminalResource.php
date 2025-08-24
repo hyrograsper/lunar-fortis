@@ -75,10 +75,6 @@ class TerminalResource extends Resource
                             ->rules(['nullable', 'string', 'max:255'])
                             ->label('Application ID'),
 
-                        Forms\Components\TextInput::make('terminal_cvm_id')
-                            ->rules(['nullable', 'string', 'max:255'])
-                            ->label('CVM ID'),
-
                         Forms\Components\Select::make('terminal_manufacturer_code')
                             ->options(Terminal::getManufacturerCodeLabels())
                             ->rules(Terminal::getValidationRules()['terminal_manufacturer_code'])
@@ -87,114 +83,13 @@ class TerminalResource extends Resource
                         Forms\Components\TextInput::make('default_product_transaction_id')
                             ->rules(['nullable', 'string', 'max:255'])
                             ->label('Default Product Transaction ID'),
-                    ])
-                    ->columns(2),
 
-                Forms\Components\Section::make('Network Configuration')
-                    ->schema([
-                        Forms\Components\TextInput::make('mac_address')
-                            ->rules(['nullable', 'string', 'max:255'])
-                            ->label('MAC Address'),
-
-                        Forms\Components\TextInput::make('local_ip_address')
-                            ->rules(['nullable', 'ip'])
-                            ->label('IP Address'),
-
-                        Forms\Components\TextInput::make('port')
-                            ->numeric()
-                            ->rules(['nullable', 'integer', 'between:1,65535'])
-                            ->label('Port'),
-
-                        Forms\Components\TextInput::make('terminal_number')
-                            ->rules(['nullable', 'string', 'max:255'])
-                            ->label('Terminal Number'),
-
-                        Forms\Components\Select::make('communication_type')
-                            ->options(Terminal::getCommunicationTypeLabels())
-                            ->rules(Terminal::getValidationRules()['communication_type'])
-                            ->default('http')
-                            ->label('Communication Type'),
-                    ])
-                    ->columns(2),
-
-                Forms\Components\Section::make('Terminal Capabilities')
-                    ->schema([
                         Forms\Components\Toggle::make('active')
                             ->default(true)
                             ->label('Active'),
-
-                        Forms\Components\Toggle::make('is_provisioned')
-                            ->label('Is Provisioned'),
-
-                        Forms\Components\Toggle::make('debit')
-                            ->label('Debit Support'),
-
-                        Forms\Components\Toggle::make('emv')
-                            ->default(true)
-                            ->label('EMV/Chip Support'),
-
-                        Forms\Components\Toggle::make('cashback_enable')
-                            ->label('Cashback Support'),
-
-                        Forms\Components\Toggle::make('print_enable')
-                            ->label('Print Receipts'),
-
-                        Forms\Components\Toggle::make('sig_capture_enable')
-                            ->label('Signature Capture'),
-
-                        Forms\Components\Toggle::make('tip_enable')
-                            ->label('Tip Support'),
-
-                        Forms\Components\Toggle::make('validated_decryption')
-                            ->label('Validated Decryption'),
-                    ])
-                    ->columns(3),
-
-                Forms\Components\Section::make('Receipt Customization')
-                    ->schema([
-                        Forms\Components\Fieldset::make('Header Lines')
-                            ->schema([
-                                Forms\Components\TextInput::make('header_line_1')->rules(['nullable', 'string', 'max:255'])->label('Line 1'),
-                                Forms\Components\TextInput::make('header_line_2')->rules(['nullable', 'string', 'max:255'])->label('Line 2'),
-                                Forms\Components\TextInput::make('header_line_3')->rules(['nullable', 'string', 'max:255'])->label('Line 3'),
-                                Forms\Components\TextInput::make('header_line_4')->rules(['nullable', 'string', 'max:255'])->label('Line 4'),
-                                Forms\Components\TextInput::make('header_line_5')->rules(['nullable', 'string', 'max:255'])->label('Line 5'),
-                            ])
-                            ->columns(1),
-
-                        Forms\Components\Fieldset::make('Footer Lines')
-                            ->schema([
-                                Forms\Components\TextInput::make('trailer_line_1')->rules(['nullable', 'string', 'max:255'])->label('Line 1'),
-                                Forms\Components\TextInput::make('trailer_line_2')->rules(['nullable', 'string', 'max:255'])->label('Line 2'),
-                                Forms\Components\TextInput::make('trailer_line_3')->rules(['nullable', 'string', 'max:255'])->label('Line 3'),
-                                Forms\Components\TextInput::make('trailer_line_4')->rules(['nullable', 'string', 'max:255'])->label('Line 4'),
-                                Forms\Components\TextInput::make('trailer_line_5')->rules(['nullable', 'string', 'max:255'])->label('Line 5'),
-                            ])
-                            ->columns(1),
                     ])
                     ->columns(2),
 
-                Forms\Components\Section::make('Lodging Configuration')
-                    ->schema([
-                        Forms\Components\DatePicker::make('default_checkin')
-                            ->rules(['nullable', 'date'])
-                            ->label('Default Check-in Date'),
-
-                        Forms\Components\DatePicker::make('default_checkout')
-                            ->rules(['nullable', 'date', 'after:default_checkin'])
-                            ->label('Default Check-out Date'),
-
-                        Forms\Components\TextInput::make('default_room_rate')
-                            ->numeric()
-                            ->rules(['nullable', 'integer', 'min:0'])
-                            ->suffix('cents')
-                            ->label('Default Room Rate'),
-
-                        Forms\Components\TextInput::make('default_room_number')
-                            ->rules(['nullable', 'string', 'max:255'])
-                            ->label('Default Room Number'),
-                    ])
-                    ->columns(2),
             ]);
     }
 
@@ -216,17 +111,6 @@ class TerminalResource extends Resource
                     ->boolean()
                     ->label('Status'),
 
-                Tables\Columns\IconColumn::make('is_provisioned')
-                    ->boolean()
-                    ->label('Provisioned'),
-
-                Tables\Columns\TextColumn::make('capabilities')
-                    ->getStateUsing(function (Terminal $record): string {
-                        return $record->getCapabilitiesString();
-                    })
-                    ->badge()
-                    ->separator(', ')
-                    ->label('Capabilities'),
 
                 Tables\Columns\TextColumn::make('synced_at')
                     ->dateTime()
@@ -244,21 +128,9 @@ class TerminalResource extends Resource
                 Tables\Filters\TernaryFilter::make('active')
                     ->label('Active Status'),
 
-                Tables\Filters\TernaryFilter::make('is_provisioned')
-                    ->label('Provisioned'),
-
                 Tables\Filters\SelectFilter::make('terminal_manufacturer_code')
-                    ->options([
-                        '1' => 'Manufacturer 1',
-                        '2' => 'Manufacturer 2',
-                        '4' => 'Manufacturer 4',
-                        '100' => 'Manufacturer 100',
-                    ])
+                    ->options(Terminal::getManufacturerCodeLabels())
                     ->label('Manufacturer'),
-
-                Tables\Filters\Filter::make('ready_for_payments')
-                    ->query(fn (Builder $query): Builder => $query->where('active', true)->where('is_provisioned', true))
-                    ->label('Ready for Payments'),
 
                 Tables\Filters\Filter::make('needs_sync')
                     ->query(function (Builder $query): Builder {
