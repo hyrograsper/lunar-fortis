@@ -98,7 +98,7 @@ class FortisTerminalPaymentType extends AbstractPayment
         if (! $terminal->isReadyForPayments()) {
             $failedResponse = new PaymentAuthorize(
                 success: false,
-                message: 'Terminal is not ready for payments (inactive or not provisioned)',
+                message: 'Terminal is not ready for payments (inactive)',
                 orderId: $this->order->id,
                 paymentType: self::PAYMENT_TYPE,
             );
@@ -311,15 +311,7 @@ class FortisTerminalPaymentType extends AbstractPayment
             return $data['card_type'];
         }
 
-        // Check terminal capabilities to determine likely card type
-        if ($terminal->emv) {
-            return 'chip';
-        }
-
-        if ($terminal->debit) {
-            return 'debit';
-        }
-
+        // Default to credit card
         return 'credit';
     }
 
