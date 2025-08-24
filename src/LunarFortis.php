@@ -40,7 +40,7 @@ class LunarFortis
 {
     protected ?FortisAPIClient $client = null;
 
-    public function getClientInstance(): FortisAPIClient
+    protected function getClientInstance(): FortisAPIClient
     {
         if ($this->client) {
             return $this->client;
