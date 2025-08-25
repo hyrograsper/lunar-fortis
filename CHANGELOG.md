@@ -2,6 +2,14 @@
 
 All notable changes to `lunar-fortis` will be documented in this file.
 
+## v1.3.0 - 2025-08-25
+
+### What's Changed
+
+* Terminals by @alecgarcia in https://github.com/hyrograsper/lunar-fortis/pull/6
+
+**Full Changelog**: https://github.com/hyrograsper/lunar-fortis/compare/v1.2.1...v1.3.0
+
 ## v1.2.1 - 2025-08-24
 
 **Full Changelog**: https://github.com/hyrograsper/lunar-fortis/compare/v1.2.0...v1.2.1
