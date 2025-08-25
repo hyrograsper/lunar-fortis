@@ -52,7 +52,7 @@ class TerminalObserver
                 'stack_trace' => $e->getTraceAsString(),
             ]);
 
-            throw new Exception('Failed to sync terminal to Fortis API after update (API Exception) - ' . $e->getMessage());
+            throw new Exception('Failed to sync terminal to Fortis API after update (API Exception) - '.$e->getMessage());
         } catch (Exception $e) {
             Log::error('Failed to sync terminal to Fortis API after update (General Exception)', [
                 'terminal_id' => $terminal->id,
@@ -67,7 +67,7 @@ class TerminalObserver
                 'stack_trace' => $e->getTraceAsString(),
             ]);
 
-            throw new Exception('Failed to sync terminal to Fortis API after update (General Exception) - ' . $e->getMessage());
+            throw new Exception('Failed to sync terminal to Fortis API after update (General Exception) - '.$e->getMessage());
         }
 
         return true;

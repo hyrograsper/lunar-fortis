@@ -41,6 +41,7 @@ class EditTerminal extends EditRecord
         } catch (Exception $exception) {
 
         }
+
         return $record;
     }
 }
