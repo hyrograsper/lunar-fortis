@@ -2,10 +2,12 @@
 
 namespace Hyrograsper\LunarFortis\Filament\Resources\TerminalResource\Pages;
 
+use Exception;
 use Filament\Actions;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Hyrograsper\LunarFortis\Filament\Resources\TerminalResource;
+use Illuminate\Database\Eloquent\Model;
 
 class EditTerminal extends EditRecord
 {
@@ -30,5 +32,16 @@ class EditTerminal extends EditRecord
             ->success()
             ->title('Terminal updated')
             ->body('The terminal has been updated successfully.');
+    }
+
+    protected function handleRecordUpdate(Model $record, array $data): Model
+    {
+        try {
+            return parent::handleRecordUpdate($record, $data);
+        } catch (Exception $exception) {
+
+        }
+
+        return $record;
     }
 }

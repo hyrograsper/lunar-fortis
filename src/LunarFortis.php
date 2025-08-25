@@ -22,7 +22,6 @@ use FortisAPILib\Models\Builders\V1TransactionsCcAuthOnlyTokenRequestBuilder;
 use FortisAPILib\Models\Builders\V1TransactionsCcRefundKeyedRequestBuilder;
 use FortisAPILib\Models\Builders\V1TransactionsCcSalePrevTrxnRequestBuilder;
 use FortisAPILib\Models\Builders\V1TransactionsCcSaleTerminalRequestBuilder;
-use FortisAPILib\Models\CommunicationTypeEnum;
 use FortisAPILib\Models\OperatorEnum;
 use FortisAPILib\Models\ResponseAsyncStatus;
 use FortisAPILib\Models\ResponseTerminal;
@@ -183,79 +182,15 @@ class LunarFortis
             terminalApplicationId: $terminalData['terminal_application_id'],
             terminalManufacturerCode: $terminalData['terminal_manufacturer_code'] ?? TerminalManufacturerCodeEnum::ENUM_1,
             title: $terminalData['title'],
-            serialNumber: $terminalData['serial_number'],
-            debit: $terminalData['debit'] ?? false,
-            emv: $terminalData['emv'] ?? false,
-            cashbackEnable: $terminalData['cashback_enable'] ?? false,
-            printEnable: $terminalData['print_enable'] ?? false,
-            sigCaptureEnable: $terminalData['sig_capture_enable'] ?? false
+            serialNumber: $terminalData['serial_number']
         );
 
         // Add optional fields if provided
         if (isset($terminalData['default_product_transaction_id'])) {
             $builder->defaultProductTransactionId($terminalData['default_product_transaction_id']);
         }
-        if (isset($terminalData['terminal_cvm_id'])) {
-            $builder->terminalCvmId($terminalData['terminal_cvm_id']);
-        }
-        if (isset($terminalData['mac_address'])) {
-            $builder->macAddress($terminalData['mac_address']);
-        }
-        if (isset($terminalData['local_ip_address'])) {
-            $builder->localIpAddress($terminalData['local_ip_address']);
-        }
-        if (isset($terminalData['port'])) {
-            $builder->port($terminalData['port']);
-        }
-        if (isset($terminalData['terminal_number'])) {
-            $builder->terminalNumber($terminalData['terminal_number']);
-        }
-        if (isset($terminalData['communication_type'])) {
-            $builder->communicationType($terminalData['communication_type']);
-        }
         if (isset($terminalData['active'])) {
             $builder->active($terminalData['active']);
-        }
-
-        // Header lines
-        for ($i = 1; $i <= 5; $i++) {
-            if (isset($terminalData["header_line_{$i}"])) {
-                $method = "headerLine{$i}";
-                $builder->$method($terminalData["header_line_{$i}"]);
-            }
-        }
-
-        // Trailer lines
-        for ($i = 1; $i <= 5; $i++) {
-            if (isset($terminalData["trailer_line_{$i}"])) {
-                $method = "trailerLine{$i}";
-                $builder->$method($terminalData["trailer_line_{$i}"]);
-            }
-        }
-
-        // Lodging specific fields
-        if (isset($terminalData['default_checkin'])) {
-            $builder->defaultCheckin($terminalData['default_checkin']);
-        }
-        if (isset($terminalData['default_checkout'])) {
-            $builder->defaultCheckout($terminalData['default_checkout']);
-        }
-        if (isset($terminalData['default_room_rate'])) {
-            $builder->defaultRoomRate($terminalData['default_room_rate']);
-        }
-        if (isset($terminalData['default_room_number'])) {
-            $builder->defaultRoomNumber($terminalData['default_room_number']);
-        }
-
-        // Additional optional fields
-        if (isset($terminalData['is_provisioned'])) {
-            $builder->isProvisioned($terminalData['is_provisioned']);
-        }
-        if (isset($terminalData['tip_enable'])) {
-            $builder->tipEnable($terminalData['tip_enable']);
-        }
-        if (isset($terminalData['validated_decryption'])) {
-            $builder->validatedDecryption($terminalData['validated_decryption']);
         }
 
         return $this->getClientInstance()
@@ -366,49 +301,15 @@ class LunarFortis
             'location_id' => 'locationId',
             'default_product_transaction_id' => 'defaultProductTransactionId',
             'terminal_application_id' => 'terminalApplicationId',
-            'terminal_cvm_id' => 'terminalCvmId',
             'terminal_manufacturer_code' => 'terminalManufacturerCode',
             'title' => 'title',
-            'mac_address' => 'macAddress',
-            'local_ip_address' => 'localIpAddress',
-            'port' => 'port',
             'serial_number' => 'serialNumber',
-            'terminal_number' => 'terminalNumber',
-            'default_checkin' => 'defaultCheckin',
-            'default_checkout' => 'defaultCheckout',
-            'default_room_rate' => 'defaultRoomRate',
-            'default_room_number' => 'defaultRoomNumber',
-            'debit' => 'debit',
-            'emv' => 'emv',
-            'cashback_enable' => 'cashbackEnable',
-            'print_enable' => 'printEnable',
-            'sig_capture_enable' => 'sigCaptureEnable',
-            'is_provisioned' => 'isProvisioned',
-            'tip_enable' => 'tipEnable',
-            'validated_decryption' => 'validatedDecryption',
-            'communication_type' => 'communicationType',
             'active' => 'active',
         ];
 
         foreach ($fieldMapping as $dataKey => $builderMethod) {
             if (isset($terminalData[$dataKey])) {
                 $builder->$builderMethod($terminalData[$dataKey]);
-            }
-        }
-
-        // Handle header lines
-        for ($i = 1; $i <= 5; $i++) {
-            if (isset($terminalData["header_line_{$i}"])) {
-                $method = "headerLine{$i}";
-                $builder->$method($terminalData["header_line_{$i}"]);
-            }
-        }
-
-        // Handle trailer lines
-        for ($i = 1; $i <= 5; $i++) {
-            if (isset($terminalData["trailer_line_{$i}"])) {
-                $method = "trailerLine{$i}";
-                $builder->$method($terminalData["trailer_line_{$i}"]);
             }
         }
 
@@ -439,13 +340,7 @@ class LunarFortis
             'title' => $title,
             'serial_number' => $serialNumber,
             'terminal_application_id' => $terminalApplicationId,
-            'debit' => false,
-            'emv' => true,
-            'cashback_enable' => false,
-            'print_enable' => false,
-            'sig_capture_enable' => false,
             'active' => true,
-            'communication_type' => CommunicationTypeEnum::HTTP,
         ], $additionalOptions);
 
         return $this->createTerminal($terminalData);
