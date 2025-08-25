@@ -195,6 +195,7 @@ class Terminal extends Model
      */
     public function initiatePayment(int $amount, array $options = []): string
     {
+        Log::debug('INITAL PAYMET ACTIVE: ' . ($this->active ? 'True' : 'False') . print_r($this->toArray(), true));
         if (! $this->active) {
             throw new Exception("Terminal {$this->fortis_id} is not active");
         }

@@ -8,6 +8,7 @@ use Filament\Infolists;
 use Filament\Infolists\Infolist;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
+use Filament\Support\RawJs;
 use Hyrograsper\LunarFortis\Filament\Resources\TerminalResource;
 use Hyrograsper\LunarFortis\Models\Terminal;
 
@@ -34,7 +35,7 @@ class ViewTerminal extends ViewRecord
                                     ->placeholder('Not synced'),
                             ]),
 
-                        Infolists\Components\Grid::make(4)
+                        Infolists\Components\Grid::make(3)
                             ->schema([
                                 Infolists\Components\IconEntry::make('active')
                                     ->boolean()
@@ -74,9 +75,7 @@ class ViewTerminal extends ViewRecord
                                     ->label('Default Product Transaction ID')
                                     ->placeholder('Not configured'),
                             ]),
-                    ])
-                    ->collapsible()
-                    ->collapsed(),
+                    ]),
 
                 Infolists\Components\Section::make('System Information')
                     ->schema([
@@ -108,9 +107,7 @@ class ViewTerminal extends ViewRecord
                                     ->dateTime()
                                     ->label('Last Updated'),
                             ]),
-                    ])
-                    ->collapsible()
-                    ->collapsed(),
+                    ]),
             ]);
     }
 
@@ -150,24 +147,26 @@ class ViewTerminal extends ViewRecord
                 ->visible(fn () => ! empty($this->record->fortis_id))
                 ->requiresConfirmation(),
 
-            Actions\Action::make('test_payment')
+            Actions\Action::make('capture_payment')
                 ->icon('heroicon-o-credit-card')
                 ->color('warning')
                 ->form([
                     Forms\Components\TextInput::make('amount')
                         ->required()
                         ->numeric()
+                        ->inputMode('decimal')
+                        ->mask(RawJs::make('$money($input, \'.\', \'\', 2)'))
                         ->default(100)
-                        ->suffix('cents')
+                        ->suffix('dollars')
                         ->label('Test Amount'),
                     Forms\Components\TextInput::make('description')
-                        ->default('Test transaction')
+                        ->helperText('To help identify the transaction')
                         ->label('Description'),
                 ])
                 ->action(function (array $data) {
                     try {
                         $result = $this->record->processPayment(
-                            amount: $data['amount'],
+                            amount: (int) bcmul($data['amount'], '100'),
                             options: [
                                 'description' => $data['description'],
                                 'order_number' => 'TEST-'.now()->format('YmdHis'),
@@ -197,7 +196,7 @@ class ViewTerminal extends ViewRecord
                 })
                 ->visible(fn () => $this->record->isReadyForPayments())
                 ->requiresConfirmation()
-                ->modalDescription('This will process a real test transaction. Make sure you are in a test environment.'),
+                ->modalDescription('This will process a real transaction.'),
 
             Actions\DeleteAction::make()
                 ->icon('heroicon-o-trash'),
