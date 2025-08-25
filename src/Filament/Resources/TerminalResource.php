@@ -111,7 +111,6 @@ class TerminalResource extends Resource
                     ->boolean()
                     ->label('Status'),
 
-
                 Tables\Columns\TextColumn::make('synced_at')
                     ->dateTime()
                     ->sortable()

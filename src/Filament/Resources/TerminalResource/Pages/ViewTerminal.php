@@ -41,7 +41,6 @@ class ViewTerminal extends ViewRecord
                                     ->boolean()
                                     ->label('Active'),
 
-
                                 Infolists\Components\TextEntry::make('isReadyForPayments')
                                     ->getStateUsing(fn (Terminal $record) => $record->isReadyForPayments() ? 'Ready' : 'Not Ready')
                                     ->badge()
