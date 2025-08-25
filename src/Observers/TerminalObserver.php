@@ -15,11 +15,11 @@ class TerminalObserver
         //
     }
 
-    public function updated(Terminal $terminal): void
+    public function updating(Terminal $terminal): bool
     {
         // Skip sync if the terminal doesn't have a Fortis ID yet
         if (empty($terminal->fortis_id)) {
-            return;
+            return true;
         }
 
         // Skip sync if only local tracking fields were updated
@@ -34,7 +34,7 @@ class TerminalObserver
         $significantChanges = array_diff($dirtyFields, $localOnlyFields);
 
         if (empty($significantChanges)) {
-            return;
+            return true;
         }
 
         try {
@@ -52,8 +52,7 @@ class TerminalObserver
                 'stack_trace' => $e->getTraceAsString(),
             ]);
 
-            // Don't throw the exception to prevent the update from failing
-            // Just log the error for manual resolution
+            throw new Exception('Failed to sync terminal to Fortis API after update (API Exception) - '.$e->getMessage());
         } catch (Exception $e) {
             Log::error('Failed to sync terminal to Fortis API after update (General Exception)', [
                 'terminal_id' => $terminal->id,
@@ -68,9 +67,10 @@ class TerminalObserver
                 'stack_trace' => $e->getTraceAsString(),
             ]);
 
-            // Don't throw the exception to prevent the update from failing
-            // Just log the error for manual resolution
+            throw new Exception('Failed to sync terminal to Fortis API after update (General Exception) - '.$e->getMessage());
         }
+
+        return true;
     }
 
     public function created(Terminal $terminal): void
@@ -121,48 +121,14 @@ class TerminalObserver
             'serial_number' => 'serial_number',
             'location_id' => 'location_id',
             'terminal_application_id' => 'terminal_application_id',
-            'terminal_cvm_id' => 'terminal_cvm_id',
             'terminal_manufacturer_code' => 'terminal_manufacturer_code',
             'default_product_transaction_id' => 'default_product_transaction_id',
-            'mac_address' => 'mac_address',
-            'local_ip_address' => 'local_ip_address',
-            'port' => 'port',
-            'terminal_number' => 'terminal_number',
-            'communication_type' => 'communication_type',
-            'debit' => 'debit',
-            'emv' => 'emv',
-            'cashback_enable' => 'cashback_enable',
-            'print_enable' => 'print_enable',
-            'sig_capture_enable' => 'sig_capture_enable',
-            'tip_enable' => 'tip_enable',
-            'is_provisioned' => 'is_provisioned',
-            'validated_decryption' => 'validated_decryption',
             'active' => 'active',
         ];
-
-        // Header lines
-        for ($i = 1; $i <= 5; $i++) {
-            $fieldMapping["header_line_{$i}"] = "header_line_{$i}";
-            $fieldMapping["trailer_line_{$i}"] = "trailer_line_{$i}";
-        }
-
-        // Lodging fields
-        $fieldMapping = array_merge($fieldMapping, [
-            'default_checkin' => 'default_checkin',
-            'default_checkout' => 'default_checkout',
-            'default_room_rate' => 'default_room_rate',
-            'default_room_number' => 'default_room_number',
-        ]);
 
         foreach ($changedFields as $field) {
             if (isset($fieldMapping[$field])) {
                 $value = $terminal->getAttribute($field);
-
-                // Convert dates to proper format for API
-                if (in_array($field, ['default_checkin', 'default_checkout']) && $value) {
-                    $value = $value instanceof \DateTime ? $value->format('Y-m-d') : $value;
-                }
-
                 $updateData[$fieldMapping[$field]] = $value;
             }
         }
@@ -202,55 +168,19 @@ class TerminalObserver
             'title' => $terminal->title,
             'serial_number' => $terminal->serial_number,
             'location_id' => $terminal->location_id ?: config('services.fortis.locationId'),
-            'debit' => $terminal->debit ?? false,
-            'emv' => $terminal->emv ?? true,
-            'cashback_enable' => $terminal->cashback_enable ?? false,
-            'print_enable' => $terminal->print_enable ?? false,
-            'sig_capture_enable' => $terminal->sig_capture_enable ?? false,
-            'tip_enable' => $terminal->tip_enable ?? false,
             'active' => $terminal->active ?? true,
         ];
 
         // Add optional fields if they exist
         $optionalFields = [
             'terminal_application_id',
-            'terminal_cvm_id',
             'terminal_manufacturer_code',
             'default_product_transaction_id',
-            'mac_address',
-            'local_ip_address',
-            'port',
-            'terminal_number',
-            'communication_type',
-            'is_provisioned',
-            'validated_decryption',
         ];
 
         foreach ($optionalFields as $field) {
             if (! is_null($terminal->getAttribute($field))) {
                 $terminalData[$field] = $terminal->getAttribute($field);
-            }
-        }
-
-        // Header and trailer lines
-        for ($i = 1; $i <= 5; $i++) {
-            if ($terminal->getAttribute("header_line_{$i}")) {
-                $terminalData["header_line_{$i}"] = $terminal->getAttribute("header_line_{$i}");
-            }
-            if ($terminal->getAttribute("trailer_line_{$i}")) {
-                $terminalData["trailer_line_{$i}"] = $terminal->getAttribute("trailer_line_{$i}");
-            }
-        }
-
-        // Lodging fields
-        $lodgingFields = ['default_checkin', 'default_checkout', 'default_room_rate', 'default_room_number'];
-        foreach ($lodgingFields as $field) {
-            $value = $terminal->getAttribute($field);
-            if (! is_null($value)) {
-                if (in_array($field, ['default_checkin', 'default_checkout']) && $value) {
-                    $value = $value instanceof \DateTime ? $value->format('Y-m-d') : $value;
-                }
-                $terminalData[$field] = $value;
             }
         }
 
