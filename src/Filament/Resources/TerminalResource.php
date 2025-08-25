@@ -6,6 +6,7 @@ use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Support\RawJs;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Hyrograsper\LunarFortis\Filament\Resources\TerminalResource\Pages;
@@ -46,13 +47,21 @@ class TerminalResource extends Resource
                             ->rules(['required', 'string', 'max:255'])
                             ->label('Terminal Name'),
 
+                        Forms\Components\Toggle::make('active')
+                            ->default(true)
+                            ->label('Active'),
+
                         Forms\Components\TextInput::make('serial_number')
+                            ->readOnly()
+                            ->disabled()
                             ->required()
                             ->unique(Terminal::class, 'serial_number', ignoreRecord: true)
                             ->rules(['required', 'string', 'max:255'])
                             ->label('Serial Number'),
 
                         Forms\Components\TextInput::make('fortis_id')
+                            ->readOnly()
+                            ->disabled()
                             ->unique(Terminal::class, 'fortis_id', ignoreRecord: true)
                             ->rules(['nullable', 'string', 'max:255'])
                             ->label('Fortis Terminal ID')
@@ -66,11 +75,7 @@ class TerminalResource extends Resource
                             ])
                             ->rules(['nullable', 'string', 'max:255'])
                             ->label('Location ID'),
-                    ])
-                    ->columns(2),
 
-                Forms\Components\Section::make('Configuration')
-                    ->schema([
                         Forms\Components\TextInput::make('terminal_application_id')
                             ->rules(['nullable', 'string', 'max:255'])
                             ->label('Application ID'),
@@ -83,13 +88,8 @@ class TerminalResource extends Resource
                         Forms\Components\TextInput::make('default_product_transaction_id')
                             ->rules(['nullable', 'string', 'max:255'])
                             ->label('Default Product Transaction ID'),
-
-                        Forms\Components\Toggle::make('active')
-                            ->default(true)
-                            ->label('Active'),
                     ])
                     ->columns(2),
-
             ]);
     }
 
@@ -173,24 +173,26 @@ class TerminalResource extends Resource
                     ->visible(fn (Terminal $record) => ! empty($record->fortis_id))
                     ->requiresConfirmation(),
 
-                Tables\Actions\Action::make('test_payment')
+                Tables\Actions\Action::make('capture_payment')
                     ->icon('heroicon-o-credit-card')
                     ->color('warning')
                     ->form([
                         Forms\Components\TextInput::make('amount')
                             ->required()
                             ->numeric()
-                            ->default(100)
-                            ->suffix('cents')
+                            ->inputMode('decimal')
+                            ->mask(RawJs::make('$money($input, \'.\', \'\', 2)'))
+                            ->placeholder('100.00')
+                            ->suffix('dollars')
                             ->label('Test Amount'),
                         Forms\Components\TextInput::make('description')
-                            ->default('Test transaction')
+                            ->helperText('To help identify the transaction')
                             ->label('Description'),
                     ])
                     ->action(function (Terminal $record, array $data) {
                         try {
                             $result = $record->processPayment(
-                                amount: $data['amount'],
+                                amount: (int) bcmul($data['amount'], '100'),
                                 options: [
                                     'description' => $data['description'],
                                     'order_number' => 'TEST-'.now()->format('YmdHis'),
@@ -218,9 +220,9 @@ class TerminalResource extends Resource
                                 ->send();
                         }
                     })
-                    ->visible(fn (Terminal $record) => $record->isReadyForPayments())
+                    ->visible(fn ($record) => $record->isReadyForPayments())
                     ->requiresConfirmation()
-                    ->modalDescription('This will process a real test transaction. Make sure you are in a test environment.'),
+                    ->modalDescription('This will process a real transaction.'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

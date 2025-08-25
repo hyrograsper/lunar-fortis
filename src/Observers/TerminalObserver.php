@@ -15,11 +15,11 @@ class TerminalObserver
         //
     }
 
-    public function updated(Terminal $terminal): void
+    public function updating(Terminal $terminal): bool
     {
         // Skip sync if the terminal doesn't have a Fortis ID yet
         if (empty($terminal->fortis_id)) {
-            return;
+            return true;
         }
 
         // Skip sync if only local tracking fields were updated
@@ -34,7 +34,7 @@ class TerminalObserver
         $significantChanges = array_diff($dirtyFields, $localOnlyFields);
 
         if (empty($significantChanges)) {
-            return;
+            return true;
         }
 
         try {
@@ -52,8 +52,7 @@ class TerminalObserver
                 'stack_trace' => $e->getTraceAsString(),
             ]);
 
-            // Don't throw the exception to prevent the update from failing
-            // Just log the error for manual resolution
+            throw new Exception('Failed to sync terminal to Fortis API after update (API Exception) - ' . $e->getMessage());
         } catch (Exception $e) {
             Log::error('Failed to sync terminal to Fortis API after update (General Exception)', [
                 'terminal_id' => $terminal->id,
@@ -68,9 +67,10 @@ class TerminalObserver
                 'stack_trace' => $e->getTraceAsString(),
             ]);
 
-            // Don't throw the exception to prevent the update from failing
-            // Just log the error for manual resolution
+            throw new Exception('Failed to sync terminal to Fortis API after update (General Exception) - ' . $e->getMessage());
         }
+
+        return true;
     }
 
     public function created(Terminal $terminal): void
