@@ -21,7 +21,6 @@ use FortisAPILib\Models\Builders\V1TerminalsRequestBuilder;
 use FortisAPILib\Models\Builders\V1TransactionsAuthCompleteRequestBuilder;
 use FortisAPILib\Models\Builders\V1TransactionsCcAuthOnlyTokenRequestBuilder;
 use FortisAPILib\Models\Builders\V1TransactionsCcRefundKeyedRequestBuilder;
-use FortisAPILib\Models\Builders\V1TransactionsCcSalePrevTrxnRequestBuilder;
 use FortisAPILib\Models\Builders\V1TransactionsCcSaleTerminalRequestBuilder;
 use FortisAPILib\Models\OperatorEnum;
 use FortisAPILib\Models\ResponseAsyncStatus;
