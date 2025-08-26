@@ -18,6 +18,7 @@ use FortisAPILib\Models\Builders\PageBuilder;
 use FortisAPILib\Models\Builders\V1ElementsTransactionIntentionRequestBuilder;
 use FortisAPILib\Models\Builders\V1TerminalsRequest1Builder;
 use FortisAPILib\Models\Builders\V1TerminalsRequestBuilder;
+use FortisAPILib\Models\Builders\V1TransactionsAuthCompleteRequestBuilder;
 use FortisAPILib\Models\Builders\V1TransactionsCcAuthOnlyTokenRequestBuilder;
 use FortisAPILib\Models\Builders\V1TransactionsCcRefundKeyedRequestBuilder;
 use FortisAPILib\Models\Builders\V1TransactionsCcSalePrevTrxnRequestBuilder;
@@ -31,9 +32,9 @@ use FortisAPILib\Models\ResponseTransactionProcessing;
 use FortisAPILib\Models\TerminalManufacturerCodeEnum;
 use FortisAPILib\Models\V1ElementsTransactionIntentionRequest;
 use Illuminate\Support\Facades\Log;
+use Lunar\Models\Contracts\Transaction as TransactionContract;
 use Lunar\Models\Order;
 use Lunar\Models\OrderAddress;
-use Lunar\Models\Transaction;
 
 class LunarFortis
 {
@@ -69,7 +70,7 @@ class LunarFortis
     }
 
     /**
-     * @throws ApiException|Exception
+     * @throws ApiException
      */
     protected function buildTransactionIntentionRequest(int $amount, string $action = ActionEnum::SALE): V1ElementsTransactionIntentionRequest
     {
@@ -84,7 +85,7 @@ class LunarFortis
     }
 
     /**
-     * @throws ApiException|Exception
+     * @throws ApiException
      */
     public function getClientTokenForSaleAmount(int $amount, string $action = ActionEnum::SALE): ?string
     {
@@ -104,16 +105,16 @@ class LunarFortis
     }
 
     /**
-     * @throws ApiException|Exception
+     * @throws ApiException
      */
-    public function capturePreviousTransaction(Transaction $transaction, int $amount = 0): ResponseTransaction
+    public function completeAuthorizedTransaction(TransactionContract $transaction, int $amount = 0): ResponseTransaction
     {
         return $this->getClientInstance()
-            ->getTransactionsCreditCardController()
-            ->cCSalePreviousTransaction(
-                V1TransactionsCcSalePrevTrxnRequestBuilder::init()
+            ->getTransactionsUpdatesController()
+            ->authComplete(
+                $transaction->reference,
+                V1TransactionsAuthCompleteRequestBuilder::init()
                     ->locationId(config('services.fortis.locationId'))
-                    ->previousTransactionId($transaction->reference)
                     ->transactionAmount($amount)
                     ->orderNumber($transaction->order?->reference)
                     ->customerId($transaction->order?->customer_id)
@@ -122,7 +123,7 @@ class LunarFortis
     }
 
     /**
-     * @throws ApiException|Exception
+     * @throws ApiException
      */
     public function authorizeCcFromToken(string $tokenId, Order $order): ResponseTransaction
     {
@@ -150,9 +151,9 @@ class LunarFortis
     }
 
     /**
-     * @throws ApiException|Exception
+     * @throws ApiException
      */
-    public function refund(Transaction $transaction, int $amount): ResponseTransaction
+    public function refund(TransactionContract $transaction, int $amount): ResponseTransaction
     {
         return $this->getClientInstance()
             ->getTransactionsCreditCardController()
@@ -166,14 +167,22 @@ class LunarFortis
             );
     }
 
+    /**
+     * @throws ApiException
+     */
+    public function getTransaction(string $transactionId): ResponseTransaction
+    {
+        return $this->getClientInstance()
+            ->getTransactionsReadController()
+            ->getTransaction($transactionId);
+    }
+
     // Terminal Management Methods
 
     /**
      * Create a new terminal device
      *
-     * @param  array  $terminalData  Array containing terminal configuration data
-     *
-     * @throws ApiException|Exception
+     * @throws ApiException
      */
     public function createTerminal(array $terminalData): ResponseTerminal
     {
@@ -201,9 +210,7 @@ class LunarFortis
     /**
      * Get all terminals for the location
      *
-     * @param  array  $options  Optional parameters (page, order, filterBy, expand, etc.)
-     *
-     * @throws ApiException|Exception
+     * @throws ApiException
      */
     public function listTerminals(array $options = []): ResponseTerminalsCollection
     {
@@ -270,11 +277,7 @@ class LunarFortis
     /**
      * Get a single terminal by ID
      *
-     * @param  string  $terminalId  Terminal ID
-     * @param  array  $expand  Optional expand parameters
-     * @param  array  $fields  Optional fields to return
-     *
-     * @throws ApiException|Exception
+     * @throws ApiException
      */
     public function getTerminal(string $terminalId, ?array $expand = null, ?array $fields = null): ResponseTerminal
     {
@@ -286,11 +289,7 @@ class LunarFortis
     /**
      * Update an existing terminal
      *
-     * @param  string  $terminalId  Terminal ID to update
-     * @param  array  $terminalData  Updated terminal data
-     * @param  array  $expand  Optional expand parameters
-     *
-     * @throws ApiException|Exception
+     * @throws ApiException
      */
     public function updateTerminal(string $terminalId, array $terminalData, ?array $expand = null): ResponseTerminal
     {
@@ -323,12 +322,7 @@ class LunarFortis
     /**
      * Create a simple terminal with minimal required data
      *
-     * @param  string  $title  Terminal name/title
-     * @param  string  $serialNumber  Terminal serial number
-     * @param  string  $terminalApplicationId  Terminal application ID
-     * @param  array  $additionalOptions  Optional additional configuration
-     *
-     * @throws ApiException|Exception
+     * @throws ApiException
      */
     public function createSimpleTerminal(
         string $title,
@@ -349,7 +343,7 @@ class LunarFortis
     /**
      * Get all active terminals for current location
      *
-     * @throws ApiException|Exception
+     * @throws ApiException
      */
     public function getActiveTerminals(): ResponseTerminalsCollection
     {
@@ -372,10 +366,7 @@ class LunarFortis
     /**
      * Activate/deactivate a terminal
      *
-     * @param  string  $terminalId  Terminal ID
-     * @param  bool  $active  True to activate, false to deactivate
-     *
-     * @throws ApiException|Exception
+     * @throws ApiException
      */
     public function setTerminalStatus(string $terminalId, bool $active): ResponseTerminal
     {
@@ -387,12 +378,7 @@ class LunarFortis
     /**
      * Initiate a credit card sale transaction through a terminal
      *
-     * @param  string  $terminalId  Terminal ID to process the transaction
-     * @param  int  $amount  Transaction amount in cents (e.g., 1099 for $10.99)
-     * @param  array  $options  Optional parameters (order_number, customer_id, description, etc.)
-     * @return ResponseTransactionProcessing Transaction processing response with async code
-     *
-     * @throws ApiException|Exception
+     * @throws ApiException
      */
     public function chargeTerminalCreditCard(string $terminalId, int $amount, array $options = []): ResponseTransactionProcessing
     {
@@ -471,10 +457,7 @@ class LunarFortis
     /**
      * Check the status of an async terminal transaction
      *
-     * @param  string  $statusCode  Async status code from the initial transaction response
-     * @return ResponseAsyncStatus Current status of the transaction
-     *
-     * @throws ApiException|Exception
+     * @throws ApiException
      */
     public function checkTerminalTransactionStatus(string $statusCode): ResponseAsyncStatus
     {
@@ -486,12 +469,7 @@ class LunarFortis
     /**
      * Wait for a terminal transaction to complete by polling the status
      *
-     * @param  string  $statusCode  Async status code from the initial transaction response
-     * @param  int  $timeoutSeconds  Maximum time to wait in seconds (default: 300 = 5 minutes)
-     * @param  int  $pollIntervalSeconds  How often to check the status in seconds (default: 2)
-     * @return ResponseAsyncStatus Final status when completed or timed out
-     *
-     * @throws ApiException|Exception
+     * @throws ApiException
      */
     public function waitForTerminalTransaction(
         string $statusCode,
@@ -539,12 +517,7 @@ class LunarFortis
     /**
      * Process a complete terminal credit card transaction with automatic status monitoring
      *
-     * @param  string  $terminalId  Terminal ID to process the transaction
-     * @param  int  $amount  Transaction amount in cents (e.g., 1099 for $10.99)
-     * @param  array  $options  Optional parameters and polling configuration
-     * @return array Result containing final status, transaction ID, and processing info
-     *
-     * @throws ApiException|Exception
+     * @throws ApiException
      */
     public function processTerminalCreditCard(string $terminalId, int $amount, array $options = []): array
     {

@@ -193,12 +193,15 @@ class Terminal extends Model
             );
 
             return $response->getData()->getAsync()->getCode();
-        } catch (ApiException|Exception $e) {
-            Log::error('Terminal payment initiation failed', [
+        } catch (ApiException $e) {
+            // TODO - Create a log that will log fortis errors better and return better messages.
+//            dd($e, $e->getHttpResponse()->getStatusCode(), json_decode($e->getHttpResponse()->getRawBody()));
+            Log::error('Terminal payment initiation failed' . print_r($e, true), [
                 'terminal_id' => $this->fortis_id,
                 'terminal_title' => $this->title,
                 'amount' => $amount,
                 'error' => $e->getMessage(),
+                'response' => json_decode($e->getHttpResponse()->getRawBody()),
             ]);
             throw new Exception("Payment initiation failed: {$e->getMessage()}");
         }

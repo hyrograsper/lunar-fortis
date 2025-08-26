@@ -150,7 +150,7 @@ class FortisPaymentType extends AbstractPayment
     {
         try {
             /** @var ResponseTransaction $response */
-            $response = $this->fortis->capturePreviousTransaction($transaction, $amount);
+            $response = $this->fortis->completeAuthorizedTransaction($transaction, $amount);
 
             $captureTransaction = $this->storeResponseTransaction($response, $transaction);
 
