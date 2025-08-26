@@ -6,7 +6,7 @@ use Carbon\Carbon;
 use Exception;
 use FortisAPILib\Exceptions\ApiException;
 use FortisAPILib\Models\TerminalManufacturerCodeEnum;
-use Hyrograsper\LunarFortis\LunarFortis;
+use Hyrograsper\LunarFortis\Facades\LunarFortis;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
@@ -84,15 +84,10 @@ class Terminal extends Model
     /**
      * Sync all terminals from Fortis API
      *
-     * @param  LunarFortis|null  $fortisClient  Optional Fortis client instance
-     * @return array Statistics about the sync operation
-     *
      * @throws Exception
      */
-    public static function syncFromFortis(?LunarFortis $fortisClient = null): array
+    public static function syncFromFortis(): array
     {
-        $fortisClient = $fortisClient ?? app(LunarFortis::class);
-
         $stats = [
             'created' => 0,
             'updated' => 0,
@@ -102,7 +97,7 @@ class Terminal extends Model
 
         try {
             // Fetch all terminals from Fortis API
-            $response = $fortisClient->listTerminals();
+            $response = LunarFortis::listTerminals();
             $terminals = $response->getList() ?? [];
 
             foreach ($terminals as $terminalData) {
@@ -152,10 +147,6 @@ class Terminal extends Model
     /**
      * Process a credit card payment using this terminal
      *
-     * @param  int  $amount  Amount in cents (e.g., 1099 for $10.99)
-     * @param  array  $options  Additional transaction options
-     * @return array Transaction result with status and details
-     *
      * @throws Exception
      */
     public function processPayment(int $amount, array $options = []): array
@@ -165,9 +156,7 @@ class Terminal extends Model
         }
 
         try {
-            $fortis = app(LunarFortis::class);
-
-            return $fortis->processTerminalCreditCard(
+            return LunarFortis::processTerminalCreditCard(
                 terminalId: $this->fortis_id,
                 amount: $amount,
                 options: $options
@@ -186,9 +175,6 @@ class Terminal extends Model
     /**
      * Initiate a payment and return async status code for manual monitoring
      *
-     * @param  int  $amount  Amount in cents
-     * @param  array  $options  Additional transaction options
-     * @return string Async status code for monitoring
      *
      * @throws Exception
      */
@@ -200,9 +186,7 @@ class Terminal extends Model
         }
 
         try {
-            $fortis = app(LunarFortis::class);
-
-            $response = $fortis->chargeTerminalCreditCard(
+            $response = LunarFortis::chargeTerminalCreditCard(
                 terminalId: $this->fortis_id,
                 amount: $amount,
                 options: $options
@@ -223,17 +207,13 @@ class Terminal extends Model
     /**
      * Check the status of a payment by async status code
      *
-     * @param  string  $statusCode  Async status code from initiation
-     * @return array Status information
-     *
      * @throws Exception
      */
     public function checkPaymentStatus(string $statusCode): array
     {
         try {
-            $fortis = app(LunarFortis::class);
-            $status = $fortis->checkTerminalTransactionStatus($statusCode);
-            $statusData = $status->getData();
+            $statusData = LunarFortis::checkTerminalTransactionStatus($statusCode)
+                ->getData();
 
             return [
                 'progress' => $statusData->getProgress(),
@@ -257,11 +237,6 @@ class Terminal extends Model
     /**
      * Wait for a payment to complete
      *
-     * @param  string  $statusCode  Async status code from initiation
-     * @param  int  $timeoutSeconds  Maximum wait time (default: 300 seconds)
-     * @param  int  $pollIntervalSeconds  Polling interval (default: 2 seconds)
-     * @return array Final status information
-     *
      * @throws Exception
      */
     public function waitForPayment(
@@ -270,8 +245,7 @@ class Terminal extends Model
         int $pollIntervalSeconds = 2
     ): array {
         try {
-            $fortis = app(LunarFortis::class);
-            $status = $fortis->waitForTerminalTransaction($statusCode, $timeoutSeconds, $pollIntervalSeconds);
+            $status = LunarFortis::waitForTerminalTransaction($statusCode, $timeoutSeconds, $pollIntervalSeconds);
             $statusData = $status->getData();
 
             return [
@@ -295,58 +269,6 @@ class Terminal extends Model
     }
 
     /**
-     * Process a payment with tip support
-     *
-     * @param  int  $amount  Base amount in cents
-     * @param  int  $tipAmount  Tip amount in cents (default: 0)
-     * @param  array  $options  Additional options
-     * @return array Transaction result
-     *
-     * @throws Exception
-     */
-    public function processPaymentWithTip(int $amount, int $tipAmount = 0, array $options = []): array
-    {
-        if (! $this->tip_enable && $tipAmount > 0) {
-            throw new Exception("Terminal {$this->fortis_id} does not support tips");
-        }
-
-        $options['tip_amount'] = $tipAmount;
-
-        return $this->processPayment($amount, $options);
-    }
-
-    /**
-     * Process a lodging payment with room details
-     *
-     * @param  int  $amount  Amount in cents
-     * @param  string  $roomNumber  Room number
-     * @param  int  $roomRate  Room rate in cents
-     * @param  string  $checkinDate  Check-in date (YYYY-MM-DD)
-     * @param  string  $checkoutDate  Check-out date (YYYY-MM-DD)
-     * @param  array  $options  Additional options
-     * @return array Transaction result
-     *
-     * @throws Exception
-     */
-    public function processLodgingPayment(
-        int $amount,
-        string $roomNumber,
-        int $roomRate,
-        string $checkinDate,
-        string $checkoutDate,
-        array $options = []
-    ): array {
-        $lodgingOptions = array_merge($options, [
-            'room_num' => $roomNumber,
-            'room_rate' => $roomRate,
-            'checkin_date' => $checkinDate,
-            'checkout_date' => $checkoutDate,
-        ]);
-
-        return $this->processPayment($amount, $lodgingOptions);
-    }
-
-    /**
      * Check if terminal is ready for payments
      *
      * @return bool True if terminal can process payments
@@ -359,19 +281,13 @@ class Terminal extends Model
     /**
      * Sync a single terminal from Fortis API by ID
      *
-     * @param  string  $fortisId  Fortis terminal ID
-     * @param  LunarFortis|null  $fortisClient  Optional Fortis client instance
-     * @return static|null The synced terminal or null if not found
-     *
      * @throws Exception
      */
-    public static function syncSingleFromFortis(string $fortisId, ?LunarFortis $fortisClient = null): ?static
+    public static function syncSingleFromFortis(string $fortisId): ?static
     {
-        $fortisClient = $fortisClient ?? app(LunarFortis::class);
-
         try {
             // Fetch single terminal from Fortis API
-            $response = $fortisClient->getTerminal($fortisId);
+            $response = LunarFortis::getTerminal($fortisId);
             $data = $response->getData();
 
             if (! $data) {
@@ -399,15 +315,7 @@ class Terminal extends Model
     }
 
     /**
-     * Map Fortis API response data to model attributes
-     *
-     * @param  object  $data  Fortis terminal data object
-     * @return array Mapped attributes for the model
-     */
-    /**
      * Get validation rules for Terminal fields
-     *
-     * @return array Validation rules using Fortis-allowed values
      */
     public static function getValidationRules(): array
     {
