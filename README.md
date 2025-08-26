@@ -44,7 +44,96 @@ php artisan vendor:publish --tag="lunar-fortis-config"
 This is the contents of the published config file:
 
 ```php
+<?php
+
+// config for Hyrograsper/LunarFortis
 return [
+    /*
+    |--------------------------------------------------------------------------
+    | Fortis Environment
+    |--------------------------------------------------------------------------
+    | Accepted values: 'sandbox', 'production'.
+    */
+    'environment' => env('FORTIS_ENVIRONMENT', 'sandbox'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Payment Policy
+    |--------------------------------------------------------------------------
+    | 'automatic' will capture the payment immediately.
+    */
+    'policy' => env('LUNAR_FORTIS_POLICY', 'automatic'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Fortis JavaScript SDK URLs
+    |--------------------------------------------------------------------------
+    */
+    'js_url_sandbox' => env('FORTIS_JS_URL_SANDBOX', 'https://js.sandbox.fortis.tech/commercejs-v1.0.0.min.js'),
+    'js_url_production' => env('FORTIS_JS_URL_PRODUCTION', 'https://js.fortis.tech/commercejs-v1.0.0.min.js'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Status mapping
+    |--------------------------------------------------------------------------
+    */
+    'status_mapping' => [
+        'payment-authorized' => 'payment-authorized',
+        'payment-received' => 'payment-received',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Elements Appearance Settings
+    |
+    | Settings will be applied separately for dark and light mode.
+    | See Fortis Docs for all settings: https://docs.fortis.tech/v/1_0_0#/rest/elements/configuration-options/appearance-option
+    |--------------------------------------------------------------------------
+    */
+    'elements' => [
+        'appearance' => [
+            'light' => [],
+            'dark' => [],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Success Redirect
+    |--------------------------------------------------------------------------
+    | Where to redirect when successful. Set false to disable.
+    | If 'route_name' is set, it will redirect using routes.
+    | If you do not want your route to be a signed route set 'use_signed_routes' to false (default: true)
+    | If 'route_name' is not set, will try and use 'uri' to redirect. The 'uri' can be a full url or just uri.
+    |
+    | NOTE: A 'reference' query parameter will be passed along set to the \Lunar\Models\Order $order->reference.
+    |
+    */
+    'success_redirect' => [
+        'route_name' => null,
+        'use_signed_route' => true,
+        'uri' => null,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Success Laravel Event
+    |--------------------------------------------------------------------------
+    | The Laravel Event Class to be dispatched. \Lunar\Models\Order $order will be passed in.
+    | To disable set to null.
+    |
+    */
+    'success_event_class' => null,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Success Livewire Event
+    |--------------------------------------------------------------------------
+    | The livewire event to be dispatched. \Lunar\Models\Order $order will be passed in.
+    | To disable set to null.
+    |
+    */
+    'success_livewire_event' => null,
 ];
 ```
 
@@ -94,14 +183,14 @@ use Hyrograsper\LunarFortis\Filament\LunarFortisPlugin;
 public function boot(): void
 {
     LunarPanel::panel(function ($panel) {
-        return $panel->plugin(
-            LunarFortisPlugin::make()
-        );
+        return $panel->plugins([
+                new LunarFortisPlugin,
+            ]);
     })->register();
 }
 ```
 
-This will add a "Payment Management" section to your Lunar admin panel with terminal management capabilities.
+This will add "Fortis Terminals" resource to your Lunar admin panel Settings section with terminal management capabilities.
 
 ### Admin Features
 
@@ -110,7 +199,7 @@ Once registered, you'll have access to:
 - **Terminal Management**: Full CRUD operations for payment terminals
 - **Bulk Sync**: Sync all terminals from Fortis API
 - **Individual Sync**: Sync specific terminals
-- **Test Payments**: Process test transactions directly from admin
+- **Capture Payments**: Process transactions directly from admin
 - **Status Management**: Activate/deactivate terminals
 - **Filtering & Search**: Advanced filtering by status and manufacturer codes
 - **Terminal Monitoring**: View terminal status and sync information
@@ -232,21 +321,17 @@ $finalStatus = $fortis->waitForTerminalTransaction($statusCode);
 #### In Your Order Processing
 
 ```php
-use Lunar\Facades\Payments;
-
-// For terminal payments
-$cart->createOrder()->setPaymentData([
-    'terminal_id' => 'terminal_123',
-    'description' => 'In-store purchase'
-]);
-
-$result = Payments::driver('fortis-terminal')->cart($cart)->authorize();
+// Update this section on use.
+// Right now I am doing a terminal transaction outside of payment driver
+// so that I can get status and show updates in real time.
+// Then I pass the transaction id to the payment driver to fetch transaction and store.
 ```
 
 ## Testing
 
 ```bash
-composer test
+# No tests  yet
+# composer test
 ```
 
 ## Changelog
