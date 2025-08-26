@@ -2,6 +2,14 @@
 
 All notable changes to `lunar-fortis` will be documented in this file.
 
+## v1.4.0 - 2025-08-26
+
+### What's Changed
+
+* Update terminal checkout process to fetch transaction and store. Complete Auth instead of capture previouse. by @alecgarcia in https://github.com/hyrograsper/lunar-fortis/pull/7
+
+**Full Changelog**: https://github.com/hyrograsper/lunar-fortis/compare/v1.3.0...v1.4.0
+
 ## v1.3.0 - 2025-08-25
 
 ### What's Changed
