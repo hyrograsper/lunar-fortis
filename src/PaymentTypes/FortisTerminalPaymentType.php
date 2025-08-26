@@ -72,9 +72,8 @@ class FortisTerminalPaymentType extends AbstractPayment
                 LunarFortis::getTransaction($this->data['fortis_transaction_id'])
             );
         } catch (ApiException|Exception $e) {
-            Log::error('Failed to fetch fortis transaction and store data. Error: ' . $e->getMessage());
+            Log::error('Failed to fetch fortis transaction and store data. Error: '.$e->getMessage());
         }
-
 
         // Terminal payments are always automatically captured
         $this->order->placed_at = now();
