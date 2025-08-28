@@ -374,9 +374,9 @@ class Terminal extends Model
     /**
      * Get validation rules for Terminal fields
      */
-    public static function getValidationRules(): array
+    public static function getValidationRules(?string $scenario = null): array
     {
-        return [
+        $rules = [
             'title' => ['required', 'string', 'max:255'],
             'serial_number' => ['required', 'string', 'max:255'],
             'location_id' => ['nullable', 'string', 'max:255'],
@@ -384,16 +384,23 @@ class Terminal extends Model
             'terminal_manufacturer_code' => [
                 'nullable',
                 'string',
-                Rule::in([
-                    TerminalManufacturerCodeEnum::ENUM_1,
-                    TerminalManufacturerCodeEnum::ENUM_2,
-                    TerminalManufacturerCodeEnum::ENUM_4,
-                    TerminalManufacturerCodeEnum::ENUM_100,
-                ]),
+                Rule::in(static::getAllowedManufacturerCodes()),
             ],
             'default_product_transaction_id' => ['nullable', 'string', 'max:255'],
             'active' => ['boolean'],
+            'fortis_id' => ['required', 'string', 'max:255'],
         ];
+
+        // Scenario-specific rule modifications
+        return match($scenario) {
+            'create' => array_merge($rules, [
+                'fortis_id' => ['required', 'string', 'max:255', 'unique:fortis_terminals,fortis_id'],
+            ]),
+            'update' => array_merge($rules, [
+                'fortis_id' => ['sometimes', 'required', 'string', 'max:255'],
+            ]),
+            default => $rules,
+        };
     }
 
     /**
@@ -410,16 +417,49 @@ class Terminal extends Model
     }
 
     /**
-     * Get display names for manufacturer codes
+     * Check if a manufacturer code is valid
+     *
+     * @param mixed $code
+     * @return bool
      */
-    public static function getManufacturerCodeLabels(): array
+    public static function isValidManufacturerCode($code): bool
     {
-        return [
+        return in_array($code, static::getAllowedManufacturerCodes(), true);
+    }
+
+    /**
+     * Get display names for manufacturer codes
+     *
+     * @param string|null $code Optional specific code to get label for
+     * @return array|string|null
+     */
+    public static function getManufacturerCodeLabels(?string $code = null)
+    {
+        $labels = [
             TerminalManufacturerCodeEnum::ENUM_1 => 'Manufacturer 1',
             TerminalManufacturerCodeEnum::ENUM_2 => 'Manufacturer 2',
             TerminalManufacturerCodeEnum::ENUM_4 => 'Manufacturer 4',
             TerminalManufacturerCodeEnum::ENUM_100 => 'Manufacturer 100',
         ];
+
+        return $code ? ($labels[$code] ?? null) : $labels;
+    }
+
+    /**
+     * Get manufacturer code options formatted for select dropdowns
+     *
+     * @return array
+     */
+    public static function getManufacturerCodeOptions(): array
+    {
+        $options = [];
+        foreach (static::getManufacturerCodeLabels() as $code => $label) {
+            $options[] = [
+                'value' => $code,
+                'label' => $label,
+            ];
+        }
+        return $options;
     }
 
     // ========================================
