@@ -7,6 +7,7 @@ use Exception;
 use FortisAPILib\Exceptions\ApiException;
 use FortisAPILib\Models\TerminalManufacturerCodeEnum;
 use Hyrograsper\LunarFortis\Facades\LunarFortis;
+use Hyrograsper\LunarFortis\Helpers\FortisErrorHelper;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
@@ -84,7 +85,7 @@ class Terminal extends Model
     /**
      * Sync all terminals from Fortis API
      *
-     * @throws Exception
+     * @throws ApiException
      */
     public static function syncFromFortis(): array
     {
@@ -134,7 +135,7 @@ class Terminal extends Model
                 }
             }
 
-        } catch (Exception $e) {
+        } catch (ApiException $e) {
             Log::error('Failed to fetch terminals from Fortis API: '.$e->getMessage());
             throw $e;
         }
@@ -161,7 +162,19 @@ class Terminal extends Model
                 amount: $amount,
                 options: $options
             );
-        } catch (ApiException|Exception $e) {
+        } catch (ApiException $e) {
+            $errorDetails = FortisErrorHelper::parseApiException($e);
+
+            Log::error('Terminal payment processing failed', [
+                'terminal_id' => $this->fortis_id,
+                'terminal_title' => $this->title,
+                'amount' => $amount,
+                'error_details' => $errorDetails,
+            ]);
+
+            $formattedError = FortisErrorHelper::formatApiErrors($e);
+            throw new Exception("Payment processing failed: {$formattedError}");
+        } catch (Exception $e) {
             Log::error('Terminal payment processing failed', [
                 'terminal_id' => $this->fortis_id,
                 'terminal_title' => $this->title,
@@ -194,16 +207,17 @@ class Terminal extends Model
 
             return $response->getData()->getAsync()->getCode();
         } catch (ApiException $e) {
-            // TODO - Create a log that will log fortis errors better and return better messages.
-//            dd($e, $e->getHttpResponse()->getStatusCode(), json_decode($e->getHttpResponse()->getRawBody()));
-            Log::error('Terminal payment initiation failed' . print_r($e, true), [
+            $errorDetails = FortisErrorHelper::parseApiException($e);
+
+            Log::error('Terminal payment initiation failed', [
                 'terminal_id' => $this->fortis_id,
                 'terminal_title' => $this->title,
                 'amount' => $amount,
-                'error' => $e->getMessage(),
-                'response' => json_decode($e->getHttpResponse()->getRawBody()),
+                'error_details' => $errorDetails,
             ]);
-            throw new Exception("Payment initiation failed: {$e->getMessage()}");
+
+            $formattedError = FortisErrorHelper::formatApiErrors($e);
+            throw new Exception("Payment initiation failed: {$formattedError}");
         }
     }
 
@@ -227,13 +241,17 @@ class Terminal extends Model
                 'type' => $statusData->getType(),
                 'ttl' => $statusData->getTtl(),
             ];
-        } catch (ApiException|Exception $e) {
+        } catch (ApiException $e) {
+            $errorDetails = FortisErrorHelper::parseApiException($e);
+
             Log::error('Terminal payment status check failed', [
                 'terminal_id' => $this->fortis_id,
                 'status_code' => $statusCode,
-                'error' => $e->getMessage(),
+                'error_details' => $errorDetails,
             ]);
-            throw new Exception("Payment status check failed: {$e->getMessage()}");
+
+            $formattedError = FortisErrorHelper::formatApiErrors($e);
+            throw new Exception("Payment status check failed: {$formattedError}");
         }
     }
 
@@ -261,13 +279,17 @@ class Terminal extends Model
                 'ttl' => $statusData->getTtl(),
                 'timed_out' => $statusData->getProgress() < 100 && ! $statusData->getError(),
             ];
-        } catch (ApiException|Exception $e) {
+        } catch (ApiException $e) {
+            $errorDetails = FortisErrorHelper::parseApiException($e);
+
             Log::error('Terminal payment wait failed', [
                 'terminal_id' => $this->fortis_id,
                 'status_code' => $statusCode,
-                'error' => $e->getMessage(),
+                'error_details' => $errorDetails,
             ]);
-            throw new Exception("Payment wait failed: {$e->getMessage()}");
+
+            $formattedError = FortisErrorHelper::formatApiErrors($e);
+            throw new Exception("Payment wait failed: {$formattedError}");
         }
     }
 
@@ -284,7 +306,7 @@ class Terminal extends Model
     /**
      * Sync a single terminal from Fortis API by ID
      *
-     * @throws Exception
+     * @throws ApiException
      */
     public static function syncSingleFromFortis(string $fortisId): ?static
     {
@@ -311,7 +333,7 @@ class Terminal extends Model
 
             return $terminal;
 
-        } catch (Exception $e) {
+        } catch (ApiException $e) {
             Log::error("Failed to sync terminal {$fortisId}: ".$e->getMessage());
             throw $e;
         }
