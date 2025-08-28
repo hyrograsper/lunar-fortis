@@ -44,7 +44,10 @@ class Terminal extends Model
         'fortis_data' => 'array',
     ];
 
-    // Scopes for common queries
+    // ========================================
+    // Query Scopes
+    // ========================================
+
     public function scopeActive($query)
     {
         return $query->where('active', true);
@@ -60,13 +63,19 @@ class Terminal extends Model
         return $query->where('terminal_manufacturer_code', $manufacturerCode);
     }
 
-    // Accessor for display name
+    // ========================================
+    // Accessors & Mutators
+    // ========================================
+
     public function getDisplayNameAttribute(): string
     {
         return $this->title.' ('.$this->serial_number.')';
     }
 
-    // Check if terminal needs sync (hasn't been synced recently)
+    // ========================================
+    // Terminal Status & Sync Methods
+    // ========================================
+
     public function needsSync(?int $hoursThreshold = 24): bool
     {
         if (! $this->synced_at) {
@@ -76,11 +85,19 @@ class Terminal extends Model
         return $this->synced_at->diffInHours(now()) > $hoursThreshold;
     }
 
-    // Mark as synced
     public function markSynced(): void
     {
         $this->update(['synced_at' => now()]);
     }
+
+    public function isReadyForPayments(): bool
+    {
+        return $this->active;
+    }
+
+    // ========================================
+    // Fortis API Sync Methods
+    // ========================================
 
     /**
      * Sync all terminals from Fortis API
@@ -156,7 +173,52 @@ class Terminal extends Model
         return $stats;
     }
 
-    // Payment Processing Helper Methods
+    /**
+     * Sync a single terminal from Fortis API by ID
+     *
+     * @throws Exception
+     */
+    public static function syncSingleFromFortis(string $fortisId): ?static
+    {
+        try {
+            // Fetch single terminal from Fortis API
+            $response = LunarFortis::getTerminal($fortisId);
+            $data = $response->getData();
+
+            if (! $data) {
+                return null;
+            }
+
+            // Extract terminal data
+            $terminalAttributes = static::mapFortisDataToAttributes($data);
+
+            // Update or create terminal
+            $terminal = static::updateOrCreate(
+                ['fortis_id' => $terminalAttributes['fortis_id']],
+                $terminalAttributes
+            );
+
+            // Mark as synced
+            $terminal->markSynced();
+
+            return $terminal;
+
+        } catch (ApiException $e) {
+            $errorDetails = FortisErrorHelper::parseApiException($e);
+            
+            Log::error("Failed to sync terminal {$fortisId}", [
+                'fortis_id' => $fortisId,
+                'error_details' => $errorDetails,
+            ]);
+            
+            $formattedError = FortisErrorHelper::formatApiErrors($e);
+            throw new Exception("Failed to sync terminal {$fortisId}: {$formattedError}");
+        }
+    }
+
+    // ========================================
+    // Payment Processing Methods
+    // ========================================
 
     /**
      * Process a credit card payment using this terminal
@@ -305,58 +367,9 @@ class Terminal extends Model
         }
     }
 
-    /**
-     * Check if terminal is ready for payments
-     *
-     * @return bool True if terminal can process payments
-     */
-    public function isReadyForPayments(): bool
-    {
-        return $this->active;
-    }
-
-    /**
-     * Sync a single terminal from Fortis API by ID
-     *
-     * @throws Exception
-     */
-    public static function syncSingleFromFortis(string $fortisId): ?static
-    {
-        try {
-            // Fetch single terminal from Fortis API
-            $response = LunarFortis::getTerminal($fortisId);
-            $data = $response->getData();
-
-            if (! $data) {
-                return null;
-            }
-
-            // Extract terminal data
-            $terminalAttributes = static::mapFortisDataToAttributes($data);
-
-            // Update or create terminal
-            $terminal = static::updateOrCreate(
-                ['fortis_id' => $terminalAttributes['fortis_id']],
-                $terminalAttributes
-            );
-
-            // Mark as synced
-            $terminal->markSynced();
-
-            return $terminal;
-
-        } catch (ApiException $e) {
-            $errorDetails = FortisErrorHelper::parseApiException($e);
-            
-            Log::error("Failed to sync terminal {$fortisId}", [
-                'fortis_id' => $fortisId,
-                'error_details' => $errorDetails,
-            ]);
-            
-            $formattedError = FortisErrorHelper::formatApiErrors($e);
-            throw new Exception("Failed to sync terminal {$fortisId}: {$formattedError}");
-        }
-    }
+    // ========================================
+    // Validation & Configuration Methods
+    // ========================================
 
     /**
      * Get validation rules for Terminal fields
@@ -408,6 +421,10 @@ class Terminal extends Model
             TerminalManufacturerCodeEnum::ENUM_100 => 'Manufacturer 100',
         ];
     }
+
+    // ========================================
+    // Private Helper Methods
+    // ========================================
 
     protected static function mapFortisDataToAttributes($data): array
     {
