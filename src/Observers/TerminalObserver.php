@@ -3,7 +3,6 @@
 namespace Hyrograsper\LunarFortis\Observers;
 
 use Exception;
-use FortisAPILib\Exceptions\ApiException;
 use Hyrograsper\LunarFortis\LunarFortis;
 use Hyrograsper\LunarFortis\Models\Terminal;
 use Illuminate\Support\Facades\Log;
@@ -39,35 +38,19 @@ class TerminalObserver
 
         try {
             $this->syncToFortis($terminal, $significantChanges);
-        } catch (ApiException $e) {
-            Log::error('Failed to sync terminal to Fortis API after update (API Exception)', [
-                'terminal_id' => $terminal->id,
-                'fortis_id' => $terminal->fortis_id,
-                'terminal_title' => $terminal->title,
-                'changed_fields' => $significantChanges,
-                'changed_values' => array_intersect_key($terminal->getAttributes(), array_flip($significantChanges)),
-                'api_error_code' => $e->getCode(),
-                'api_error_message' => $e->getMessage(),
-                'api_response_body' => method_exists($e, 'getResponseBody') ? $e->getResponseBody() : null,
-                'stack_trace' => $e->getTraceAsString(),
-            ]);
-
-            throw new Exception('Failed to sync terminal to Fortis API after update (API Exception) - '.$e->getMessage());
         } catch (Exception $e) {
-            Log::error('Failed to sync terminal to Fortis API after update (General Exception)', [
+            // Error handling is now centralized in LunarFortis, so we just need to log the sync failure
+            Log::error('Failed to sync terminal to Fortis API during update', [
                 'terminal_id' => $terminal->id,
                 'fortis_id' => $terminal->fortis_id,
                 'terminal_title' => $terminal->title,
                 'changed_fields' => $significantChanges,
                 'changed_values' => array_intersect_key($terminal->getAttributes(), array_flip($significantChanges)),
-                'error_type' => get_class($e),
                 'error_message' => $e->getMessage(),
-                'error_file' => $e->getFile(),
-                'error_line' => $e->getLine(),
-                'stack_trace' => $e->getTraceAsString(),
             ]);
 
-            throw new Exception('Failed to sync terminal to Fortis API after update (General Exception) - '.$e->getMessage());
+            // Re-throw the exception to prevent database save and let Filament handle the error
+            throw new Exception("Failed to sync terminal to Fortis API: {$e->getMessage()}");
         }
 
         return true;
@@ -87,27 +70,18 @@ class TerminalObserver
 
         try {
             $this->createInFortis($terminal);
-        } catch (ApiException $e) {
-            Log::error('Failed to create terminal in Fortis API (API Exception)', [
-                'terminal_id' => $terminal->id,
-                'terminal_title' => $terminal->title,
-                'terminal_serial' => $terminal->serial_number,
-                'api_error_code' => $e->getCode(),
-                'api_error_message' => $e->getMessage(),
-                'api_response_body' => method_exists($e, 'getResponseBody') ? $e->getResponseBody() : null,
-                'stack_trace' => $e->getTraceAsString(),
-            ]);
         } catch (Exception $e) {
-            Log::error('Failed to create terminal in Fortis API (General Exception)', [
+            // Error handling is now centralized in LunarFortis, so we just need to log the sync failure
+            Log::error('Failed to create terminal in Fortis API during creation', [
                 'terminal_id' => $terminal->id,
                 'terminal_title' => $terminal->title,
                 'terminal_serial' => $terminal->serial_number,
-                'error_type' => get_class($e),
                 'error_message' => $e->getMessage(),
-                'error_file' => $e->getFile(),
-                'error_line' => $e->getLine(),
-                'stack_trace' => $e->getTraceAsString(),
             ]);
+
+            // For creation, we might want to allow local save but log the sync failure
+            // Alternatively, throw exception to prevent creation entirely:
+            // throw new Exception("Failed to create terminal in Fortis API: {$e->getMessage()}");
         }
     }
 
