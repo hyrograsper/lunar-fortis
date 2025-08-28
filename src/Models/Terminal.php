@@ -105,11 +105,8 @@ class Terminal extends Model
                 $stats['total_processed']++;
 
                 try {
-                    // For list responses, the terminal data is directly in the list item
-                    $data = $terminalData;
-
                     // Extract terminal data
-                    $terminalAttributes = static::mapFortisDataToAttributes($data);
+                    $terminalAttributes = static::mapFortisDataToAttributes($terminalData);
 
                     // Update or create terminal
                     $terminal = static::updateOrCreate(
@@ -126,9 +123,19 @@ class Terminal extends Model
                         $stats['updated']++;
                     }
 
+                } catch (ApiException $e) {
+                    $stats['errors']++;
+                    $errorDetails = FortisErrorHelper::parseApiException($e);
+                    
+                    Log::error('Failed to sync individual terminal', [
+                        'fortis_id' => $terminalAttributes['fortis_id'] ?? 'unknown',
+                        'terminal_data' => $terminalData ?? null,
+                        'error_details' => $errorDetails,
+                    ]);
                 } catch (Exception $e) {
                     $stats['errors']++;
-                    Log::error('Failed to sync terminal: '.$e->getMessage(), [
+                    Log::error('Failed to sync individual terminal', [
+                        'fortis_id' => $terminalAttributes['fortis_id'] ?? 'unknown',
                         'terminal_data' => $terminalData ?? null,
                         'error' => $e->getMessage(),
                     ]);
@@ -199,7 +206,6 @@ class Terminal extends Model
      */
     public function initiatePayment(int $amount, array $options = []): string
     {
-        Log::debug('INITAL PAYMET ACTIVE: '.($this->active ? 'True' : 'False').print_r($this->toArray(), true));
         if (! $this->active) {
             throw new Exception("Terminal {$this->fortis_id} is not active");
         }
