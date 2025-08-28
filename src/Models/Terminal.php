@@ -85,7 +85,7 @@ class Terminal extends Model
     /**
      * Sync all terminals from Fortis API
      *
-     * @throws ApiException
+     * @throws Exception
      */
     public static function syncFromFortis(): array
     {
@@ -136,8 +136,14 @@ class Terminal extends Model
             }
 
         } catch (ApiException $e) {
-            Log::error('Failed to fetch terminals from Fortis API: '.$e->getMessage());
-            throw $e;
+            $errorDetails = FortisErrorHelper::parseApiException($e);
+            
+            Log::error('Failed to fetch terminals from Fortis API', [
+                'error_details' => $errorDetails,
+            ]);
+            
+            $formattedError = FortisErrorHelper::formatApiErrors($e);
+            throw new Exception("Failed to sync terminals from Fortis API: {$formattedError}");
         }
 
         return $stats;
@@ -306,7 +312,7 @@ class Terminal extends Model
     /**
      * Sync a single terminal from Fortis API by ID
      *
-     * @throws ApiException
+     * @throws Exception
      */
     public static function syncSingleFromFortis(string $fortisId): ?static
     {
@@ -334,8 +340,15 @@ class Terminal extends Model
             return $terminal;
 
         } catch (ApiException $e) {
-            Log::error("Failed to sync terminal {$fortisId}: ".$e->getMessage());
-            throw $e;
+            $errorDetails = FortisErrorHelper::parseApiException($e);
+            
+            Log::error("Failed to sync terminal {$fortisId}", [
+                'fortis_id' => $fortisId,
+                'error_details' => $errorDetails,
+            ]);
+            
+            $formattedError = FortisErrorHelper::formatApiErrors($e);
+            throw new Exception("Failed to sync terminal {$fortisId}: {$formattedError}");
         }
     }
 
