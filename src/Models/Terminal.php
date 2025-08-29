@@ -297,7 +297,7 @@ class Terminal extends Model
         ];
 
         // Scenario-specific rule modifications
-        return match($scenario) {
+        return match ($scenario) {
             'create' => array_merge($rules, [
                 'fortis_id' => ['required', 'string', 'max:255', 'unique:fortis_terminals,fortis_id'],
             ]),
@@ -324,8 +324,7 @@ class Terminal extends Model
     /**
      * Check if a manufacturer code is valid
      *
-     * @param mixed $code
-     * @return bool
+     * @param  mixed  $code
      */
     public static function isValidManufacturerCode($code): bool
     {
@@ -335,7 +334,7 @@ class Terminal extends Model
     /**
      * Get display names for manufacturer codes
      *
-     * @param string|null $code Optional specific code to get label for
+     * @param  string|null  $code  Optional specific code to get label for
      * @return array|string|null
      */
     public static function getManufacturerCodeLabels(?string $code = null)
@@ -352,8 +351,6 @@ class Terminal extends Model
 
     /**
      * Get manufacturer code options formatted for select dropdowns
-     *
-     * @return array
      */
     public static function getManufacturerCodeOptions(): array
     {
@@ -364,6 +361,7 @@ class Terminal extends Model
                 'label' => $label,
             ];
         }
+
         return $options;
     }
 

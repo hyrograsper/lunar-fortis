@@ -26,15 +26,15 @@ class FortisErrorHelper
         try {
             $rawBody = $exception->getHttpResponse()->getRawBody();
             $errorDetails['raw_body'] = $rawBody;
-            
+
             $decodedBody = json_decode($rawBody);
-            
+
             if ($decodedBody && is_object($decodedBody)) {
                 $errorDetails['status_code'] = $decodedBody->statusCode ?? null;
                 $errorDetails['type'] = $decodedBody->type ?? null;
                 $errorDetails['title'] = $decodedBody->title ?? null;
                 $errorDetails['detail'] = $decodedBody->detail ?? null;
-                
+
                 // Extract validation errors from meta.errors
                 if (isset($decodedBody->meta->errors) && is_object($decodedBody->meta->errors)) {
                     $errorDetails['errors'] = (array) $decodedBody->meta->errors;
@@ -57,20 +57,20 @@ class FortisErrorHelper
     public static function formatApiErrors(ApiException $exception): string
     {
         $errorDetails = static::parseApiException($exception);
-        
+
         $formattedError = $errorDetails['title'] ?? 'API Error';
-        
+
         if ($errorDetails['detail']) {
-            $formattedError .= ': ' . $errorDetails['detail'];
+            $formattedError .= ': '.$errorDetails['detail'];
         }
-        
-        if (!empty($errorDetails['errors'])) {
+
+        if (! empty($errorDetails['errors'])) {
             $formattedError .= "\nValidation errors:";
             foreach ($errorDetails['errors'] as $field => $fieldErrors) {
-                $formattedError .= "\n- {$field}: " . implode(', ', (array) $fieldErrors);
+                $formattedError .= "\n- {$field}: ".implode(', ', (array) $fieldErrors);
             }
         }
-        
+
         return $formattedError;
     }
 
@@ -80,6 +80,7 @@ class FortisErrorHelper
     public static function getValidationErrors(ApiException $exception): array
     {
         $errorDetails = static::parseApiException($exception);
+
         return $errorDetails['errors'] ?? [];
     }
 
@@ -89,6 +90,7 @@ class FortisErrorHelper
     public static function hasValidationErrors(ApiException $exception): bool
     {
         $errors = static::getValidationErrors($exception);
-        return !empty($errors);
+
+        return ! empty($errors);
     }
 }

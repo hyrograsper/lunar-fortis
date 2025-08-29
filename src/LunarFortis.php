@@ -104,7 +104,7 @@ class LunarFortis
             return $data->getClientToken();
         } catch (ApiException $e) {
             $errorDetails = FortisErrorHelper::parseApiException($e);
-            
+
             Log::error('Failed to get client token for transaction intention', [
                 'amount' => $amount,
                 'action' => $action,
@@ -150,7 +150,7 @@ class LunarFortis
             return $result;
         } catch (ApiException $e) {
             $errorDetails = FortisErrorHelper::parseApiException($e);
-            
+
             Log::error('Failed to complete authorized transaction', [
                 'transaction_reference' => $transaction->reference,
                 'amount' => $amount,
@@ -201,7 +201,7 @@ class LunarFortis
             return $result;
         } catch (ApiException $e) {
             $errorDetails = FortisErrorHelper::parseApiException($e);
-            
+
             Log::error('Failed to authorize credit card from token', [
                 'token_id' => $tokenId,
                 'order_reference' => $order->reference,
@@ -240,7 +240,7 @@ class LunarFortis
             return $result;
         } catch (ApiException $e) {
             $errorDetails = FortisErrorHelper::parseApiException($e);
-            
+
             Log::error('Failed to process refund', [
                 'transaction_reference' => $transaction->reference,
                 'refund_amount' => $amount,
@@ -269,7 +269,7 @@ class LunarFortis
             return $result;
         } catch (ApiException $e) {
             $errorDetails = FortisErrorHelper::parseApiException($e);
-            
+
             Log::error('Failed to retrieve transaction', [
                 'transaction_id' => $transactionId,
                 'error_details' => $errorDetails,
@@ -319,7 +319,7 @@ class LunarFortis
             return $result;
         } catch (ApiException $e) {
             $errorDetails = FortisErrorHelper::parseApiException($e);
-            
+
             Log::error('Failed to create terminal', [
                 'terminal_data' => $terminalData,
                 'error_details' => $errorDetails,
@@ -405,7 +405,7 @@ class LunarFortis
             return $result;
         } catch (ApiException $e) {
             $errorDetails = FortisErrorHelper::parseApiException($e);
-            
+
             Log::error('Failed to list terminals', [
                 'options' => $options,
                 'error_details' => $errorDetails,
@@ -437,7 +437,7 @@ class LunarFortis
             return $result;
         } catch (ApiException $e) {
             $errorDetails = FortisErrorHelper::parseApiException($e);
-            
+
             Log::error('Failed to retrieve terminal', [
                 'terminal_id' => $terminalId,
                 'expand' => $expand,
@@ -490,7 +490,7 @@ class LunarFortis
             return $result;
         } catch (ApiException $e) {
             $errorDetails = FortisErrorHelper::parseApiException($e);
-            
+
             Log::error('Failed to update terminal', [
                 'terminal_id' => $terminalId,
                 'terminal_data' => $terminalData,
@@ -649,7 +649,7 @@ class LunarFortis
             return $result;
         } catch (ApiException $e) {
             $errorDetails = FortisErrorHelper::parseApiException($e);
-            
+
             Log::error('Failed to charge terminal credit card', [
                 'terminal_id' => $terminalId,
                 'amount' => $amount,
@@ -683,7 +683,7 @@ class LunarFortis
             return $result;
         } catch (ApiException $e) {
             $errorDetails = FortisErrorHelper::parseApiException($e);
-            
+
             Log::error('Failed to check terminal transaction status', [
                 'status_code' => $statusCode,
                 'error_details' => $errorDetails,
@@ -794,7 +794,7 @@ class LunarFortis
 
         } catch (ApiException $e) {
             $errorDetails = FortisErrorHelper::parseApiException($e);
-            
+
             Log::error('Terminal credit card processing failed', [
                 'terminal_id' => $terminalId,
                 'amount' => $amount,
