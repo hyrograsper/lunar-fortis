@@ -33,13 +33,12 @@ class CreateTerminal extends CreateRecord
             // Handle Fortis sync failures during creation
             Notification::make()
                 ->title('Terminal creation failed')
-                ->body('Failed to sync new terminal to Fortis API: ' . $exception->getMessage())
+                ->body($exception->getMessage())
                 ->danger()
                 ->persistent()
                 ->send();
 
-            // Re-throw the exception to prevent Filament from showing success notification
-            throw $exception;
+            $this->halt();
         }
     }
 }
