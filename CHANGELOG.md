@@ -2,6 +2,14 @@
 
 All notable changes to `lunar-fortis` will be documented in this file.
 
+## v1.5.0 - 2025-08-30
+
+### What's Changed
+
+* Refactor error handling to sdk by @alecgarcia in https://github.com/hyrograsper/lunar-fortis/pull/8
+
+**Full Changelog**: https://github.com/hyrograsper/lunar-fortis/compare/v1.4.0...v1.5.0
+
 ## v1.4.0 - 2025-08-26
 
 ### What's Changed
