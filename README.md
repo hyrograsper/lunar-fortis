@@ -134,6 +134,16 @@ return [
     |
     */
     'success_livewire_event' => null,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Debug Logging
+    |--------------------------------------------------------------------------
+    | Turn debug logging on to view each step of the payment process.
+    | Accepted values: true, false.
+    |
+    */
+    'debug' => env('FORTIS_DEBUG', false),
 ];
 ```
 
@@ -155,6 +165,7 @@ FORTIS_USER_API_KEY=your_fortis_api_key
 FORTIS_DEVELOPER_ID=your_fortis_developer_id
 FORTIS_LOCATION_ID=your_fortis_location_id
 FORTIS_ENVIRONMENT=sandbox  # or 'production'
+FORTIS_DEBUG=false  # Set to true to enable debug logging
 ```
 
 ### Payment Configuration
