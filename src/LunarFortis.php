@@ -30,6 +30,7 @@ use FortisAPILib\Models\ResponseTransaction;
 use FortisAPILib\Models\ResponseTransactionProcessing;
 use FortisAPILib\Models\TerminalManufacturerCodeEnum;
 use FortisAPILib\Models\V1ElementsTransactionIntentionRequest;
+use Hyrograsper\LunarFortis\Helpers\FortisErrorHelper;
 use Illuminate\Support\Facades\Log;
 use Lunar\Models\Contracts\Transaction as TransactionContract;
 use Lunar\Models\Order;
@@ -84,7 +85,7 @@ class LunarFortis
     }
 
     /**
-     * @throws ApiException
+     * @throws Exception
      */
     public function getClientTokenForSaleAmount(int $amount, string $action = ActionEnum::SALE): ?string
     {
@@ -95,85 +96,198 @@ class LunarFortis
                     body: $this->buildTransactionIntentionRequest($amount, $action)
                 )->getData();
 
+            if (config('lunar-fortis.debug')) {
+                Log::debug('Client token generated successfully', [
+                    'amount' => $amount,
+                    'action' => $action,
+                ]);
+            }
+
             return $data->getClientToken();
-        } catch (ApiException|Exception $e) {
-            $message = "Unable to get client token for {$action}: {$e->getMessage()}";
-            Log::error($message);
-            throw new Exception($message);
+        } catch (ApiException $e) {
+            $errorDetails = FortisErrorHelper::parseApiException($e);
+
+            Log::error('Failed to get client token for transaction intention', [
+                'amount' => $amount,
+                'action' => $action,
+                'error_details' => $errorDetails,
+            ]);
+
+            $formattedError = FortisErrorHelper::formatApiErrors($e);
+            throw new Exception("Unable to get client token for {$action}: {$formattedError}");
+        } catch (Exception $e) {
+            Log::error('Failed to get client token for transaction intention', [
+                'amount' => $amount,
+                'action' => $action,
+                'error' => $e->getMessage(),
+            ]);
+            throw new Exception("Unable to get client token for {$action}: {$e->getMessage()}");
         }
     }
 
     /**
-     * @throws ApiException
+     * @throws Exception
      */
     public function completeAuthorizedTransaction(TransactionContract $transaction, int $amount = 0): ResponseTransaction
     {
-        return $this->getClientInstance()
-            ->getTransactionsUpdatesController()
-            ->authComplete(
-                $transaction->reference,
-                V1TransactionsAuthCompleteRequestBuilder::init()
-                    ->locationId(config('services.fortis.locationId'))
-                    ->transactionAmount($amount)
-                    ->orderNumber($transaction->order?->reference)
-                    ->customerId($transaction->order?->customer_id)
-                    ->build()
-            );
+        try {
+            $result = $this->getClientInstance()
+                ->getTransactionsUpdatesController()
+                ->authComplete(
+                    $transaction->reference,
+                    V1TransactionsAuthCompleteRequestBuilder::init()
+                        ->locationId(config('services.fortis.locationId'))
+                        ->transactionAmount($amount)
+                        ->orderNumber($transaction->order?->reference)
+                        ->customerId($transaction->order?->customer_id)
+                        ->build()
+                );
+
+            if (config('lunar-fortis.debug')) {
+                Log::debug('Transaction authorization completed successfully', [
+                    'transaction_reference' => $transaction->reference,
+                    'amount' => $amount,
+                    'order_reference' => $transaction->order?->reference,
+                ]);
+            }
+
+            return $result;
+        } catch (ApiException $e) {
+            $errorDetails = FortisErrorHelper::parseApiException($e);
+
+            Log::error('Failed to complete authorized transaction', [
+                'transaction_reference' => $transaction->reference,
+                'amount' => $amount,
+                'order_reference' => $transaction->order?->reference,
+                'error_details' => $errorDetails,
+            ]);
+
+            $formattedError = FortisErrorHelper::formatApiErrors($e);
+            throw new Exception("Failed to complete authorized transaction: {$formattedError}");
+        }
     }
 
     /**
-     * @throws ApiException
+     * @throws Exception
      */
     public function authorizeCcFromToken(string $tokenId, Order $order): ResponseTransaction
     {
-        /** @var OrderAddress $billingAddress */
-        $billingAddress = $order->billingAddress;
+        try {
+            /** @var OrderAddress $billingAddress */
+            $billingAddress = $order->billingAddress;
 
-        return $this->getClientInstance()
-            ->getTransactionsCreditCardController()
-            ->ccAuthOnlyTokenized(
-                V1TransactionsCcAuthOnlyTokenRequestBuilder::init($order->total->value)
-                    ->tokenId($tokenId)
-                    ->orderNumber($order->reference)
-                    ->billingAddress(
-                        BillingAddress1Builder::init()
-                            ->street($billingAddress->line_one)
-                            ->city($billingAddress->city)
-                            ->state($billingAddress->state)
-                            ->postalCode($billingAddress->postcode)
-                            ->country($billingAddress->country->iso3)
-                            ->build()
-                    )
-                    ->customerId($order->customer_id)
-                    ->build()
-            );
+            $result = $this->getClientInstance()
+                ->getTransactionsCreditCardController()
+                ->ccAuthOnlyTokenized(
+                    V1TransactionsCcAuthOnlyTokenRequestBuilder::init($order->total->value)
+                        ->tokenId($tokenId)
+                        ->orderNumber($order->reference)
+                        ->billingAddress(
+                            BillingAddress1Builder::init()
+                                ->street($billingAddress->line_one)
+                                ->city($billingAddress->city)
+                                ->state($billingAddress->state)
+                                ->postalCode($billingAddress->postcode)
+                                ->country($billingAddress->country->iso3)
+                                ->build()
+                        )
+                        ->customerId($order->customer_id)
+                        ->build()
+                );
+
+            if (config('lunar-fortis.debug')) {
+                Log::debug('Credit card authorization from token completed successfully', [
+                    'token_id' => $tokenId,
+                    'order_reference' => $order->reference,
+                    'amount' => $order->total->value,
+                    'customer_id' => $order->customer_id,
+                ]);
+            }
+
+            return $result;
+        } catch (ApiException $e) {
+            $errorDetails = FortisErrorHelper::parseApiException($e);
+
+            Log::error('Failed to authorize credit card from token', [
+                'token_id' => $tokenId,
+                'order_reference' => $order->reference,
+                'amount' => $order->total->value,
+                'customer_id' => $order->customer_id,
+                'error_details' => $errorDetails,
+            ]);
+
+            $formattedError = FortisErrorHelper::formatApiErrors($e);
+            throw new Exception("Failed to authorize credit card from token: {$formattedError}");
+        }
     }
 
     /**
-     * @throws ApiException
+     * @throws Exception
      */
     public function refund(TransactionContract $transaction, int $amount): ResponseTransaction
     {
-        return $this->getClientInstance()
-            ->getTransactionsCreditCardController()
-            ->cCRefund(
-                V1TransactionsCcRefundKeyedRequestBuilder::init($amount)
-                    ->previousTransactionId($transaction->reference)
-                    ->locationId(config('services.fortis.locationId'))
-                    ->orderNumber($transaction->reference)
-                    ->cvv(999)
-                    ->build()
-            );
+        try {
+            $result = $this->getClientInstance()
+                ->getTransactionsCreditCardController()
+                ->cCRefund(
+                    V1TransactionsCcRefundKeyedRequestBuilder::init($amount)
+                        ->previousTransactionId($transaction->reference)
+                        ->locationId(config('services.fortis.locationId'))
+                        ->orderNumber($transaction->reference)
+                        ->cvv(999)
+                        ->build()
+                );
+
+            if (config('lunar-fortis.debug')) {
+                Log::debug('Transaction refund completed successfully', [
+                    'transaction_reference' => $transaction->reference,
+                    'refund_amount' => $amount,
+                ]);
+            }
+
+            return $result;
+        } catch (ApiException $e) {
+            $errorDetails = FortisErrorHelper::parseApiException($e);
+
+            Log::error('Failed to process refund', [
+                'transaction_reference' => $transaction->reference,
+                'refund_amount' => $amount,
+                'error_details' => $errorDetails,
+            ]);
+
+            $formattedError = FortisErrorHelper::formatApiErrors($e);
+            throw new Exception("Failed to process refund: {$formattedError}");
+        }
     }
 
     /**
-     * @throws ApiException
+     * @throws Exception
      */
     public function getTransaction(string $transactionId): ResponseTransaction
     {
-        return $this->getClientInstance()
-            ->getTransactionsReadController()
-            ->getTransaction($transactionId);
+        try {
+            $result = $this->getClientInstance()
+                ->getTransactionsReadController()
+                ->getTransaction($transactionId);
+
+            if (config('lunar-fortis.debug')) {
+                Log::debug('Transaction retrieved successfully', [
+                    'transaction_id' => $transactionId,
+                ]);
+            }
+
+            return $result;
+        } catch (ApiException $e) {
+            $errorDetails = FortisErrorHelper::parseApiException($e);
+
+            Log::error('Failed to retrieve transaction', [
+                'transaction_id' => $transactionId,
+                'error_details' => $errorDetails,
+            ]);
+
+            $formattedError = FortisErrorHelper::formatApiErrors($e);
+            throw new Exception("Failed to retrieve transaction: {$formattedError}");
+        }
     }
 
     // Terminal Management Methods
@@ -181,139 +295,230 @@ class LunarFortis
     /**
      * Create a new terminal device
      *
-     * @throws ApiException
+     * @throws Exception
      */
     public function createTerminal(array $terminalData): ResponseTerminal
     {
-        $builder = V1TerminalsRequestBuilder::init(
-            locationId: $terminalData['location_id'] ?? config('services.fortis.locationId'),
-            terminalApplicationId: $terminalData['terminal_application_id'],
-            terminalManufacturerCode: $terminalData['terminal_manufacturer_code'] ?? TerminalManufacturerCodeEnum::ENUM_1,
-            title: $terminalData['title'],
-            serialNumber: $terminalData['serial_number']
-        );
+        try {
+            $builder = V1TerminalsRequestBuilder::init(
+                locationId: $terminalData['location_id'] ?? config('services.fortis.locationId'),
+                terminalApplicationId: $terminalData['terminal_application_id'],
+                terminalManufacturerCode: $terminalData['terminal_manufacturer_code'] ?? TerminalManufacturerCodeEnum::ENUM_1,
+                title: $terminalData['title'],
+                serialNumber: $terminalData['serial_number']
+            );
 
-        // Add optional fields if provided
-        if (isset($terminalData['default_product_transaction_id'])) {
-            $builder->defaultProductTransactionId($terminalData['default_product_transaction_id']);
-        }
-        if (isset($terminalData['active'])) {
-            $builder->active($terminalData['active']);
-        }
+            // Add optional fields if provided
+            if (isset($terminalData['default_product_transaction_id'])) {
+                $builder->defaultProductTransactionId($terminalData['default_product_transaction_id']);
+            }
+            if (isset($terminalData['active'])) {
+                $builder->active($terminalData['active']);
+            }
 
-        return $this->getClientInstance()
-            ->getTerminalsController()
-            ->createANewTerminalDevice($builder->build());
+            $result = $this->getClientInstance()
+                ->getTerminalsController()
+                ->createANewTerminalDevice($builder->build());
+
+            if (config('lunar-fortis.debug')) {
+                Log::debug('Terminal created successfully', [
+                    'title' => $terminalData['title'],
+                    'serial_number' => $terminalData['serial_number'],
+                    'terminal_id' => $result->getData()->getId(),
+                ]);
+            }
+
+            return $result;
+        } catch (ApiException $e) {
+            $errorDetails = FortisErrorHelper::parseApiException($e);
+
+            Log::error('Failed to create terminal', [
+                'terminal_data' => $terminalData,
+                'error_details' => $errorDetails,
+            ]);
+
+            $formattedError = FortisErrorHelper::formatApiErrors($e);
+            throw new Exception("Failed to create terminal: {$formattedError}");
+        }
     }
 
     /**
      * Get all terminals for the location
      *
-     * @throws ApiException
+     * @throws Exception
      */
     public function listTerminals(array $options = []): ResponseTerminalsCollection
     {
-        $page = null;
-        $order = null;
-        $filterBy = null;
-        $expand = $options['expand'] ?? null;
-        $format = $options['format'] ?? null;
-        $typeahead = $options['typeahead'] ?? null;
-        $fields = $options['fields'] ?? null;
+        try {
+            $page = null;
+            $order = null;
+            $filterBy = null;
+            $expand = $options['expand'] ?? null;
+            $format = $options['format'] ?? null;
+            $typeahead = $options['typeahead'] ?? null;
+            $fields = $options['fields'] ?? null;
 
-        // Build pagination if provided
-        if (isset($options['page'])) {
-            $page = PageBuilder::init()
-                ->number($options['page']['number'] ?? 1)
-                ->size($options['page']['size'] ?? 50)
-                ->build();
-        }
-
-        // Build order if provided
-        if (isset($options['order'])) {
-            $order = [];
-            foreach ($options['order'] as $orderItem) {
-                // Convert string operators to proper enum values
-                $operator = match (strtolower($orderItem['operator'])) {
-                    'asc' => OperatorEnum::ASC,
-                    'desc' => OperatorEnum::DESC,
-                    default => OperatorEnum::ASC,
-                };
-
-                $order[] = Order21Builder::init(
-                    $orderItem['key'],
-                    $operator
-                )->build();
+            // Build pagination if provided
+            if (isset($options['page'])) {
+                $page = PageBuilder::init()
+                    ->number($options['page']['number'] ?? 1)
+                    ->size($options['page']['size'] ?? 50)
+                    ->build();
             }
-        }
 
-        // Build filters if provided
-        if (isset($options['filterBy'])) {
-            $filterBy = [];
-            foreach ($options['filterBy'] as $filter) {
-                // Use the operator string directly - the SDK expects string operators, not enum values
-                $filterBy[] = FilterByBuilder::init(
-                    $filter['key'],
-                    $filter['operator'],
-                    $filter['value']
-                )->build();
+            // Build order if provided
+            if (isset($options['order'])) {
+                $order = [];
+                foreach ($options['order'] as $orderItem) {
+                    // Convert string operators to proper enum values
+                    $operator = match (strtolower($orderItem['operator'])) {
+                        'asc' => OperatorEnum::ASC,
+                        'desc' => OperatorEnum::DESC,
+                        default => OperatorEnum::ASC,
+                    };
+
+                    $order[] = Order21Builder::init(
+                        $orderItem['key'],
+                        $operator
+                    )->build();
+                }
             }
-        }
 
-        return $this->getClientInstance()
-            ->getTerminalsController()
-            ->listAllTerminalsRelated(
-                $page,
-                $order,
-                $filterBy,
-                $expand,
-                $format,
-                $typeahead,
-                $fields
-            );
+            // Build filters if provided
+            if (isset($options['filterBy'])) {
+                $filterBy = [];
+                foreach ($options['filterBy'] as $filter) {
+                    // Use the operator string directly - the SDK expects string operators, not enum values
+                    $filterBy[] = FilterByBuilder::init(
+                        $filter['key'],
+                        $filter['operator'],
+                        $filter['value']
+                    )->build();
+                }
+            }
+
+            $result = $this->getClientInstance()
+                ->getTerminalsController()
+                ->listAllTerminalsRelated(
+                    $page,
+                    $order,
+                    $filterBy,
+                    $expand,
+                    $format,
+                    $typeahead,
+                    $fields
+                );
+
+            if (config('lunar-fortis.debug')) {
+                Log::debug('Terminals listed successfully', [
+                    'total_count' => count($result->getList() ?? []),
+                    'options' => $options,
+                ]);
+            }
+
+            return $result;
+        } catch (ApiException $e) {
+            $errorDetails = FortisErrorHelper::parseApiException($e);
+
+            Log::error('Failed to list terminals', [
+                'options' => $options,
+                'error_details' => $errorDetails,
+            ]);
+
+            $formattedError = FortisErrorHelper::formatApiErrors($e);
+            throw new Exception("Failed to list terminals: {$formattedError}");
+        }
     }
 
     /**
      * Get a single terminal by ID
      *
-     * @throws ApiException
+     * @throws Exception
      */
     public function getTerminal(string $terminalId, ?array $expand = null, ?array $fields = null): ResponseTerminal
     {
-        return $this->getClientInstance()
-            ->getTerminalsController()
-            ->viewSingleTerminalsRecord($terminalId, $expand, $fields);
+        try {
+            $result = $this->getClientInstance()
+                ->getTerminalsController()
+                ->viewSingleTerminalsRecord($terminalId, $expand, $fields);
+
+            if (config('lunar-fortis.debug')) {
+                Log::debug('Terminal retrieved successfully', [
+                    'terminal_id' => $terminalId,
+                    'expand' => $expand,
+                    'fields' => $fields,
+                ]);
+            }
+
+            return $result;
+        } catch (ApiException $e) {
+            $errorDetails = FortisErrorHelper::parseApiException($e);
+
+            Log::error('Failed to retrieve terminal', [
+                'terminal_id' => $terminalId,
+                'expand' => $expand,
+                'fields' => $fields,
+                'error_details' => $errorDetails,
+            ]);
+
+            $formattedError = FortisErrorHelper::formatApiErrors($e);
+            throw new Exception("Failed to retrieve terminal {$terminalId}: {$formattedError}");
+        }
     }
 
     /**
      * Update an existing terminal
      *
-     * @throws ApiException
+     * @throws Exception
      */
     public function updateTerminal(string $terminalId, array $terminalData, ?array $expand = null): ResponseTerminal
     {
-        $builder = V1TerminalsRequest1Builder::init();
+        try {
+            $builder = V1TerminalsRequest1Builder::init();
 
-        // Add provided fields to the builder
-        $fieldMapping = [
-            'location_id' => 'locationId',
-            'default_product_transaction_id' => 'defaultProductTransactionId',
-            'terminal_application_id' => 'terminalApplicationId',
-            'terminal_manufacturer_code' => 'terminalManufacturerCode',
-            'title' => 'title',
-            'serial_number' => 'serialNumber',
-            'active' => 'active',
-        ];
+            // Add provided fields to the builder
+            $fieldMapping = [
+                'location_id' => 'locationId',
+                'default_product_transaction_id' => 'defaultProductTransactionId',
+                'terminal_application_id' => 'terminalApplicationId',
+                'terminal_manufacturer_code' => 'terminalManufacturerCode',
+                'title' => 'title',
+                'serial_number' => 'serialNumber',
+                'active' => 'active',
+            ];
 
-        foreach ($fieldMapping as $dataKey => $builderMethod) {
-            if (isset($terminalData[$dataKey])) {
-                $builder->$builderMethod($terminalData[$dataKey]);
+            foreach ($fieldMapping as $dataKey => $builderMethod) {
+                if (isset($terminalData[$dataKey])) {
+                    $builder->$builderMethod($terminalData[$dataKey]);
+                }
             }
-        }
 
-        return $this->getClientInstance()
-            ->getTerminalsController()
-            ->updateTerminalRecord($terminalId, $builder->build(), $expand);
+            $result = $this->getClientInstance()
+                ->getTerminalsController()
+                ->updateTerminalRecord($terminalId, $builder->build(), $expand);
+
+            if (config('lunar-fortis.debug')) {
+                Log::debug('Terminal updated successfully', [
+                    'terminal_id' => $terminalId,
+                    'updated_fields' => array_keys($terminalData),
+                    'expand' => $expand,
+                ]);
+            }
+
+            return $result;
+        } catch (ApiException $e) {
+            $errorDetails = FortisErrorHelper::parseApiException($e);
+
+            Log::error('Failed to update terminal', [
+                'terminal_id' => $terminalId,
+                'terminal_data' => $terminalData,
+                'expand' => $expand,
+                'error_details' => $errorDetails,
+            ]);
+
+            $formattedError = FortisErrorHelper::formatApiErrors($e);
+            throw new Exception("Failed to update terminal {$terminalId}: {$formattedError}");
+        }
     }
 
     // Helper methods for common terminal operations
@@ -321,7 +526,7 @@ class LunarFortis
     /**
      * Create a simple terminal with minimal required data
      *
-     * @throws ApiException
+     * @throws Exception
      */
     public function createSimpleTerminal(
         string $title,
@@ -342,7 +547,7 @@ class LunarFortis
     /**
      * Get all active terminals for current location
      *
-     * @throws ApiException
+     * @throws Exception
      */
     public function getActiveTerminals(): ResponseTerminalsCollection
     {
@@ -365,7 +570,7 @@ class LunarFortis
     /**
      * Activate/deactivate a terminal
      *
-     * @throws ApiException
+     * @throws Exception
      */
     public function setTerminalStatus(string $terminalId, bool $active): ResponseTerminal
     {
@@ -377,7 +582,7 @@ class LunarFortis
     /**
      * Initiate a credit card sale transaction through a terminal
      *
-     * @throws ApiException
+     * @throws Exception
      */
     public function chargeTerminalCreditCard(string $terminalId, int $amount, array $options = []): ResponseTransactionProcessing
     {
@@ -448,27 +653,73 @@ class LunarFortis
             $builder->roomRate($options['room_rate']);
         }
 
-        return $this->getClientInstance()
-            ->getTransactionsCreditCardController()
-            ->cCSaleTerminal($builder->build());
+        try {
+            $result = $this->getClientInstance()
+                ->getTransactionsCreditCardController()
+                ->cCSaleTerminal($builder->build());
+
+            if (config('lunar-fortis.debug')) {
+                Log::debug('Terminal credit card charge initiated successfully', [
+                    'terminal_id' => $terminalId,
+                    'amount' => $amount,
+                    'status_code' => $result->getData()->getAsync()->getCode(),
+                ]);
+            }
+
+            return $result;
+        } catch (ApiException $e) {
+            $errorDetails = FortisErrorHelper::parseApiException($e);
+
+            Log::error('Failed to charge terminal credit card', [
+                'terminal_id' => $terminalId,
+                'amount' => $amount,
+                'options' => $options,
+                'error_details' => $errorDetails,
+            ]);
+
+            $formattedError = FortisErrorHelper::formatApiErrors($e);
+            throw new Exception("Failed to charge terminal credit card: {$formattedError}");
+        }
     }
 
     /**
      * Check the status of an async terminal transaction
      *
-     * @throws ApiException
+     * @throws Exception
      */
     public function checkTerminalTransactionStatus(string $statusCode): ResponseAsyncStatus
     {
-        return $this->getClientInstance()
-            ->getAsyncProcessingController()
-            ->statusCheck($statusCode);
+        try {
+            $result = $this->getClientInstance()
+                ->getAsyncProcessingController()
+                ->statusCheck($statusCode);
+
+            if (config('lunar-fortis.debug')) {
+                Log::debug('Terminal transaction status checked', [
+                    'status_code' => $statusCode,
+                    'progress' => $result->getData()->getProgress(),
+                    'error' => $result->getData()->getError(),
+                ]);
+            }
+
+            return $result;
+        } catch (ApiException $e) {
+            $errorDetails = FortisErrorHelper::parseApiException($e);
+
+            Log::error('Failed to check terminal transaction status', [
+                'status_code' => $statusCode,
+                'error_details' => $errorDetails,
+            ]);
+
+            $formattedError = FortisErrorHelper::formatApiErrors($e);
+            throw new Exception("Failed to check terminal transaction status: {$formattedError}");
+        }
     }
 
     /**
      * Wait for a terminal transaction to complete by polling the status
      *
-     * @throws ApiException
+     * @throws Exception
      */
     public function waitForTerminalTransaction(
         string $statusCode,
@@ -516,7 +767,7 @@ class LunarFortis
     /**
      * Process a complete terminal credit card transaction with automatic status monitoring
      *
-     * @throws ApiException
+     * @throws Exception
      */
     public function processTerminalCreditCard(string $terminalId, int $amount, array $options = []): array
     {
@@ -527,20 +778,24 @@ class LunarFortis
 
         try {
             // Step 1: Initiate the terminal transaction
-            Log::info('Initiating terminal credit card transaction', [
-                'terminal_id' => $terminalId,
-                'amount' => $amount,
-                'options' => $options,
-            ]);
+            if (config('lunar-fortis.debug')) {
+                Log::debug('Initiating terminal credit card transaction', [
+                    'terminal_id' => $terminalId,
+                    'amount' => $amount,
+                    'options' => $options,
+                ]);
+            }
 
             $processingResponse = $this->chargeTerminalCreditCard($terminalId, $amount, $options);
             $asyncData = $processingResponse->getData()->getAsync();
             $statusCode = $asyncData->getCode();
 
-            Log::info('Terminal transaction initiated', [
-                'status_code' => $statusCode,
-                'async_link' => $asyncData->getLink(),
-            ]);
+            if (config('lunar-fortis.debug')) {
+                Log::debug('Terminal transaction initiated', [
+                    'status_code' => $statusCode,
+                    'async_link' => $asyncData->getLink(),
+                ]);
+            }
 
             // Step 2: Wait for completion
             $finalStatus = $this->waitForTerminalTransaction($statusCode, $timeoutSeconds, $pollIntervalSeconds);
@@ -559,17 +814,32 @@ class LunarFortis
                 'timed_out' => $statusData->getProgress() < 100 && ! $statusData->getError(),
             ];
 
-            Log::info('Terminal transaction processing completed', $result);
+            if (config('lunar-fortis.debug')) {
+                Log::debug('Terminal transaction processing completed', $result);
+            }
 
             return $result;
 
+        } catch (ApiException $e) {
+            $errorDetails = FortisErrorHelper::parseApiException($e);
+
+            Log::error('Terminal credit card processing failed', [
+                'terminal_id' => $terminalId,
+                'amount' => $amount,
+                'options' => $options,
+                'error_details' => $errorDetails,
+            ]);
+
+            $formattedError = FortisErrorHelper::formatApiErrors($e);
+            throw new Exception("Terminal credit card processing failed: {$formattedError}");
         } catch (Exception $e) {
             Log::error('Terminal credit card processing failed', [
                 'terminal_id' => $terminalId,
                 'amount' => $amount,
+                'options' => $options,
                 'error' => $e->getMessage(),
             ]);
-            throw $e;
+            throw new Exception("Terminal credit card processing failed: {$e->getMessage()}");
         }
     }
 }

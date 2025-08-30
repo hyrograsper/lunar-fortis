@@ -39,9 +39,15 @@ class EditTerminal extends EditRecord
         try {
             return parent::handleRecordUpdate($record, $data);
         } catch (Exception $exception) {
+            // Handle Fortis sync failures with appropriate notifications
+            Notification::make()
+                ->title('Terminal update failed')
+                ->body($exception->getMessage())
+                ->danger()
+                ->persistent()
+                ->send();
 
+            $this->halt();
         }
-
-        return $record;
     }
 }
