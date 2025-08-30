@@ -88,4 +88,14 @@ return [
     |
     */
     'success_livewire_event' => null,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Debug Logging
+    |--------------------------------------------------------------------------
+    | Turn debug logging on to view each step of the payment process.
+    | Accepted values: true, false.
+    |
+    */
+    'debug' => env('FORTIS_DEBUG', false),
 ];

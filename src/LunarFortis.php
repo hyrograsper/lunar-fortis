@@ -96,10 +96,12 @@ class LunarFortis
                     body: $this->buildTransactionIntentionRequest($amount, $action)
                 )->getData();
 
-            Log::info('Client token generated successfully', [
-                'amount' => $amount,
-                'action' => $action,
-            ]);
+            if (config('lunar-fortis.debug')) {
+                Log::debug('Client token generated successfully', [
+                    'amount' => $amount,
+                    'action' => $action,
+                ]);
+            }
 
             return $data->getClientToken();
         } catch (ApiException $e) {
@@ -141,11 +143,13 @@ class LunarFortis
                         ->build()
                 );
 
-            Log::info('Transaction authorization completed successfully', [
-                'transaction_reference' => $transaction->reference,
-                'amount' => $amount,
-                'order_reference' => $transaction->order?->reference,
-            ]);
+            if (config('lunar-fortis.debug')) {
+                Log::debug('Transaction authorization completed successfully', [
+                    'transaction_reference' => $transaction->reference,
+                    'amount' => $amount,
+                    'order_reference' => $transaction->order?->reference,
+                ]);
+            }
 
             return $result;
         } catch (ApiException $e) {
@@ -191,12 +195,14 @@ class LunarFortis
                         ->build()
                 );
 
-            Log::info('Credit card authorization from token completed successfully', [
-                'token_id' => $tokenId,
-                'order_reference' => $order->reference,
-                'amount' => $order->total->value,
-                'customer_id' => $order->customer_id,
-            ]);
+            if (config('lunar-fortis.debug')) {
+                Log::debug('Credit card authorization from token completed successfully', [
+                    'token_id' => $tokenId,
+                    'order_reference' => $order->reference,
+                    'amount' => $order->total->value,
+                    'customer_id' => $order->customer_id,
+                ]);
+            }
 
             return $result;
         } catch (ApiException $e) {
@@ -232,10 +238,12 @@ class LunarFortis
                         ->build()
                 );
 
-            Log::info('Transaction refund completed successfully', [
-                'transaction_reference' => $transaction->reference,
-                'refund_amount' => $amount,
-            ]);
+            if (config('lunar-fortis.debug')) {
+                Log::debug('Transaction refund completed successfully', [
+                    'transaction_reference' => $transaction->reference,
+                    'refund_amount' => $amount,
+                ]);
+            }
 
             return $result;
         } catch (ApiException $e) {
@@ -262,9 +270,11 @@ class LunarFortis
                 ->getTransactionsReadController()
                 ->getTransaction($transactionId);
 
-            Log::info('Transaction retrieved successfully', [
-                'transaction_id' => $transactionId,
-            ]);
+            if (config('lunar-fortis.debug')) {
+                Log::debug('Transaction retrieved successfully', [
+                    'transaction_id' => $transactionId,
+                ]);
+            }
 
             return $result;
         } catch (ApiException $e) {
@@ -310,11 +320,13 @@ class LunarFortis
                 ->getTerminalsController()
                 ->createANewTerminalDevice($builder->build());
 
-            Log::info('Terminal created successfully', [
-                'title' => $terminalData['title'],
-                'serial_number' => $terminalData['serial_number'],
-                'terminal_id' => $result->getData()->getId(),
-            ]);
+            if (config('lunar-fortis.debug')) {
+                Log::debug('Terminal created successfully', [
+                    'title' => $terminalData['title'],
+                    'serial_number' => $terminalData['serial_number'],
+                    'terminal_id' => $result->getData()->getId(),
+                ]);
+            }
 
             return $result;
         } catch (ApiException $e) {
@@ -397,10 +409,12 @@ class LunarFortis
                     $fields
                 );
 
-            Log::info('Terminals listed successfully', [
-                'total_count' => count($result->getList() ?? []),
-                'options' => $options,
-            ]);
+            if (config('lunar-fortis.debug')) {
+                Log::debug('Terminals listed successfully', [
+                    'total_count' => count($result->getList() ?? []),
+                    'options' => $options,
+                ]);
+            }
 
             return $result;
         } catch (ApiException $e) {
@@ -428,11 +442,13 @@ class LunarFortis
                 ->getTerminalsController()
                 ->viewSingleTerminalsRecord($terminalId, $expand, $fields);
 
-            Log::info('Terminal retrieved successfully', [
-                'terminal_id' => $terminalId,
-                'expand' => $expand,
-                'fields' => $fields,
-            ]);
+            if (config('lunar-fortis.debug')) {
+                Log::debug('Terminal retrieved successfully', [
+                    'terminal_id' => $terminalId,
+                    'expand' => $expand,
+                    'fields' => $fields,
+                ]);
+            }
 
             return $result;
         } catch (ApiException $e) {
@@ -481,11 +497,13 @@ class LunarFortis
                 ->getTerminalsController()
                 ->updateTerminalRecord($terminalId, $builder->build(), $expand);
 
-            Log::info('Terminal updated successfully', [
-                'terminal_id' => $terminalId,
-                'updated_fields' => array_keys($terminalData),
-                'expand' => $expand,
-            ]);
+            if (config('lunar-fortis.debug')) {
+                Log::debug('Terminal updated successfully', [
+                    'terminal_id' => $terminalId,
+                    'updated_fields' => array_keys($terminalData),
+                    'expand' => $expand,
+                ]);
+            }
 
             return $result;
         } catch (ApiException $e) {
@@ -640,11 +658,13 @@ class LunarFortis
                 ->getTransactionsCreditCardController()
                 ->cCSaleTerminal($builder->build());
 
-            Log::info('Terminal credit card charge initiated successfully', [
-                'terminal_id' => $terminalId,
-                'amount' => $amount,
-                'status_code' => $result->getData()->getAsync()->getCode(),
-            ]);
+            if (config('lunar-fortis.debug')) {
+                Log::debug('Terminal credit card charge initiated successfully', [
+                    'terminal_id' => $terminalId,
+                    'amount' => $amount,
+                    'status_code' => $result->getData()->getAsync()->getCode(),
+                ]);
+            }
 
             return $result;
         } catch (ApiException $e) {
@@ -674,11 +694,13 @@ class LunarFortis
                 ->getAsyncProcessingController()
                 ->statusCheck($statusCode);
 
-            Log::debug('Terminal transaction status checked', [
-                'status_code' => $statusCode,
-                'progress' => $result->getData()->getProgress(),
-                'error' => $result->getData()->getError(),
-            ]);
+            if (config('lunar-fortis.debug')) {
+                Log::debug('Terminal transaction status checked', [
+                    'status_code' => $statusCode,
+                    'progress' => $result->getData()->getProgress(),
+                    'error' => $result->getData()->getError(),
+                ]);
+            }
 
             return $result;
         } catch (ApiException $e) {
@@ -756,20 +778,24 @@ class LunarFortis
 
         try {
             // Step 1: Initiate the terminal transaction
-            Log::info('Initiating terminal credit card transaction', [
-                'terminal_id' => $terminalId,
-                'amount' => $amount,
-                'options' => $options,
-            ]);
+            if (config('lunar-fortis.debug')) {
+                Log::debug('Initiating terminal credit card transaction', [
+                    'terminal_id' => $terminalId,
+                    'amount' => $amount,
+                    'options' => $options,
+                ]);
+            }
 
             $processingResponse = $this->chargeTerminalCreditCard($terminalId, $amount, $options);
             $asyncData = $processingResponse->getData()->getAsync();
             $statusCode = $asyncData->getCode();
 
-            Log::info('Terminal transaction initiated', [
-                'status_code' => $statusCode,
-                'async_link' => $asyncData->getLink(),
-            ]);
+            if (config('lunar-fortis.debug')) {
+                Log::debug('Terminal transaction initiated', [
+                    'status_code' => $statusCode,
+                    'async_link' => $asyncData->getLink(),
+                ]);
+            }
 
             // Step 2: Wait for completion
             $finalStatus = $this->waitForTerminalTransaction($statusCode, $timeoutSeconds, $pollIntervalSeconds);
@@ -788,7 +814,9 @@ class LunarFortis
                 'timed_out' => $statusData->getProgress() < 100 && ! $statusData->getError(),
             ];
 
-            Log::info('Terminal transaction processing completed', $result);
+            if (config('lunar-fortis.debug')) {
+                Log::debug('Terminal transaction processing completed', $result);
+            }
 
             return $result;
 
