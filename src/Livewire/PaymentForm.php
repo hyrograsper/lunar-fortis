@@ -32,7 +32,7 @@ class PaymentForm extends Component
     public function handlePaymentResponse(array $response): void
     {
         if (! isset($response['data'])) {
-            Log::error('Fortis Payment response missing "data" key.', $response);
+            Log::error('LunarFortis: Fortis Payment response missing "data" key.', $response);
             $this->dispatch('payment-error', 'Invalid payment response from gateway.');
 
             return;
@@ -61,7 +61,7 @@ class PaymentForm extends Component
                 try {
                     $success_event_class::dispatch($order);
                 } catch (\Exception $exception) {
-                    Log::error('Unable to dispatch Success Event Class: '.$exception->getMessage());
+                    Log::error('LunarFortis: Unable to dispatch Success Event Class: '.$exception->getMessage());
                 }
             }
 
