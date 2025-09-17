@@ -239,7 +239,7 @@ class FortisTerminalPaymentType extends AbstractPayment
             ]);
 
         } catch (Exception $e) {
-            Log::error('LunarFortis: LunarFortis: Terminal payment processing failed', [
+            Log::error('LunarFortis: Terminal payment processing failed', [
                 'transaction_id' => $data?->getId(),
                 'order_id' => $this->order->id,
                 'amount' => $this->cart->total->value,
