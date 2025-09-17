@@ -2,6 +2,10 @@
 
 All notable changes to `lunar-fortis` will be documented in this file.
 
+## v1.7.1 - 2025-09-17
+
+**Full Changelog**: https://github.com/hyrograsper/lunar-fortis/compare/v1.7.0...v1.7.1
+
 ## v1.7.0 - 2025-09-17
 
 **Full Changelog**: https://github.com/hyrograsper/lunar-fortis/compare/v1.6.0...v1.7.0
