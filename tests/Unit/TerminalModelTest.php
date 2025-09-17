@@ -3,35 +3,7 @@
 use Carbon\Carbon;
 use Hyrograsper\LunarFortis\Facades\LunarFortis;
 use Hyrograsper\LunarFortis\Models\Terminal;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
-
-uses(RefreshDatabase::class);
-
 beforeEach(function () {
-    // Set up the terminals table
-    DB::statement('
-        CREATE TABLE fortis_terminals (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            fortis_id VARCHAR(255),
-            location_id VARCHAR(255),
-            title VARCHAR(255),
-            serial_number VARCHAR(255),
-            terminal_application_id VARCHAR(255),
-            terminal_manufacturer_code VARCHAR(255),
-            default_product_transaction_id VARCHAR(255),
-            active BOOLEAN DEFAULT 1,
-            fortis_created_at TIMESTAMP NULL,
-            fortis_modified_at TIMESTAMP NULL,
-            created_user_id VARCHAR(255),
-            modified_user_id VARCHAR(255),
-            synced_at TIMESTAMP NULL,
-            fortis_data TEXT,
-            created_at TIMESTAMP NULL,
-            updated_at TIMESTAMP NULL
-        )
-    ');
-
     $this->terminal = Terminal::create([
         'fortis_id' => 'terminal-123',
         'title' => 'Test Terminal',
@@ -229,7 +201,7 @@ describe('Terminal Payment Processing', function () {
         // Mock capture
         LunarFortis::shouldReceive('captureTerminalTransaction')
             ->once()
-            ->with('auth-trans-456', 1500, ['description' => 'Test'])
+            ->with('auth-trans-456', 1500, ['description' => 'Test', 'order_number' => null, 'customer_id' => null])
             ->andReturn([
                 'data' => [
                     'id' => 'captured-trans-456',

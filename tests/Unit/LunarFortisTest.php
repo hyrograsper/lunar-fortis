@@ -161,6 +161,8 @@ describe('LunarFortis Transaction Completion', function () {
 describe('LunarFortis Credit Card Authorization', function () {
     it('authorizes credit card from token successfully', function () {
         $mockOrder = Mockery::mock(Order::class);
+        $mockOrder->shouldReceive('setAttribute')->andReturnSelf();
+        $mockOrder->shouldReceive('getAttribute')->andReturn(null);
         $mockOrder->reference = 'ORD-789';
         $mockOrder->customer_id = 456;
         $mockOrder->total = (object) ['value' => 1500];

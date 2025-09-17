@@ -6,7 +6,10 @@ use Illuminate\Support\Facades\Facade;
 
 describe('LunarFortis Facade', function () {
     it('is a valid facade', function () {
-        expect(LunarFortisFacade::class)->toBeSubclassOf(Facade::class);
+        $reflection = new ReflectionClass(LunarFortisFacade::class);
+        $parentClass = $reflection->getParentClass();
+
+        expect($parentClass->getName())->toBe(Facade::class);
     });
 
     it('returns correct facade accessor', function () {

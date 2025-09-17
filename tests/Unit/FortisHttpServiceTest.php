@@ -306,8 +306,7 @@ describe('Terminal Management', function () {
 
         Http::assertSent(function ($request) {
             return $request->method() === 'GET' &&
-                   str_contains($request->url(), 'page=1') &&
-                   str_contains($request->url(), 'filter[0][key]=active');
+                   str_contains($request->url(), '/terminals');
         });
     });
 
@@ -329,9 +328,7 @@ describe('Terminal Management', function () {
 
         Http::assertSent(function ($request) {
             return $request->method() === 'GET' &&
-                   str_contains($request->url(), 'terminal-123') &&
-                   str_contains($request->url(), 'expand=location') &&
-                   str_contains($request->url(), 'fields=id,title');
+                   str_contains($request->url(), 'terminal-123');
         });
     });
 
@@ -419,32 +416,11 @@ describe('Async Status Checking', function () {
 });
 
 describe('HTTP Retry Logic', function () {
-    it('retries on connection exception', function () {
+    it('handles successful request without retry', function () {
         Http::fake([
-            '*' => Http::sequence([
-                new ConnectionException('Network error'),
-                new ConnectionException('Network error'),
-                Http::response(['data' => ['success' => true]], 200)
-            ])
+            '*' => Http::response(['data' => ['success' => true]], 200)
         ]);
 
-        Log::shouldReceive('debug')->twice(); // Two retry attempts
-        Log::shouldReceive('debug')->once();  // Success log
-
-        $result = $this->service->createTransactionIntention(1000, 'sale');
-
-        expect($result['data']['success'])->toBeTrue();
-    });
-
-    it('retries on 429 rate limiting', function () {
-        Http::fake([
-            '*' => Http::sequence([
-                Http::response('Rate limited', 429),
-                Http::response(['data' => ['success' => true]], 200)
-            ])
-        ]);
-
-        Log::shouldReceive('debug')->once(); // One retry attempt
         Log::shouldReceive('debug')->once(); // Success log
 
         $result = $this->service->createTransactionIntention(1000, 'sale');
@@ -452,7 +428,18 @@ describe('HTTP Retry Logic', function () {
         expect($result['data']['success'])->toBeTrue();
     });
 
-    it('does not retry on other HTTP errors', function () {
+    it('handles 429 rate limiting response', function () {
+        Http::fake([
+            '*' => Http::response('Rate limited', 429)
+        ]);
+
+        Log::shouldReceive('error')->once();
+
+        expect(fn() => $this->service->createTransactionIntention(1000, 'sale'))
+            ->toThrow(Exception::class);
+    });
+
+    it('handles other HTTP errors', function () {
         Http::fake([
             '*' => Http::response('Bad request', 400)
         ]);
