@@ -162,16 +162,8 @@ describe('LunarFortis Credit Card Authorization', function () {
     it('authorizes credit card from token successfully', function () {
         $mockOrder = Mockery::mock(Order::class);
         $mockOrder->shouldReceive('setAttribute')->andReturnSelf();
-        $mockOrder->shouldReceive('getAttribute')->andReturn(null);
-        $mockOrder->reference = 'ORD-789';
-        $mockOrder->customer_id = 456;
-        $mockOrder->total = (object) ['value' => 1500];
 
         $mockBillingAddress = Mockery::mock();
-        $mockBillingAddress->shouldReceive('getAttribute')->with('line_one')->andReturn('123 Main St');
-        $mockBillingAddress->shouldReceive('getAttribute')->with('city')->andReturn('Anytown');
-        $mockBillingAddress->shouldReceive('getAttribute')->with('state')->andReturn('CA');
-        $mockBillingAddress->shouldReceive('getAttribute')->with('postcode')->andReturn('12345');
         $mockBillingAddress->line_one = '123 Main St';
         $mockBillingAddress->city = 'Anytown';
         $mockBillingAddress->state = 'CA';
@@ -181,8 +173,12 @@ describe('LunarFortis Credit Card Authorization', function () {
         $mockCountry->iso3 = 'USA';
         $mockBillingAddress->country = $mockCountry;
 
+        // Set up property access for Laravel model - Laravel uses both __get and getAttribute
+        $mockOrder->shouldReceive('getAttribute')->with('reference')->andReturn('ORD-789');
+        $mockOrder->shouldReceive('getAttribute')->with('customer_id')->andReturn(456);
+        $mockOrder->shouldReceive('getAttribute')->with('total')->andReturn((object) ['value' => 1500]);
         $mockOrder->shouldReceive('getAttribute')->with('billingAddress')->andReturn($mockBillingAddress);
-        $mockOrder->billingAddress = $mockBillingAddress;
+        $mockOrder->shouldReceive('getAttribute')->andReturn(null); // Fallback for any other getAttribute calls
 
         $mockHttpService = Mockery::mock(FortisHttpService::class);
         $mockHttpService->shouldReceive('authorizeCcFromToken')
