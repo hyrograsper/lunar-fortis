@@ -72,7 +72,7 @@ class FortisTerminalPaymentType extends AbstractPayment
                 LunarFortis::getTransaction($this->data['fortis_transaction_id'])
             );
         } catch (ApiException|Exception $e) {
-            Log::error('Failed to fetch fortis transaction and store data. Error: '.$e->getMessage());
+            Log::error('LunarFortis: Failed to fetch fortis transaction and store data. Error: '.$e->getMessage());
         }
 
         // Terminal payments are always automatically captured
@@ -107,7 +107,7 @@ class FortisTerminalPaymentType extends AbstractPayment
         try {
             $result = LunarFortis::refund($transaction, $amount);
         } catch (ApiException $exception) {
-            Log::error('Unable to process terminal refund: '.$exception->getMessage().' '.print_r($exception->getHttpResponse(), true));
+            Log::error('LunarFortis: Unable to process terminal refund: '.$exception->getMessage().' '.print_r($exception->getHttpResponse(), true));
 
             return new PaymentRefund(
                 success: false,
@@ -239,7 +239,7 @@ class FortisTerminalPaymentType extends AbstractPayment
             ]);
 
         } catch (Exception $e) {
-            Log::error('Terminal payment processing failed', [
+            Log::error('LunarFortis: Terminal payment processing failed', [
                 'transaction_id' => $data?->getId(),
                 'order_id' => $this->order->id,
                 'amount' => $this->cart->total->value,
