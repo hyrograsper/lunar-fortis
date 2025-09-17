@@ -2,6 +2,14 @@
 
 All notable changes to `lunar-fortis` will be documented in this file.
 
+## v1.6.0 - 2025-09-17
+
+### What's Changed
+
+* Update fortis sdk. Prefix logs with LunarFortis: by @alecgarcia in https://github.com/hyrograsper/lunar-fortis/pull/9
+
+**Full Changelog**: https://github.com/hyrograsper/lunar-fortis/compare/v1.5.0...v1.6.0
+
 ## v1.5.0 - 2025-08-30
 
 ### What's Changed
