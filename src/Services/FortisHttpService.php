@@ -40,7 +40,7 @@ class FortisHttpService
             // Retry on network errors or 429 rate limiting
             if ($exception instanceof ConnectionException) {
                 if (config('lunar-fortis.debug')) {
-                    Log::debug('Fortis HTTP: Retrying due to connection error', [
+                    Log::debug('LunarFortis: Retrying due to connection error', [
                         'exception' => $exception->getMessage(),
                     ]);
                 }
@@ -52,7 +52,7 @@ class FortisHttpService
                 $response = $exception->getResponse();
                 if ($response && $response->getStatusCode() === 429) {
                     if (config('lunar-fortis.debug')) {
-                        Log::debug('Fortis HTTP: Retrying due to rate limiting (429)', [
+                        Log::debug('LunarFortis: Retrying due to rate limiting (429)', [
                             'response' => $response->getBody()->getContents(),
                         ]);
                     }
@@ -98,7 +98,7 @@ class FortisHttpService
             $response = $this->makeRequest('POST', '/v1/elements/transaction/intention', $data);
 
             if (config('lunar-fortis.debug')) {
-                Log::debug('Fortis HTTP: Transaction intention created successfully', [
+                Log::debug('LunarFortis: Transaction intention created successfully', [
                     'amount' => $amount,
                     'action' => $action,
                 ]);
@@ -107,7 +107,7 @@ class FortisHttpService
             return $response;
         } catch (RequestException $e) {
             $responseBody = $e->response?->body();
-            Log::error('Fortis HTTP: Failed to create transaction intention', [
+            Log::error('LunarFortis: Failed to create transaction intention', [
                 'amount' => $amount,
                 'action' => $action,
                 'status_code' => $e->response?->status(),
@@ -150,7 +150,7 @@ class FortisHttpService
             $response = $this->makeRequest('PATCH', "/v1/transactions/{$transactionId}/auth-complete", $data);
 
             if (config('lunar-fortis.debug')) {
-                Log::debug('Fortis HTTP: Transaction authorization completed successfully', [
+                Log::debug('LunarFortis: Transaction authorization completed successfully', [
                     'transaction_id' => $transactionId,
                     'amount' => $amount,
                 ]);
@@ -158,7 +158,7 @@ class FortisHttpService
 
             return $response;
         } catch (RequestException $e) {
-            Log::error('Fortis HTTP: Failed to complete authorized transaction', [
+            Log::error('LunarFortis: Failed to complete authorized transaction', [
                 'transaction_id' => $transactionId,
                 'amount' => $amount,
                 'error' => $e->getMessage(),
@@ -195,7 +195,7 @@ class FortisHttpService
             $response = $this->makeRequest('POST', '/v1/transactions/cc/auth-only/token', $data);
 
             if (config('lunar-fortis.debug')) {
-                Log::debug('Fortis HTTP: Credit card authorization from token completed successfully', [
+                Log::debug('LunarFortis: Credit card authorization from token completed successfully', [
                     'token_id' => $tokenId,
                     'amount' => $amount,
                 ]);
@@ -203,7 +203,7 @@ class FortisHttpService
 
             return $response;
         } catch (RequestException $e) {
-            Log::error('Fortis HTTP: Failed to authorize credit card from token', [
+            Log::error('LunarFortis: Failed to authorize credit card from token', [
                 'token_id' => $tokenId,
                 'amount' => $amount,
                 'error' => $e->getMessage(),
@@ -228,7 +228,7 @@ class FortisHttpService
             $response = $this->makeRequest('PATCH', "/v1/transactions/{$previousTransactionId}/refund", $data);
 
             if (config('lunar-fortis.debug')) {
-                Log::debug('Fortis HTTP: Refund completed successfully', [
+                Log::debug('LunarFortis: Refund completed successfully', [
                     'previous_transaction_id' => $previousTransactionId,
                     'amount' => $amount,
                 ]);
@@ -236,7 +236,7 @@ class FortisHttpService
 
             return $response;
         } catch (RequestException $e) {
-            Log::error('Fortis HTTP: Failed to process refund', [
+            Log::error('LunarFortis: Failed to process refund', [
                 'previous_transaction_id' => $previousTransactionId,
                 'amount' => $amount,
                 'error' => $e->getMessage(),
@@ -256,14 +256,14 @@ class FortisHttpService
             $response = $this->makeRequest('GET', "/v1/transactions/{$transactionId}");
 
             if (config('lunar-fortis.debug')) {
-                Log::debug('Fortis HTTP: Transaction retrieved successfully', [
+                Log::debug('LunarFortis: Transaction retrieved successfully', [
                     'transaction_id' => $transactionId,
                 ]);
             }
 
             return $response;
         } catch (RequestException $e) {
-            Log::error('Fortis HTTP: Failed to retrieve transaction', [
+            Log::error('LunarFortis: Failed to retrieve transaction', [
                 'transaction_id' => $transactionId,
                 'error' => $e->getMessage(),
                 'response' => $e->response?->body(),
@@ -300,7 +300,7 @@ class FortisHttpService
             $response = $this->makeRequest('POST', '/v1/terminals', $data);
 
             if (config('lunar-fortis.debug')) {
-                Log::debug('Fortis HTTP: Terminal created successfully', [
+                Log::debug('LunarFortis: Terminal created successfully', [
                     'title' => $terminalData['title'],
                     'serial_number' => $terminalData['serial_number'],
                 ]);
@@ -308,7 +308,7 @@ class FortisHttpService
 
             return $response;
         } catch (RequestException $e) {
-            Log::error('Fortis HTTP: Failed to create terminal', [
+            Log::error('LunarFortis: Failed to create terminal', [
                 'terminal_data' => $terminalData,
                 'error' => $e->getMessage(),
                 'response' => $e->response?->body(),
@@ -348,14 +348,14 @@ class FortisHttpService
             $response = $this->makeRequest('GET', '/v1/terminals', [], $queryParams);
 
             if (config('lunar-fortis.debug')) {
-                Log::debug('Fortis HTTP: Terminals listed successfully', [
+                Log::debug('LunarFortis: Terminals listed successfully', [
                     'total_count' => count($response['list'] ?? []),
                 ]);
             }
 
             return $response;
         } catch (RequestException $e) {
-            Log::error('Fortis HTTP: Failed to list terminals', [
+            Log::error('LunarFortis: Failed to list terminals', [
                 'options' => $options,
                 'error' => $e->getMessage(),
                 'response' => $e->response?->body(),
@@ -382,14 +382,14 @@ class FortisHttpService
             $response = $this->makeRequest('GET', "/v1/terminals/{$terminalId}", [], $queryParams);
 
             if (config('lunar-fortis.debug')) {
-                Log::debug('Fortis HTTP: Terminal retrieved successfully', [
+                Log::debug('LunarFortis: Terminal retrieved successfully', [
                     'terminal_id' => $terminalId,
                 ]);
             }
 
             return $response;
         } catch (RequestException $e) {
-            Log::error('Fortis HTTP: Failed to retrieve terminal', [
+            Log::error('LunarFortis: Failed to retrieve terminal', [
                 'terminal_id' => $terminalId,
                 'error' => $e->getMessage(),
                 'response' => $e->response?->body(),
@@ -413,7 +413,7 @@ class FortisHttpService
             $response = $this->makeRequest('PATCH', "/v1/terminals/{$terminalId}", $terminalData, $queryParams);
 
             if (config('lunar-fortis.debug')) {
-                Log::debug('Fortis HTTP: Terminal updated successfully', [
+                Log::debug('LunarFortis: Terminal updated successfully', [
                     'terminal_id' => $terminalId,
                     'updated_fields' => array_keys($terminalData),
                 ]);
@@ -421,7 +421,7 @@ class FortisHttpService
 
             return $response;
         } catch (RequestException $e) {
-            Log::error('Fortis HTTP: Failed to update terminal', [
+            Log::error('LunarFortis: Failed to update terminal', [
                 'terminal_id' => $terminalId,
                 'terminal_data' => $terminalData,
                 'error' => $e->getMessage(),
@@ -445,6 +445,7 @@ class FortisHttpService
                 'transaction_amount' => $amount,
                 'terminal_id' => $terminalId,
                 'card_present' => true,
+                'cardholder_present' => true,
             ];
 
             // Handle product_transaction_id for terminal transactions
@@ -476,7 +477,7 @@ class FortisHttpService
             $response = $this->makeRequest('POST', '/v1/transactions/cc/auth-only/terminal', $data);
 
             if (config('lunar-fortis.debug')) {
-                Log::debug('Fortis HTTP: Terminal credit card authorization initiated successfully', [
+                Log::debug('LunarFortis: Terminal credit card authorization initiated successfully', [
                     'terminal_id' => $terminalId,
                     'amount' => $amount,
                 ]);
@@ -484,7 +485,7 @@ class FortisHttpService
 
             return $response;
         } catch (RequestException $e) {
-            Log::error('Fortis HTTP: Failed to authorize terminal credit card', [
+            Log::error('LunarFortis: Failed to authorize terminal credit card', [
                 'terminal_id' => $terminalId,
                 'amount' => $amount,
                 'error' => $e->getMessage(),
@@ -504,7 +505,7 @@ class FortisHttpService
             $response = $this->makeRequest('GET', "/v1/async/status/{$statusCode}");
 
             if (config('lunar-fortis.debug')) {
-                Log::debug('Fortis HTTP: Async status checked', [
+                Log::debug('LunarFortis: Async status checked', [
                     'status_code' => $statusCode,
                     'progress' => $response['data']['progress'] ?? null,
                 ]);
@@ -512,7 +513,7 @@ class FortisHttpService
 
             return $response;
         } catch (RequestException $e) {
-            Log::error('Fortis HTTP: Failed to check async status', [
+            Log::error('LunarFortis: Failed to check async status', [
                 'status_code' => $statusCode,
                 'error' => $e->getMessage(),
                 'response' => $e->response?->body(),
