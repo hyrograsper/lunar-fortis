@@ -139,7 +139,7 @@ class Terminal extends Model
 
             } catch (Exception $e) {
                 $stats['errors']++;
-                Log::error('Failed to sync individual terminal', [
+                Log::error('LunarFortis: Failed to sync individual terminal', [
                     'fortis_id' => $terminalAttributes['fortis_id'] ?? 'unknown',
                     'terminal_data' => $terminalData ?? null,
                     'error' => $e->getMessage(),

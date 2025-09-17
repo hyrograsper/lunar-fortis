@@ -166,7 +166,7 @@ class FortisPaymentType extends AbstractPayment
                 message: 'Payment captured successfully'
             );
         } catch (\Exception $e) {
-            Log::error('Capture failed: '.$e->getMessage());
+            Log::error('LunarFortis: Capture failed: '.$e->getMessage());
 
             return new PaymentCapture(
                 success: false,
@@ -180,7 +180,7 @@ class FortisPaymentType extends AbstractPayment
         try {
             $result = $this->fortis->refund($transaction, $amount);
         } catch (ApiException $exception) {
-            Log::error('Unable to process refund: '.$exception->getMessage().' '.print_r($exception->getHttpResponse(), true));
+            Log::error('LunarFortis: Unable to process refund: '.$exception->getMessage().' '.print_r($exception->getHttpResponse(), true));
 
             return new PaymentRefund(
                 success: false,

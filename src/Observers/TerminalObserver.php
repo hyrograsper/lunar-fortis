@@ -40,7 +40,7 @@ class TerminalObserver
             $this->syncToFortis($terminal, $significantChanges);
         } catch (Exception $e) {
             // Error handling is now centralized in LunarFortis, so we just need to log the sync failure
-            Log::error('Failed to sync terminal to Fortis API during update', [
+            Log::error('LunarFortis: Failed to sync terminal to Fortis API during update', [
                 'terminal_id' => $terminal->id,
                 'fortis_id' => $terminal->fortis_id,
                 'terminal_title' => $terminal->title,
@@ -72,7 +72,7 @@ class TerminalObserver
             $this->createInFortis($terminal);
         } catch (Exception $e) {
             // Error handling is now centralized in LunarFortis, so we just need to log the sync failure
-            Log::error('Failed to create terminal in Fortis API during creation', [
+            Log::error('LunarFortis: Failed to create terminal in Fortis API during creation', [
                 'terminal_id' => $terminal->id,
                 'terminal_title' => $terminal->title,
                 'terminal_serial' => $terminal->serial_number,
@@ -108,7 +108,7 @@ class TerminalObserver
         }
 
         if (! empty($updateData)) {
-            Log::info('Attempting to sync terminal to Fortis API', [
+            Log::info('LunarFortis: Attempting to sync terminal to Fortis API', [
                 'terminal_id' => $terminal->id,
                 'fortis_id' => $terminal->fortis_id,
                 'terminal_title' => $terminal->title,
@@ -121,13 +121,13 @@ class TerminalObserver
             // Update the synced_at timestamp
             $terminal->updateQuietly(['synced_at' => now()]);
 
-            Log::info('Terminal synced to Fortis API successfully', [
+            Log::info('LunarFortis: Terminal synced to Fortis API successfully', [
                 'terminal_id' => $terminal->id,
                 'fortis_id' => $terminal->fortis_id,
                 'updated_fields' => array_keys($updateData),
             ]);
         } else {
-            Log::info('No significant data changes to sync for terminal', [
+            Log::info('LunarFortis: No significant data changes to sync for terminal', [
                 'terminal_id' => $terminal->id,
                 'fortis_id' => $terminal->fortis_id,
                 'changed_fields' => $changedFields,
@@ -167,7 +167,7 @@ class TerminalObserver
             'synced_at' => now(),
         ]);
 
-        Log::info('Terminal created in Fortis API', [
+        Log::info('LunarFortis: Terminal created in Fortis API', [
             'terminal_id' => $terminal->id,
             'fortis_id' => $fortisTerminal->getId(),
         ]);

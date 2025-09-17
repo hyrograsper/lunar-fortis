@@ -42,7 +42,7 @@ class FortisErrorHelper
             }
         } catch (Exception $e) {
             // If we can't parse the response, at least we have the basic message
-            Log::warning('Could not parse Fortis API exception response', [
+            Log::warning('LunarFortis: Could not parse Fortis API exception response', [
                 'original_message' => $exception->getMessage(),
                 'parse_error' => $e->getMessage(),
             ]);
