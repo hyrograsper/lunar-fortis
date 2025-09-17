@@ -295,15 +295,27 @@ use Hyrograsper\LunarFortis\Models\Terminal;
 
 $terminal = Terminal::where('active', true)->first();
 
-// Simple payment
-$result = $terminal->processPayment(1099, [
+// Complete payment (authorize + capture)
+$result = $terminal->processCompletePayment(1099, [
     'order_number' => 'ORD-12345',
     'description' => 'Coffee purchase'
 ]);
 
+// Authorization only
+$authResult = $terminal->authorizePayment(1099, [
+    'order_number' => 'ORD-12345',
+    'description' => 'Payment'
+]);
+
+// Capture authorized transaction
+if ($authResult['success']) {
+    $transactionId = $authResult['transaction_id'];
+    $captureResult = $terminal->captureTransaction($transactionId, 1099);
+}
+
 // Check terminal readiness
 if ($terminal->isReadyForPayments()) {
-    $result = $terminal->processPayment(1099, [
+    $result = $terminal->processCompletePayment(1099, [
         'order_number' => 'ORD-12345',
         'description' => 'Payment'
     ]);
@@ -315,16 +327,26 @@ if ($terminal->isReadyForPayments()) {
 ```php
 $fortis = app(LunarFortis::class);
 
-// Complete payment processing
-$result = $fortis->processTerminalCreditCard('terminal_123', 1099, [
+// Complete authorization processing with automatic monitoring
+$result = $fortis->processTerminalCreditCardAuth('terminal_123', 1099, [
     'order_number' => 'ORD-12345',
     'customer_id' => 'CUST-456'
 ]);
 
-// Manual async handling
-$response = $fortis->chargeTerminalCreditCard('terminal_123', 1099);
-$statusCode = $response->getData()->getAsync()->getCode();
+// Manual authorization handling
+$response = $fortis->authorizeTerminalCreditCard('terminal_123', 1099, [
+    'order_number' => 'ORD-12345'
+]);
+$statusCode = $response['data']['async']['code'];
 $finalStatus = $fortis->waitForTerminalTransaction($statusCode);
+
+// Capture the authorized transaction
+if ($finalStatus['data']['progress'] >= 100) {
+    $transactionId = $finalStatus['data']['id'];
+    $captureResult = $fortis->captureTerminalTransaction($transactionId, 1099, [
+        'order_number' => 'ORD-12345'
+    ]);
+}
 ```
 
 ### Lunar Integration

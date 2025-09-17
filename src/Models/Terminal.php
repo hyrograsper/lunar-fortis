@@ -4,7 +4,6 @@ namespace Hyrograsper\LunarFortis\Models;
 
 use Carbon\Carbon;
 use Exception;
-use FortisAPILib\Models\TerminalManufacturerCodeEnum;
 use Hyrograsper\LunarFortis\Facades\LunarFortis;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -113,7 +112,7 @@ class Terminal extends Model
 
         // Fetch all terminals from Fortis API (error handling is in LunarFortis)
         $response = LunarFortis::listTerminals();
-        $terminals = $response->getList() ?? [];
+        $terminals = $response['list'] ?? [];
 
         foreach ($terminals as $terminalData) {
             $stats['total_processed']++;
@@ -159,9 +158,9 @@ class Terminal extends Model
     {
         // Fetch single terminal from Fortis API (error handling is in LunarFortis)
         $response = LunarFortis::getTerminal($fortisId);
-        $data = $response->getData();
+        $data = $response['data'] ?? [];
 
-        if (! $data) {
+        if (empty($data)) {
             return null;
         }
 
@@ -185,91 +184,151 @@ class Terminal extends Model
     // ========================================
 
     /**
-     * Process a credit card payment using this terminal
+     * Process a credit card authorization using this terminal (auth-only flow)
      *
      * @throws Exception
      */
-    public function processPayment(int $amount, array $options = []): array
+    public function authorizePayment(int $amount, array $options = []): array
     {
         if (! $this->active) {
             throw new Exception("Terminal {$this->fortis_id} is not active");
         }
 
         // Error handling is now centralized in LunarFortis
-        return LunarFortis::processTerminalCreditCard(
+        return LunarFortis::processTerminalCreditCardAuth(
             terminalId: $this->fortis_id,
             amount: $amount,
             options: $options
         );
     }
 
+
     /**
-     * Initiate a payment and return async status code for manual monitoring
+     * Initiate an authorization and return async status code for manual monitoring
      *
      * @throws Exception
      */
-    public function initiatePayment(int $amount, array $options = []): string
+    public function initiateAuthorization(int $amount, array $options = []): string
     {
         if (! $this->active) {
             throw new Exception("Terminal {$this->fortis_id} is not active");
         }
 
         // Error handling is now centralized in LunarFortis
-        $response = LunarFortis::chargeTerminalCreditCard(
+        $response = LunarFortis::authorizeTerminalCreditCard(
             terminalId: $this->fortis_id,
             amount: $amount,
             options: $options
         );
 
-        return $response->getData()->getAsync()->getCode();
+        $asyncData = $response['data']['async'] ?? [];
+        $statusCode = $asyncData['code'] ?? null;
+
+        if (!$statusCode) {
+            throw new Exception('No async status code received from terminal authorization initiation');
+        }
+
+        return $statusCode;
     }
 
+
     /**
-     * Check the status of a payment by async status code
+     * Check the status of an authorization by async status code
      *
      * @throws Exception
      */
-    public function checkPaymentStatus(string $statusCode): array
+    public function checkAuthorizationStatus(string $statusCode): array
     {
         // Error handling is now centralized in LunarFortis
-        $statusData = LunarFortis::checkTerminalTransactionStatus($statusCode)
-            ->getData();
+        $response = LunarFortis::checkTerminalTransactionStatus($statusCode);
+        $statusData = $response['data'] ?? [];
+
+        $progress = $statusData['progress'] ?? 0;
 
         return [
-            'progress' => $statusData->getProgress(),
-            'completed' => $statusData->getProgress() >= 100,
-            'success' => $statusData->getProgress() >= 100 && ! $statusData->getError(),
-            'error' => $statusData->getError(),
-            'transaction_id' => $statusData->getId(),
-            'type' => $statusData->getType(),
-            'ttl' => $statusData->getTtl(),
+            'progress' => $progress,
+            'completed' => $progress >= 100,
+            'success' => $progress >= 100 && ! ($statusData['error'] ?? null),
+            'error' => $statusData['error'] ?? null,
+            'transaction_id' => $statusData['id'] ?? null,
+            'type' => $statusData['type'] ?? null,
+            'ttl' => $statusData['ttl'] ?? null,
         ];
     }
 
     /**
-     * Wait for a payment to complete
+     * Wait for an authorization to complete
      *
      * @throws Exception
      */
-    public function waitForPayment(
+    public function waitForAuthorization(
         string $statusCode,
         int $timeoutSeconds = 300,
         int $pollIntervalSeconds = 2
     ): array {
         // Error handling is now centralized in LunarFortis
-        $status = LunarFortis::waitForTerminalTransaction($statusCode, $timeoutSeconds, $pollIntervalSeconds);
-        $statusData = $status->getData();
+        $response = LunarFortis::waitForTerminalTransaction($statusCode, $timeoutSeconds, $pollIntervalSeconds);
+        $statusData = $response['data'] ?? [];
+
+        $progress = $statusData['progress'] ?? 0;
+        $error = $statusData['error'] ?? null;
 
         return [
-            'progress' => $statusData->getProgress(),
-            'completed' => $statusData->getProgress() >= 100,
-            'success' => $statusData->getProgress() >= 100 && ! $statusData->getError(),
-            'error' => $statusData->getError(),
-            'transaction_id' => $statusData->getId(),
-            'type' => $statusData->getType(),
-            'ttl' => $statusData->getTtl(),
-            'timed_out' => $statusData->getProgress() < 100 && ! $statusData->getError(),
+            'progress' => $progress,
+            'completed' => $progress >= 100,
+            'success' => $progress >= 100 && ! $error,
+            'error' => $error,
+            'transaction_id' => $statusData['id'] ?? null,
+            'type' => $statusData['type'] ?? null,
+            'ttl' => $statusData['ttl'] ?? null,
+            'timed_out' => $progress < 100 && ! $error,
         ];
+    }
+
+    /**
+     * Capture an authorized transaction (complete the payment)
+     *
+     * @throws Exception
+     */
+    public function captureTransaction(string $transactionId, int $amount, array $options = []): array
+    {
+        // Add terminal context to options
+        $options = array_merge($options, [
+            'order_number' => $options['order_number'] ?? null,
+            'customer_id' => $options['customer_id'] ?? null,
+        ]);
+
+        // Error handling is now centralized in LunarFortis
+        return LunarFortis::captureTerminalTransaction($transactionId, $amount, $options);
+    }
+
+
+    /**
+     * Complete auth-only flow: authorize and capture in one call
+     *
+     * @throws Exception
+     */
+    public function processCompletePayment(int $amount, array $options = []): array
+    {
+        // Step 1: Authorize
+        $authResult = $this->authorizePayment($amount, $options);
+
+        if (!$authResult['success']) {
+            return $authResult;
+        }
+
+        $transactionId = $authResult['transaction_id'];
+        if (!$transactionId) {
+            throw new Exception('No transaction ID returned from authorization');
+        }
+
+        // Step 2: Capture
+        $captureResult = $this->captureTransaction($transactionId, $amount, $options);
+
+        return array_merge($authResult, [
+            'captured' => true,
+            'capture_result' => $captureResult,
+        ]);
     }
 
     // ========================================
@@ -314,10 +373,10 @@ class Terminal extends Model
     public static function getAllowedManufacturerCodes(): array
     {
         return [
-            TerminalManufacturerCodeEnum::ENUM_1,
-            TerminalManufacturerCodeEnum::ENUM_2,
-            TerminalManufacturerCodeEnum::ENUM_4,
-            TerminalManufacturerCodeEnum::ENUM_100,
+            1,
+            2,
+            4,
+            100,
         ];
     }
 
@@ -337,13 +396,13 @@ class Terminal extends Model
      * @param  string|null  $code  Optional specific code to get label for
      * @return array|string|null
      */
-    public static function getManufacturerCodeLabels(?string $code = null)
+    public static function getManufacturerCodeLabels($code = null)
     {
         $labels = [
-            TerminalManufacturerCodeEnum::ENUM_1 => 'Manufacturer 1',
-            TerminalManufacturerCodeEnum::ENUM_2 => 'Manufacturer 2',
-            TerminalManufacturerCodeEnum::ENUM_4 => 'Manufacturer 4',
-            TerminalManufacturerCodeEnum::ENUM_100 => 'Manufacturer 100',
+            1 => 'Manufacturer 1',
+            2 => 'Manufacturer 2',
+            4 => 'Manufacturer 4',
+            100 => 'Manufacturer 100',
         ];
 
         return $code ? ($labels[$code] ?? null) : $labels;
@@ -369,22 +428,22 @@ class Terminal extends Model
     // Private Helper Methods
     // ========================================
 
-    protected static function mapFortisDataToAttributes($data): array
+    protected static function mapFortisDataToAttributes(array $data): array
     {
         return [
-            'fortis_id' => $data->getId(),
-            'location_id' => $data->getLocationId(),
-            'title' => $data->getTitle(),
-            'serial_number' => $data->getSerialNumber(),
-            'terminal_application_id' => $data->getTerminalApplicationId(),
-            'terminal_manufacturer_code' => (string) $data->getTerminalManufacturerCode(),
-            'default_product_transaction_id' => $data->getDefaultProductTransactionId(),
-            'active' => (bool) $data->getActive(),
-            'fortis_created_at' => $data->getCreatedTs() ? Carbon::createFromTimestamp($data->getCreatedTs()) : null,
-            'fortis_modified_at' => $data->getModifiedTs() ? Carbon::createFromTimestamp($data->getModifiedTs()) : null,
-            'created_user_id' => $data->getCreatedUserId(),
-            'modified_user_id' => $data->getModifiedUserId(),
-            'fortis_data' => json_decode(json_encode($data), true), // Store full response for reference
+            'fortis_id' => $data['id'] ?? null,
+            'location_id' => $data['location_id'] ?? null,
+            'title' => $data['title'] ?? null,
+            'serial_number' => $data['serial_number'] ?? null,
+            'terminal_application_id' => $data['terminal_application_id'] ?? null,
+            'terminal_manufacturer_code' => (string) ($data['terminal_manufacturer_code'] ?? 1),
+            'default_product_transaction_id' => $data['default_product_transaction_id'] ?? null,
+            'active' => (bool) ($data['active'] ?? true),
+            'fortis_created_at' => isset($data['created_ts']) ? Carbon::createFromTimestamp($data['created_ts']) : null,
+            'fortis_modified_at' => isset($data['modified_ts']) ? Carbon::createFromTimestamp($data['modified_ts']) : null,
+            'created_user_id' => $data['created_user_id'] ?? null,
+            'modified_user_id' => $data['modified_user_id'] ?? null,
+            'fortis_data' => $data, // Store full response for reference
         ];
     }
 }

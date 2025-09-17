@@ -2,7 +2,6 @@
 
 namespace Hyrograsper\LunarFortis\Livewire;
 
-use FortisAPILib\Models\ActionEnum;
 use Hyrograsper\LunarFortis\Facades\LunarFortis;
 use Hyrograsper\LunarFortis\PaymentTypes\FortisPaymentType;
 use Illuminate\Support\Facades\Cache;
@@ -99,7 +98,7 @@ class PaymentForm extends Component
         $this->cart->calculate();
 
         return Cache::remember($this->clientTokenCacheKey(), 5, function () {
-            return LunarFortis::getClientTokenForSaleAmount($this->cart->total->value, ActionEnum::AUTHONLY);
+            return LunarFortis::getClientTokenForSaleAmount($this->cart->total->value, 'auth-only');
         });
     }
 
