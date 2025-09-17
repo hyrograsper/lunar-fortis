@@ -73,6 +73,30 @@ class FortisTerminalPaymentType extends AbstractPayment
             );
         } catch (ApiException|Exception $e) {
             Log::error('LunarFortis: Failed to fetch fortis transaction and store data. Error: '.$e->getMessage());
+
+            $paymentAuthorize = new PaymentAuthorize(
+                success: false,
+                message: 'Failed to fetch fortis transaction and store data. Error: '.$e->getMessage(),
+                orderId: $this->order->id,
+                paymentType: self::PAYMENT_TYPE,
+            );
+
+            PaymentAttemptEvent::dispatch($paymentAuthorize);
+
+            return $paymentAuthorize;
+        }
+
+        if (! $transaction->success) {
+            $paymentAuthorize = new PaymentAuthorize(
+                success: false,
+                message: $transaction->meta['errors'] ?? 'Unknown Error.',
+                orderId: $this->order->id,
+                paymentType: self::PAYMENT_TYPE,
+            );
+
+            PaymentAttemptEvent::dispatch($paymentAuthorize);
+
+            return $paymentAuthorize;
         }
 
         // Terminal payments are always automatically captured
