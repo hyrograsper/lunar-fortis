@@ -168,6 +168,10 @@ describe('LunarFortis Credit Card Authorization', function () {
         $mockOrder->total = (object) ['value' => 1500];
 
         $mockBillingAddress = Mockery::mock();
+        $mockBillingAddress->shouldReceive('getAttribute')->with('line_one')->andReturn('123 Main St');
+        $mockBillingAddress->shouldReceive('getAttribute')->with('city')->andReturn('Anytown');
+        $mockBillingAddress->shouldReceive('getAttribute')->with('state')->andReturn('CA');
+        $mockBillingAddress->shouldReceive('getAttribute')->with('postcode')->andReturn('12345');
         $mockBillingAddress->line_one = '123 Main St';
         $mockBillingAddress->city = 'Anytown';
         $mockBillingAddress->state = 'CA';
@@ -177,6 +181,7 @@ describe('LunarFortis Credit Card Authorization', function () {
         $mockCountry->iso3 = 'USA';
         $mockBillingAddress->country = $mockCountry;
 
+        $mockOrder->shouldReceive('getAttribute')->with('billingAddress')->andReturn($mockBillingAddress);
         $mockOrder->billingAddress = $mockBillingAddress;
 
         $mockHttpService = Mockery::mock(FortisHttpService::class);
