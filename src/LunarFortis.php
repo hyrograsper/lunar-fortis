@@ -39,14 +39,26 @@ class LunarFortis
     /**
      * @throws Exception
      */
-    public function completeAuthorizedTransaction(TransactionContract $transaction, int $amount = 0): array
+    public function completeAuthorizedTransaction(TransactionContract $transaction, int $amount = 0, array $options = []): array
     {
         try {
+            // Build options from transaction data and merge with provided options
+            $transactionOptions = [];
+
+            if ($transaction->order?->reference) {
+                $transactionOptions['order_number'] = $transaction->order->reference;
+            }
+
+            if ($transaction->order?->customer_id) {
+                $transactionOptions['customer_id'] = $transaction->order->customer_id;
+            }
+
+            $mergedOptions = array_merge($transactionOptions, $options);
+
             return $this->getHttpService()->completeAuthorizedTransaction(
                 $transaction->reference,
                 $amount,
-                $transaction->order?->reference,
-                $transaction->order?->customer_id
+                $mergedOptions
             );
         } catch (Exception $e) {
             throw new Exception("Failed to complete authorized transaction: {$e->getMessage()}");
@@ -375,14 +387,10 @@ class LunarFortis
     public function captureTerminalTransaction(string $transactionId, int $amount, array $options = []): array
     {
         try {
-            $orderNumber = $options['order_number'] ?? null;
-            $customerId = $options['customer_id'] ?? null;
-
             return $this->getHttpService()->completeAuthorizedTransaction(
                 $transactionId,
                 $amount,
-                $orderNumber,
-                $customerId
+                $options
             );
         } catch (Exception $e) {
             throw new Exception("Failed to capture terminal transaction: {$e->getMessage()}");

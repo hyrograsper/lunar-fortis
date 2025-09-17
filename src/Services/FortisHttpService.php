@@ -131,20 +131,72 @@ class FortisHttpService
     /**
      * Complete authorized transaction
      */
-    public function completeAuthorizedTransaction(string $transactionId, int $amount, ?string $orderNumber = null, ?string $customerId = null): array
+    public function completeAuthorizedTransaction(string $transactionId, int $amount, array $options = []): array
     {
         try {
             $data = [
-                'location_id' => config('services.fortis.locationId'),
+                'location_id' => $options['location_id'] ?? config('services.fortis.locationId'),
                 'transaction_amount' => $amount,
             ];
 
-            if ($orderNumber) {
-                $data['order_number'] = $orderNumber;
-            }
+            // Add all optional fields supported by the auth-complete endpoint
+            $optionalFields = [
+                // Transaction identification
+                'order_number', 'customer_id', 'transaction_api_id', 'po_number', 'clerk_number',
 
-            if ($customerId) {
-                $data['customer_id'] = $customerId;
+                // Contact and location
+                'contact_api_id', 'contact_id', 'location_api_id', 'product_transaction_id', 'quick_invoice_id',
+
+                // Transaction amounts
+                'secondary_amount', 'subtotal_amount', 'surcharge_amount', 'tax', 'tip_amount',
+
+                // Date fields
+                'checkin_date', 'checkout_date',
+
+                // Account management
+                'save_account', 'save_account_title',
+
+                // Billing information (object)
+                'billing_address',
+
+                // Additional amounts (array)
+                'additional_amounts',
+
+                // Identity verification (object)
+                'identity_verification',
+
+                // Custom data
+                'custom_data', 'transaction_c1', 'transaction_c2', 'transaction_c3',
+
+                // Installment and recurring
+                'installment', 'installment_number', 'installment_count', 'installment_counter',
+                'installment_total', 'recurring', 'recurring_flag', 'recurring_number',
+                'subscription', 'standing_order',
+
+                // Lodging/hospitality
+                'room_num', 'room_rate', 'advance_deposit', 'no_show', 'mini_bar',
+
+                // Images
+                'image_front', 'image_back',
+
+                // Override flags
+                'bank_funded_only_override', 'allow_partial_authorization_override',
+                'auto_decline_cvv_override', 'auto_decline_street_override', 'auto_decline_zip_override',
+
+                // Miscellaneous
+                'description', 'notification_email_address', 'tags', 'iias_ind',
+                'ebt_type', 'currency_code', 'deferred_auth'
+            ];
+
+            foreach ($optionalFields as $field) {
+                if (isset($options[$field])) {
+                    // Ensure customer_id is always a string as required by Fortis API
+                    if ($field === 'customer_id') {
+                        $data[$field] = (string) $options[$field];
+                    } else {
+                        $data[$field] = $options[$field];
+                    }
+                }
             }
 
             $response = $this->makeRequest('PATCH', "/v1/transactions/{$transactionId}/auth-complete", $data);
