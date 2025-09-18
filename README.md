@@ -225,6 +225,8 @@ FORTIS_USER_ID=your_fortis_user_id
 FORTIS_USER_API_KEY=your_fortis_api_key
 FORTIS_DEVELOPER_ID=your_fortis_developer_id
 FORTIS_LOCATION_ID=your_fortis_location_id
+FORTIS_PRODUCT_TRANSACTION_ID=your_product_transaction_id
+FORTIS_TERMINAL_PRODUCT_TRANSACTION_ID=your_terminal_product_transaction_id
 FORTIS_ENVIRONMENT=sandbox  # or 'production'
 
 # Optional: HTTP Configuration (defaults shown)
@@ -250,6 +252,8 @@ Configure the payment types in your `config/services.php`:
     'userApiKey' => env('FORTIS_USER_API_KEY'),
     'developerId' => env('FORTIS_DEVELOPER_ID'),
     'locationId' => env('FORTIS_LOCATION_ID'),
+    'productTransactionId' => env('FORTIS_PRODUCT_TRANSACTION_ID'),
+    'terminalProductTransactionId' => env('FORTIS_TERMINAL_PRODUCT_TRANSACTION_ID'),
 ],
 ```
 
