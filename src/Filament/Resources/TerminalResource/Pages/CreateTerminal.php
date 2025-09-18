@@ -39,9 +39,12 @@ class CreateTerminal extends CreateRecord
                 ->send();
 
             $this->halt();
+<<<<<<< HEAD
 
             // This line should never be reached due to halt() above, but PHPStan requires it
             throw $exception;
+=======
+>>>>>>> origin/main
         }
     }
 }

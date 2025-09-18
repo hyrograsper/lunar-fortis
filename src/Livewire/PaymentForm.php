@@ -2,6 +2,7 @@
 
 namespace Hyrograsper\LunarFortis\Livewire;
 
+use FortisAPILib\Models\ActionEnum;
 use Hyrograsper\LunarFortis\Facades\LunarFortis;
 use Hyrograsper\LunarFortis\PaymentTypes\FortisPaymentType;
 use Illuminate\Support\Facades\Cache;

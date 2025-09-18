@@ -17,11 +17,18 @@
     ],
     "require": {
         "php": "^8.3",
+<<<<<<< HEAD
+=======
+        "hyrograsper/fortis-php-sdk": "v1.1.1",
+>>>>>>> origin/main
         "illuminate/cache": "^10.0 || ^11.0 || ^12.0",
         "illuminate/config": "^10.0 || ^11.0 || ^12.0",
         "illuminate/contracts": "^10.0||^11.0||^12.0",
         "illuminate/events": "^10.0 || ^11.0 || ^12.0",
+<<<<<<< HEAD
         "illuminate/http": "^10.0 || ^11.0 || ^12.0",
+=======
+>>>>>>> origin/main
         "illuminate/log": "^10.0 || ^11.0 || ^12.0",
         "illuminate/support": "^10.0 || ^11.0 || ^12.0",
         "illuminate/view": "^10.0 || ^11.0 || ^12.0",
@@ -85,5 +92,15 @@
         }
     },
     "minimum-stability": "stable",
+<<<<<<< HEAD
     "prefer-stable": true
+=======
+    "prefer-stable": true,
+    "repositories": {
+        "fortis-php-sdk": {
+            "type": "vcs",
+            "url": "git@github.com:hyrograsper/fortis-php-sdk"
+        }
+    }
+>>>>>>> origin/main
 }

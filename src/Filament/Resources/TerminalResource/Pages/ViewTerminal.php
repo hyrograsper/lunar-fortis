@@ -146,7 +146,11 @@ class ViewTerminal extends ViewRecord
                 ->visible(fn () => ! empty($this->record->fortis_id))
                 ->requiresConfirmation(),
 
+<<<<<<< HEAD
             Actions\Action::make('test_payment')
+=======
+            Actions\Action::make('capture_payment')
+>>>>>>> origin/main
                 ->icon('heroicon-o-credit-card')
                 ->color('warning')
                 ->form([
@@ -161,6 +165,7 @@ class ViewTerminal extends ViewRecord
                     Forms\Components\TextInput::make('description')
                         ->helperText('To help identify the transaction')
                         ->label('Description'),
+<<<<<<< HEAD
                     Forms\Components\Select::make('flow_type')
                         ->options([
                             'complete' => 'Complete Payment (authorize + capture)',
@@ -183,6 +188,18 @@ class ViewTerminal extends ViewRecord
                             'authorize' => $this->record->authorizePayment($amount, $options),
                             default => $this->record->processCompletePayment($amount, $options),
                         };
+=======
+                ])
+                ->action(function (array $data) {
+                    try {
+                        $result = $this->record->processPayment(
+                            amount: (int) bcmul($data['amount'], '100'),
+                            options: [
+                                'description' => $data['description'],
+                                'order_number' => 'TEST-'.now()->format('YmdHis'),
+                            ]
+                        );
+>>>>>>> origin/main
 
                         if ($result['success']) {
                             Notification::make()
