@@ -146,7 +146,7 @@ class ViewTerminal extends ViewRecord
                 ->visible(fn () => ! empty($this->record->fortis_id))
                 ->requiresConfirmation(),
 
-            Actions\Action::make('capture_payment')
+            Actions\Action::make('test_payment')
                 ->icon('heroicon-o-credit-card')
                 ->color('warning')
                 ->form([
@@ -161,16 +161,28 @@ class ViewTerminal extends ViewRecord
                     Forms\Components\TextInput::make('description')
                         ->helperText('To help identify the transaction')
                         ->label('Description'),
+                    Forms\Components\Select::make('flow_type')
+                        ->options([
+                            'complete' => 'Complete Payment (authorize + capture)',
+                            'authorize' => 'Authorization Only',
+                        ])
+                        ->default('complete')
+                        ->required()
+                        ->label('Payment Flow'),
                 ])
                 ->action(function (array $data) {
                     try {
-                        $result = $this->record->processPayment(
-                            amount: (int) bcmul($data['amount'], '100'),
-                            options: [
-                                'description' => $data['description'],
-                                'order_number' => 'TEST-'.now()->format('YmdHis'),
-                            ]
-                        );
+                        $amount = (int) bcmul($data['amount'], '100');
+                        $options = [
+                            'description' => $data['description'],
+                            'order_number' => 'TEST-'.now()->format('YmdHis'),
+                        ];
+
+                        $result = match ($data['flow_type']) {
+                            'complete' => $this->record->processCompletePayment($amount, $options),
+                            'authorize' => $this->record->authorizePayment($amount, $options),
+                            default => $this->record->processCompletePayment($amount, $options),
+                        };
 
                         if ($result['success']) {
                             Notification::make()

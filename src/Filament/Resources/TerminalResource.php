@@ -183,37 +183,48 @@ class TerminalResource extends Resource
                             ->mask(RawJs::make('$money($input, \'.\', \'\', 2)'))
                             ->placeholder('100.00')
                             ->suffix('dollars')
-                            ->label('Test Amount'),
+                            ->label('Amount'),
                         Forms\Components\TextInput::make('description')
                             ->helperText('To help identify the transaction')
                             ->label('Description'),
+                        Forms\Components\Select::make('flow_type')
+                            ->options([
+                                'complete' => 'Complete Payment (authorize + capture)',
+                                'authorize' => 'Authorization Only',
+                            ])
+                            ->default('complete')
+                            ->required()
+                            ->label('Payment Flow'),
                     ])
                     ->action(function (Terminal $record, array $data) {
                         try {
-                            $result = $record->processPayment(
-                                amount: (int) bcmul($data['amount'], '100'),
-                                options: [
-                                    'description' => $data['description'],
-                                    'order_number' => 'TEST-'.now()->format('YmdHis'),
-                                ]
-                            );
+                            $amount = (int) bcmul($data['amount'], '100');
+                            $options = [
+                                'description' => $data['description'],
+                                'order_number' => now()->format('YmdHis'),
+                            ];
+
+                            $result = match ($data['flow_type']) {
+                                'authorize' => $record->authorizePayment($amount, $options),
+                                default => $record->processCompletePayment($amount, $options),
+                            };
 
                             if ($result['success']) {
                                 Notification::make()
-                                    ->title('Test payment successful')
+                                    ->title('Successful')
                                     ->body("Transaction ID: {$result['transaction_id']}")
                                     ->success()
                                     ->send();
                             } else {
                                 Notification::make()
-                                    ->title('Test payment failed')
+                                    ->title('Payment failed')
                                     ->body($result['error'] ?? 'Unknown error')
                                     ->danger()
                                     ->send();
                             }
                         } catch (\Exception $e) {
                             Notification::make()
-                                ->title('Test payment error')
+                                ->title('Payment error')
                                 ->body($e->getMessage())
                                 ->danger()
                                 ->send();

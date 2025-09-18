@@ -99,7 +99,7 @@ class PaymentForm extends Component
         $this->cart->calculate();
 
         return Cache::remember($this->clientTokenCacheKey(), 5, function () {
-            return LunarFortis::getClientTokenForSaleAmount($this->cart->total->value, ActionEnum::AUTHONLY);
+            return LunarFortis::getClientTokenForSaleAmount($this->cart->total->value, 'auth-only');
         });
     }
 
@@ -147,6 +147,8 @@ class PaymentForm extends Component
 
     public function render(): View
     {
-        return view('lunar-fortis::components.payment-form');
+        /** @var view-string $viewName */
+        $viewName = 'lunar-fortis::components.payment-form';
+        return view($viewName);
     }
 }

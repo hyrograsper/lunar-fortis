@@ -3,8 +3,6 @@
 namespace Hyrograsper\LunarFortis\PaymentTypes;
 
 use Exception;
-use FortisAPILib\Exceptions\ApiException;
-use FortisAPILib\Models\ResponseTransaction;
 use Hyrograsper\LunarFortis\Enums\ReasonCode;
 use Hyrograsper\LunarFortis\Enums\StatusCode;
 use Hyrograsper\LunarFortis\Facades\LunarFortis;
@@ -22,14 +20,13 @@ use Lunar\PaymentTypes\AbstractPayment;
 
 class FortisTerminalPaymentType extends AbstractPayment
 {
-    // Terminal payments are always automatic capture (in-person transactions)
-    protected string $policy = 'automatic';
+    protected string $policy;
 
     public const string PAYMENT_TYPE = 'fortis-terminal';
 
     public function __construct()
     {
-        //
+        $this->policy = config('lunar-fortis.terminal_policy', config('lunar-fortis.policy', 'automatic'));
     }
 
     public function authorize(): ?PaymentAuthorize
@@ -71,7 +68,7 @@ class FortisTerminalPaymentType extends AbstractPayment
             $transaction = $this->storeTerminalTransaction(
                 LunarFortis::getTransaction($this->data['fortis_transaction_id'])
             );
-        } catch (ApiException|Exception $e) {
+        } catch (Exception $e) {
             Log::error('LunarFortis: Failed to fetch fortis transaction and store data. Error: '.$e->getMessage());
 
             $paymentAuthorize = new PaymentAuthorize(
@@ -99,14 +96,63 @@ class FortisTerminalPaymentType extends AbstractPayment
             return $paymentAuthorize;
         }
 
-        // Terminal payments are always automatically captured
-        $this->order->placed_at = now();
-        $this->order->status = config('lunar-fortis.status_mapping.payment-received', 'payment-received');
+        // Check if this was already captured (sale transaction)
+        if ($transaction->type == 'capture') {
+            $this->order->placed_at = now();
+            $this->order->status = config('lunar-fortis.status_mapping.payment-received', 'payment-received');
+            $this->order->save();
+
+            $paymentAuthorize = new PaymentAuthorize(
+                success: true,
+                message: 'Terminal payment completed successfully',
+                orderId: $this->order->id,
+                paymentType: self::PAYMENT_TYPE,
+            );
+
+            PaymentAttemptEvent::dispatch($paymentAuthorize);
+
+            return $paymentAuthorize;
+        }
+
+        // Handle authorization-only transaction
+        $this->order->status = config('lunar-fortis.status_mapping.payment-authorized', 'payment-authorized');
         $this->order->save();
+
+        if ($this->policy == 'automatic') {
+            $captureResponse = $this->capture($transaction, $transaction->amount->value);
+
+            if (! $captureResponse->success) {
+                $paymentAuthorize = new PaymentAuthorize(
+                    success: false,
+                    message: $captureResponse->message,
+                    orderId: $this->order->id,
+                    paymentType: self::PAYMENT_TYPE,
+                );
+
+                PaymentAttemptEvent::dispatch($paymentAuthorize);
+
+                return $paymentAuthorize;
+            }
+
+            $this->order->placed_at = now();
+            $this->order->status = config('lunar-fortis.status_mapping.payment-received', 'payment-received');
+            $this->order->save();
+
+            $paymentAuthorize = new PaymentAuthorize(
+                success: true,
+                message: 'Terminal payment captured successfully',
+                orderId: $this->order->id,
+                paymentType: self::PAYMENT_TYPE,
+            );
+
+            PaymentAttemptEvent::dispatch($paymentAuthorize);
+
+            return $paymentAuthorize;
+        }
 
         $paymentAuthorize = new PaymentAuthorize(
             success: true,
-            message: 'Terminal payment completed successfully',
+            message: 'Terminal payment authorized',
             orderId: $this->order->id,
             paymentType: self::PAYMENT_TYPE,
         );
@@ -118,20 +164,38 @@ class FortisTerminalPaymentType extends AbstractPayment
 
     public function capture(TransactionContract $transaction, $amount = 0): PaymentCapture
     {
-        // Terminal payments are automatically captured during authorization
-        // This method should not normally be called for terminal payments
-        return new PaymentCapture(
-            success: false,
-            message: 'Terminal payments are automatically captured during authorization'
-        );
+        try {
+            $response = LunarFortis::completeAuthorizedTransaction($transaction, $amount);
+
+            $captureTransaction = $this->storeResponseTransaction($response, $transaction);
+
+            if (! $captureTransaction->success) {
+                return new PaymentCapture(
+                    success: false,
+                    message: $captureTransaction->notes ?? 'Capture failed'
+                );
+            }
+
+            return new PaymentCapture(
+                success: true,
+                message: 'Terminal payment captured successfully'
+            );
+        } catch (Exception $e) {
+            Log::error('LunarFortis: Terminal capture failed: '.$e->getMessage());
+
+            return new PaymentCapture(
+                success: false,
+                message: $e->getMessage()
+            );
+        }
     }
 
     public function refund(TransactionContract $transaction, int $amount = 0, $notes = null): PaymentRefund
     {
         try {
             $result = LunarFortis::refund($transaction, $amount);
-        } catch (ApiException $exception) {
-            Log::error('LunarFortis: Unable to process terminal refund: '.$exception->getMessage().' '.print_r($exception->getHttpResponse(), true));
+        } catch (Exception $exception) {
+            Log::error('LunarFortis: Unable to process terminal refund: '.$exception->getMessage());
 
             return new PaymentRefund(
                 success: false,
@@ -139,8 +203,11 @@ class FortisTerminalPaymentType extends AbstractPayment
             );
         }
 
-        $data = $result->getData();
-        if (! StatusCode::isRefunded($data->getStatusCode()) || ! ReasonCode::isApproved($data->getReasonCodeId())) {
+        $data = $result['data'] ?? [];
+        $statusCode = $data['status_code'] ?? null;
+        $reasonCodeId = $data['reason_code_id'] ?? null;
+
+        if (! StatusCode::isRefunded($statusCode) || ! ReasonCode::isApproved($reasonCodeId)) {
             Transaction::create([
                 'parent_transaction_id' => $transaction->id,
                 'order_id' => $transaction->order->id,
@@ -148,23 +215,23 @@ class FortisTerminalPaymentType extends AbstractPayment
                 'type' => 'refund',
                 'driver' => self::PAYMENT_TYPE,
                 'amount' => $amount,
-                'reference' => $data->getId() ?? now()->timestamp,
+                'reference' => $data['id'] ?? now()->timestamp,
                 'status' => 'declined',
-                'notes' => $data->getReasonCode(),
+                'notes' => $data['reason_code'] ?? null,
                 'card_type' => $transaction->card_type ?? '',
                 'last_four' => $transaction->last_four ?? '',
                 'meta' => [
-                    'status_code' => $data->getStatusCode(),
-                    'reason_code' => $data->getReasonCode(),
-                    'description' => $data->getDescription(),
-                    'verbiage' => $data->getVerbiage(),
+                    'status_code' => $data['status_code'] ?? null,
+                    'reason_code' => $data['reason_code'] ?? null,
+                    'description' => $data['description'] ?? null,
+                    'verbiage' => $data['verbiage'] ?? null,
                     'terminal_id' => $this->getTerminalIdFromMeta($transaction),
                 ],
             ]);
 
             return new PaymentRefund(
                 success: false,
-                message: $data->getReasonCode()
+                message: $data['reason_code'] ?? 'Refund failed'
             );
         }
 
@@ -175,15 +242,15 @@ class FortisTerminalPaymentType extends AbstractPayment
             'type' => 'refund',
             'driver' => self::PAYMENT_TYPE,
             'amount' => $amount,
-            'reference' => $data->getId() ?? now()->timestamp,
+            'reference' => $data['id'] ?? now()->timestamp,
             'status' => 'refunded',
             'card_type' => $transaction->card_type ?? '',
             'last_four' => $transaction->last_four ?? '',
             'meta' => [
-                'status_code' => $data->getStatusCode(),
-                'reason_code' => $data->getReasonCode(),
-                'description' => $data->getDescription(),
-                'verbiage' => $data->getVerbiage(),
+                'status_code' => $data['status_code'] ?? null,
+                'reason_code' => $data['reason_code'] ?? null,
+                'description' => $data['description'] ?? null,
+                'verbiage' => $data['verbiage'] ?? null,
                 'terminal_id' => $this->getTerminalIdFromMeta($transaction),
             ],
         ]);
@@ -191,11 +258,11 @@ class FortisTerminalPaymentType extends AbstractPayment
         return new PaymentRefund(success: true);
     }
 
-    private function storeTerminalTransaction(ResponseTransaction $response): Transaction
+    private function storeTerminalTransaction(array $response): Transaction
     {
-        $data = $response->getData();
+        $data = $response['data'] ?? [];
 
-        if (! $data) {
+        if (empty($data)) {
             return Transaction::create([
                 'order_id' => $this->order->id,
                 'success' => false,
@@ -212,59 +279,68 @@ class FortisTerminalPaymentType extends AbstractPayment
         }
 
         try {
-            $success = StatusCode::isSuccessful($data->getStatusCode());
+            $statusCode = $data['status_code'] ?? null;
+            $success = StatusCode::isSuccessful($statusCode);
 
-            // Build transaction meta data from ResponseTransaction
+            // Build transaction meta data from response
             $meta = [
-                'status_code' => $data->getStatusCode(),
-                'reason_code' => $data->getReasonCode(),
-                'fortis_transaction_id' => $data->getId(),
-                'description' => $data->getDescription(),
-                'verbiage' => $data->getVerbiage(),
+                'status_code' => $data['status_code'] ?? null,
+                'reason_code' => $data['reason_code'] ?? null,
+                'fortis_transaction_id' => $data['id'] ?? null,
+                'description' => $data['description'] ?? null,
+                'verbiage' => $data['verbiage'] ?? null,
             ];
 
             // Add terminal ID if available
-            if ($data->getTerminalId()) {
-                $meta['terminal_id'] = $data->getTerminalId();
+            if (isset($data['terminal_id'])) {
+                $meta['terminal_id'] = $data['terminal_id'];
 
                 // Try to get terminal details from the database
-                if ($terminal = Terminal::where('fortis_id', $data->getTerminalId())->first()) {
+                if ($terminal = Terminal::where('fortis_id', $data['terminal_id'])->first()) {
                     $meta['terminal_title'] = $terminal->title;
                     $meta['terminal_serial'] = $terminal->serial_number;
                 }
             }
 
             // Add additional transaction details if available
-            if ($data->getTipAmount()) {
-                $meta['tip_amount'] = $data->getTipAmount();
+            if (isset($data['tip_amount'])) {
+                $meta['tip_amount'] = $data['tip_amount'];
             }
 
-            if (method_exists($data, 'getClerkNumber') && $data->getClerkNumber()) {
-                $meta['clerk_number'] = $data->getClerkNumber();
+            if (isset($data['clerk_number'])) {
+                $meta['clerk_number'] = $data['clerk_number'];
             }
+
+            // Determine transaction type based on action or status
+            $transactionType = $this->determineTransactionType($data);
 
             // Determine card details from response data
-            $cardType = $data->getAccountType() ?? 'credit';
-            $lastFour = $data->getLastFour() ?? '';
+            $cardType = $data['account_type'] ?? 'credit';
+            $lastFour = $data['last_four'] ?? '';
 
             return Transaction::create([
                 'order_id' => $this->order->id,
                 'success' => $success,
-                'type' => 'capture', // Terminal payments are always captures
+                'type' => $transactionType,
                 'driver' => self::PAYMENT_TYPE,
-                'amount' => $data->getTransactionAmount() ?? $this->cart->total->value,
-                'reference' => $data->getId() ?? now()->timestamp,
-                'status' => $success ? 'approved' : 'declined',
-                'notes' => $success ? '' : ($data->getVerbiage() ?? $data->getReasonCode()),
+                'amount' => $data['transaction_amount'] ?? $this->cart->total->value,
+                'reference' => $data['id'] ?? now()->timestamp,
+                'status' => $success
+                    ? (StatusCode::isCaptured($data['status_code'])
+                        ? 'approved'
+                        : 'authorized'
+                    )
+                    : 'declined',
+                'notes' => $success ? null : ($data['verbiage'] ?? $data['reason_code'] ?? null),
                 'card_type' => $cardType,
                 'last_four' => $lastFour,
-                'captured_at' => $success ? now() : null,
+                'captured_at' => StatusCode::isCaptured($data['status_code']) ? now() : null,
                 'meta' => $meta,
             ]);
 
         } catch (Exception $e) {
             Log::error('LunarFortis: Terminal payment processing failed', [
-                'transaction_id' => $data?->getId(),
+                'transaction_id' => $data['id'] ?? null,
                 'order_id' => $this->order->id,
                 'amount' => $this->cart->total->value,
                 'error' => $e->getMessage(),
@@ -276,13 +352,13 @@ class FortisTerminalPaymentType extends AbstractPayment
                 'type' => 'capture',
                 'driver' => self::PAYMENT_TYPE,
                 'amount' => $this->cart->total->value,
-                'reference' => $data?->getId() ?? now()->timestamp,
+                'reference' => $data['id'] ?? now()->timestamp,
                 'status' => 'failed',
                 'notes' => $e->getMessage(),
                 'card_type' => 'unknown',
                 'last_four' => '',
                 'meta' => [
-                    'terminal_id' => $data?->getTerminalId(),
+                    'terminal_id' => $data['terminal_id'] ?? null,
                     'errors' => $e->getMessage(),
                 ],
             ]);
@@ -294,5 +370,87 @@ class FortisTerminalPaymentType extends AbstractPayment
         $meta = is_array($transaction->meta) ? $transaction->meta : [];
 
         return $meta['terminal_id'] ?? null;
+    }
+
+    private function determineTransactionType(array $data): string
+    {
+        // Check if there's an action field that indicates the transaction type
+        if (isset($data['@action'])) {
+            return $data['@action'] == 'sale' ? 'capture' : 'intent';
+        }
+
+        // Check status code - if it's already captured, it was a sale transaction
+        if (StatusCode::isCaptured($data['status_code'] ?? null)) {
+            return 'capture';
+        }
+
+        // Default to intent for authorization-only transactions
+        return 'intent';
+    }
+
+    private function storeResponseTransaction(array $response, TransactionContract $parentTransaction): Transaction
+    {
+        $data = $response['data'] ?? [];
+
+        if (empty($data)) {
+            return Transaction::create([
+                'parent_transaction_id' => $parentTransaction->id,
+                'order_id' => $parentTransaction->order->id,
+                'success' => false,
+                'type' => 'capture',
+                'driver' => self::PAYMENT_TYPE,
+                'amount' => 0,
+                'reference' => now()->timestamp,
+                'status' => 'failed',
+                'notes' => 'No response data received',
+                'card_type' => $parentTransaction->card_type ?? 'N/A',
+                'last_four' => $parentTransaction->last_four ?? '',
+                'meta' => [],
+            ]);
+        }
+
+        $statusCode = $data['status_code'] ?? null;
+        $success = StatusCode::isSuccessful($statusCode);
+
+        // Build transaction meta data from response
+        $meta = [
+            'status_code' => $data['status_code'] ?? null,
+            'reason_code' => $data['reason_code'] ?? null,
+            'fortis_transaction_id' => $data['id'] ?? null,
+            'description' => $data['description'] ?? null,
+            'verbiage' => $data['verbiage'] ?? null,
+        ];
+
+        // Add terminal ID if available
+        if (isset($data['terminal_id'])) {
+            $meta['terminal_id'] = $data['terminal_id'];
+
+            // Try to get terminal details from the database
+            if ($terminal = Terminal::where('fortis_id', $data['terminal_id'])->first()) {
+                $meta['terminal_title'] = $terminal->title;
+                $meta['terminal_serial'] = $terminal->serial_number;
+            }
+        }
+
+        return Transaction::create([
+            'parent_transaction_id' => $parentTransaction->id,
+            'order_id' => $parentTransaction->order->id,
+            'success' => $success,
+            'type' => 'capture',
+            'driver' => self::PAYMENT_TYPE,
+            'amount' => $data['transaction_amount'] ?? 0,
+            'reference' => $data['id'] ?? now()->timestamp,
+            'status' => $success
+                ? (StatusCode::isCaptured($statusCode)
+                    ? 'approved'
+                    : 'authorized'
+                )
+                : 'declined',
+            'notes' => $success ? null : ($data['verbiage'] ?? $data['reason_code'] ?? null),
+            'card_type' => $data['account_type'] ?? $parentTransaction->card_type ?? 'N/A',
+            'last_four' => $data['last_four'] ?? $parentTransaction->last_four ?? '',
+            'captured_at' => StatusCode::isCaptured($statusCode) ? now() : null,
+            'meta' => $meta,
+        ]);
     }
 }

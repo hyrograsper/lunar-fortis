@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pest
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="https://pestphp.com/schema/pest.xsd"
+    testDirectory="tests/"
+    colors="true"
+    cacheDirectory=".pest.cache"
+>
+    <!-- Parallel testing configuration -->
+    <parallel>
+        <!-- Optimal process count for integration tests -->
+        <processes>8</processes>
+        <!-- Enable test tokens for isolation -->
+        <testTokens>true</testTokens>
+    </parallel>
+
+    <!-- Test suites for better organization -->
+    <testSuites>
+        <testsuite name="unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+
+        <testsuite name="integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
+    </testSuites>
+
+    <!-- Coverage configuration -->
+    <coverage>
+        <include>
+            <directory>src</directory>
+        </include>
+        <exclude>
+            <directory>src/Filament</directory>
+            <directory>src/Livewire</directory>
+        </exclude>
+    </coverage>
+
+    <!-- Logging -->
+    <logging>
+        <junit outputFile="build/pest-junit.xml"/>
+    </logging>
+</pest>
