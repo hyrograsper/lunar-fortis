@@ -183,7 +183,6 @@ class TerminalResource extends Resource
                             ->mask(RawJs::make('$money($input, \'.\', \'\', 2)'))
                             ->placeholder('100.00')
                             ->suffix('dollars')
-<<<<<<< HEAD
                             ->label('Amount'),
                         Forms\Components\TextInput::make('description')
                             ->helperText('To help identify the transaction')
@@ -213,47 +212,19 @@ class TerminalResource extends Resource
                             if ($result['success']) {
                                 Notification::make()
                                     ->title('Successful')
-=======
-                            ->label('Test Amount'),
-                        Forms\Components\TextInput::make('description')
-                            ->helperText('To help identify the transaction')
-                            ->label('Description'),
-                    ])
-                    ->action(function (Terminal $record, array $data) {
-                        try {
-                            $result = $record->processPayment(
-                                amount: (int) bcmul($data['amount'], '100'),
-                                options: [
-                                    'description' => $data['description'],
-                                    'order_number' => 'TEST-'.now()->format('YmdHis'),
-                                ]
-                            );
-
-                            if ($result['success']) {
-                                Notification::make()
-                                    ->title('Test payment successful')
->>>>>>> origin/main
                                     ->body("Transaction ID: {$result['transaction_id']}")
                                     ->success()
                                     ->send();
                             } else {
                                 Notification::make()
-<<<<<<< HEAD
                                     ->title('Payment failed')
-=======
-                                    ->title('Test payment failed')
->>>>>>> origin/main
                                     ->body($result['error'] ?? 'Unknown error')
                                     ->danger()
                                     ->send();
                             }
                         } catch (\Exception $e) {
                             Notification::make()
-<<<<<<< HEAD
                                 ->title('Payment error')
-=======
-                                ->title('Test payment error')
->>>>>>> origin/main
                                 ->body($e->getMessage())
                                 ->danger()
                                 ->send();

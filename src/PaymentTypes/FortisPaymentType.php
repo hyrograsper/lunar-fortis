@@ -2,11 +2,6 @@
 
 namespace Hyrograsper\LunarFortis\PaymentTypes;
 
-<<<<<<< HEAD
-=======
-use FortisAPILib\Exceptions\ApiException;
-use FortisAPILib\Models\ResponseTransaction;
->>>>>>> origin/main
 use Hyrograsper\LunarFortis\Enums\AvsResponseCode;
 use Hyrograsper\LunarFortis\Enums\CvvResponseCode;
 use Hyrograsper\LunarFortis\Enums\ReasonCode;
@@ -152,10 +147,6 @@ class FortisPaymentType extends AbstractPayment
     public function capture(TransactionContract $transaction, $amount = 0): PaymentCapture
     {
         try {
-<<<<<<< HEAD
-=======
-            /** @var ResponseTransaction $response */
->>>>>>> origin/main
             $response = $this->fortis->completeAuthorizedTransaction($transaction, $amount);
 
             $captureTransaction = $this->storeResponseTransaction($response, $transaction);
@@ -185,13 +176,8 @@ class FortisPaymentType extends AbstractPayment
     {
         try {
             $result = $this->fortis->refund($transaction, $amount);
-<<<<<<< HEAD
         } catch (\Exception $exception) {
             Log::error('LunarFortis: Unable to process refund: '.$exception->getMessage());
-=======
-        } catch (ApiException $exception) {
-            Log::error('LunarFortis: Unable to process refund: '.$exception->getMessage().' '.print_r($exception->getHttpResponse(), true));
->>>>>>> origin/main
 
             return new PaymentRefund(
                 success: false,
@@ -199,15 +185,11 @@ class FortisPaymentType extends AbstractPayment
             );
         }
 
-<<<<<<< HEAD
         $resultData = $result['data'] ?? [];
         $statusCode = $resultData['status_code'] ?? null;
         $reasonCodeId = $resultData['reason_code_id'] ?? null;
 
         if (! StatusCode::isRefunded($statusCode) || ! ReasonCode::isApproved($reasonCodeId)) {
-=======
-        if (! StatusCode::isRefunded($result->getData()->getStatusCode()) || ! ReasonCode::isApproved($result->getData()->getReasonCodeId())) {
->>>>>>> origin/main
             Transaction::create([
                 'parent_transaction_id' => $transaction->id,
                 'order_id' => $transaction->order->id,
@@ -372,19 +354,11 @@ class FortisPaymentType extends AbstractPayment
         return $meta;
     }
 
-<<<<<<< HEAD
     private function storeResponseTransaction(array $response, TransactionContract $parentTransaction): Transaction
     {
         $data = $response['data'] ?? [];
 
         if (empty($data)) {
-=======
-    private function storeResponseTransaction(ResponseTransaction $response, TransactionContract $parentTransaction): Transaction
-    {
-        $data = $response->getData();
-
-        if (! $data) {
->>>>>>> origin/main
             return Transaction::create([
                 'parent_transaction_id' => $parentTransaction->id,
                 'order_id' => $parentTransaction->order->id,
@@ -401,12 +375,8 @@ class FortisPaymentType extends AbstractPayment
             ]);
         }
 
-<<<<<<< HEAD
         $statusCode = $data['status_code'] ?? null;
         $success = StatusCode::isSuccessful($statusCode);
-=======
-        $success = StatusCode::isSuccessful($data->getStatusCode());
->>>>>>> origin/main
         $meta = $this->buildResponseTransactionMetaArray($data);
 
         return Transaction::create([
@@ -415,78 +385,46 @@ class FortisPaymentType extends AbstractPayment
             'success' => $success,
             'type' => 'capture',
             'driver' => self::PAYMENT_TYPE,
-<<<<<<< HEAD
             'amount' => $data['transaction_amount'] ?? 0,
             'reference' => $data['id'] ?? now()->timestamp,
             'status' => $success
                 ? (StatusCode::isCaptured($statusCode)
-=======
-            'amount' => $data->getTransactionAmount() ?? 0,
-            'reference' => $data->getId() ?? now()->timestamp,
-            'status' => $success
-                ? (StatusCode::isCaptured($data->getStatusCode())
->>>>>>> origin/main
                     ? 'approved'
                     : 'authorized'
                 )
                 : 'declined',
             'notes' => $success ? null : ($meta['errors'] ?? null),
-<<<<<<< HEAD
             'card_type' => $data['account_type'] ?? $parentTransaction->card_type ?? 'N/A',
             'last_four' => $data['last_four'] ?? $parentTransaction->last_four ?? '',
             'captured_at' => StatusCode::isCaptured($statusCode) ? now() : null,
-=======
-            'card_type' => $data->getAccountType() ?? $parentTransaction->card_type ?? 'N/A',
-            'last_four' => $data->getLastFour() ?? $parentTransaction->last_four ?? '',
-            'captured_at' => StatusCode::isCaptured($data->getStatusCode()) ? now() : null,
->>>>>>> origin/main
             'meta' => $meta,
         ]);
     }
 
-<<<<<<< HEAD
     private function buildResponseTransactionMetaArray(array $data): array
-=======
-    private function buildResponseTransactionMetaArray($data): array
->>>>>>> origin/main
     {
         $meta = [];
 
         $errors = null;
 
         // AVS Check
-<<<<<<< HEAD
         if (isset($data['avs'])) {
             $avsCode = AvsResponseCode::fromCode($data['avs']);
             if ($avsCode && $avsCode != AvsResponseCode::GOOD) {
                 $errors = 'AVS Failed: '.$avsCode->value;
             } elseif (! $avsCode) {
                 $errors = "AVS Failed: Unknown code ({$data['avs']})";
-=======
-        if ($data->getAvs()) {
-            $avsCode = AvsResponseCode::fromCode($data->getAvs());
-            if ($avsCode && $avsCode != AvsResponseCode::GOOD) {
-                $errors = 'AVS Failed: '.$avsCode->value;
-            } elseif (! $avsCode) {
-                $errors = "AVS Failed: Unknown code ({$data->getAvs()})";
->>>>>>> origin/main
             }
         }
 
         // CVV Check
-<<<<<<< HEAD
         if (isset($data['cvv_response'])) {
             $cvvCode = CvvResponseCode::fromCode($data['cvv_response']);
-=======
-        if ($data->getCvvResponse()) {
-            $cvvCode = CvvResponseCode::fromCode($data->getCvvResponse());
->>>>>>> origin/main
             if ($cvvCode && $cvvCode == CvvResponseCode::N) {
                 if ($errors) {
                     $errors .= '. ';
                 }
                 $errors .= 'CVV Failed: '.$cvvCode->value;
-<<<<<<< HEAD
             } elseif ($cvvCode === null && $data['cvv_response'] !== null) {
                 if ($errors) {
                     $errors .= '. ';
@@ -500,21 +438,6 @@ class FortisPaymentType extends AbstractPayment
 
             if (isset($data['verbiage'])) {
                 $errors .= '. '.$data['verbiage'];
-=======
-            } elseif ($cvvCode === null && $data->getCvvResponse() !== null) {
-                if ($errors) {
-                    $errors .= '. ';
-                }
-                $errors .= "CVV Info: Unknown code ({$data->getCvvResponse()})";
-            }
-        }
-
-        if (! $errors && StatusCode::isSuccessful($data->getStatusCode())) {
-            $errors = ReasonCode::fromCode((int) $data->getReasonCodeId());
-
-            if ($data->getVerbiage()) {
-                $errors .= '. '.$data->getVerbiage();
->>>>>>> origin/main
             }
         }
 
@@ -522,7 +445,6 @@ class FortisPaymentType extends AbstractPayment
             $meta['errors'] = $errors;
         }
 
-<<<<<<< HEAD
         if (isset($data['reason_code_id'])) {
             $meta['reason_code_message'] = ReasonCode::fromCode((int) $data['reason_code_id']);
         }
@@ -550,38 +472,6 @@ class FortisPaymentType extends AbstractPayment
         foreach ($metaFields as $field) {
             if (isset($data[$field])) {
                 $meta[$field] = $data[$field];
-=======
-        if ($data->getReasonCodeId()) {
-            $meta['reason_code_message'] = ReasonCode::fromCode((int) $data->getReasonCodeId());
-        }
-
-        // List of potential meta fields from ResponseTransaction data
-        $metaFields = [
-            'status_code' => 'getStatusCode',
-            'reason_code_id' => 'getReasonCodeId',
-            'auth_code' => 'getAuthCode',
-            'avs' => 'getAvs',
-            'avs_enhanced' => 'getAvsEnhanced',
-            'cvv_response' => 'getCvvResponse',
-            'auth_amount' => 'getAuthAmount',
-            'first_six' => 'getFirstSix',
-            'account_holder_name' => 'getAccountHolderName',
-            'payment_method' => 'getPaymentMethod',
-            'par' => 'getPar',
-            'entry_mode_id' => 'getEntryModeId',
-            'customer_ip' => 'getCustomerIp',
-            'transaction_batch_id' => 'getTransactionBatchId',
-            'verbiage' => 'getVerbiage',
-        ];
-
-        // Add fields to meta array only if they exist and are not null
-        foreach ($metaFields as $metaKey => $method) {
-            if (method_exists($data, $method)) {
-                $value = $data->$method();
-                if ($value !== null) {
-                    $meta[$metaKey] = $value;
-                }
->>>>>>> origin/main
             }
         }
 
