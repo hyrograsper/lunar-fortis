@@ -18,8 +18,9 @@ beforeEach(function () {
         'terminalProductTransactionId' => 'test-terminal-product-id',
     ]);
 
-    // Mock Log facade to handle channel() calls that may happen in Laravel 11+
+    // Mock Log facade to handle channel() and warning() calls that may happen in Laravel 11+
     Log::shouldReceive('channel')->andReturnSelf();
+    Log::shouldReceive('warning')->withAnyArgs();
 
     $this->service = new FortisHttpService;
 });
