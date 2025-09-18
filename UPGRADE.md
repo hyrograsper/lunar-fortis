@@ -113,13 +113,33 @@ return [
 
 ### New Features
 
-#### 1. Enhanced Error Handling
+#### 1. Enhanced HTTP Configuration & Retry System
 
-- Automatic retry logic for network errors and 429 rate limiting
+- **Comprehensive HTTP Retry Logic**: Support for multiple status codes (429, 502, 503, 504)
+- **Exponential Backoff**: Configurable backoff strategies with max delay caps
+- **Flexible Timeout Configuration**: Adjustable request timeouts per environment
+- **Network Resilience**: Connection error recovery and rate limiting handling
+- **Environment-Specific Tuning**: Production-ready defaults with development overrides
+
+**New Environment Variables:**
+```env
+# HTTP Configuration (all optional with sensible defaults)
+FORTIS_HTTP_TIMEOUT=30                      # Request timeout in seconds
+FORTIS_HTTP_RETRY_ATTEMPTS=3                # Number of retry attempts
+FORTIS_HTTP_RETRY_DELAY=1000                # Delay between retries (ms)
+FORTIS_HTTP_RETRY_CONNECTION=true           # Retry on connection errors
+FORTIS_HTTP_RETRY_STATUS_CODES="429,502,503,504"  # HTTP status codes to retry on
+FORTIS_HTTP_RETRY_EXPONENTIAL=false         # Use exponential backoff
+FORTIS_HTTP_RETRY_MAX_DELAY=10000          # Max delay with exponential backoff (ms)
+```
+
+#### 2. Enhanced Error Handling
+
+- Automatic retry logic for network errors and multiple HTTP status codes
 - Detailed error logging with request/response data
 - Better exception messages with Fortis API error details
 
-#### 2. Configurable Payment Policies
+#### 3. Configurable Payment Policies
 
 Terminal payments now support configurable capture policies:
 
@@ -131,14 +151,14 @@ Terminal payments now support configurable capture policies:
 'terminal_policy' => 'manual'
 ```
 
-#### 3. Improved Filament Interface
+#### 4. Improved Filament Interface
 
 The terminal management interface now includes:
 - Payment flow selection (Complete vs Authorization Only)
 - Better error messages and status feedback
 - Enhanced test payment functionality
 
-#### 4. New Capture Methods
+#### 5. New Capture Methods
 
 ```php
 // New methods for manual capture workflow
