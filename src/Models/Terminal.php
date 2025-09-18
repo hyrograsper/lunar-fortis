@@ -79,7 +79,23 @@ class Terminal extends Model
             return true;
         }
 
-        return $this->synced_at->diffInHours(now()) > $hoursThreshold;
+        // Handle case where synced_at might be stored as integer (SQLite issue)
+        $syncedAt = $this->synced_at;
+        if (is_int($syncedAt) || is_string($syncedAt)) {
+            try {
+                $syncedAt = \Carbon\Carbon::createFromTimestamp($syncedAt);
+            } catch (\Exception $e) {
+                // If we can't parse the timestamp, assume it needs sync
+                return true;
+            }
+        }
+
+        if (!$syncedAt instanceof \Carbon\Carbon) {
+            // If it's still not a Carbon instance, assume it needs sync
+            return true;
+        }
+
+        return $syncedAt->diffInHours(now()) > $hoursThreshold;
     }
 
     public function markSynced(): void
@@ -156,11 +172,16 @@ class Terminal extends Model
      */
     public static function syncSingleFromFortis(string $fortisId): ?static
     {
-        // Fetch single terminal from Fortis API (error handling is in LunarFortis)
-        $response = LunarFortis::getTerminal($fortisId);
-        $data = $response['data'] ?? [];
+        try {
+            // Fetch single terminal from Fortis API
+            $response = LunarFortis::getTerminal($fortisId);
+            $data = $response['data'] ?? [];
 
-        if (empty($data)) {
+            if (empty($data)) {
+                return null;
+            }
+        } catch (\Exception $e) {
+            // Return null if terminal doesn't exist or there's an API error
             return null;
         }
 

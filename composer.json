@@ -58,6 +58,10 @@
         "analyse": "vendor/bin/phpstan analyse",
         "test": "vendor/bin/pest",
         "test-coverage": "vendor/bin/pest --coverage",
+        "test-parallel": "vendor/bin/pest --parallel --processes=8",
+        "test-integration": "vendor/bin/pest tests/Integration/",
+        "test-integration-parallel": "vendor/bin/pest --parallel --processes=8 tests/Integration/",
+        "test-unit": "vendor/bin/pest tests/Unit/",
         "format": "vendor/bin/pint"
     },
     "config": {

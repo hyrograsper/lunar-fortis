@@ -26,6 +26,13 @@ class TestCase extends Orchestra
 
     public function getEnvironmentSetUp($app): void
     {
+        // Load .env.testing file if it exists
+        $envTestingFile = base_path('.env.testing');
+        if (file_exists($envTestingFile)) {
+            $dotenv = \Dotenv\Dotenv::createImmutable(base_path(), '.env.testing');
+            $dotenv->safeLoad();
+        }
+
         config()->set('database.default', 'testing');
         config()->set('database.connections.testing', [
             'driver' => 'sqlite',
