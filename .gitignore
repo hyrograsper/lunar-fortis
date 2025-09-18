@@ -33,3 +33,7 @@ testbench.yaml
 
 .env
 .env.testing
+
+# Postman collections (may contain sensitive API information)
+*.postman_collection.json
+*.postman_environment.json
