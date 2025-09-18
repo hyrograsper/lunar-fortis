@@ -9,6 +9,15 @@ A comprehensive Fortis payment gateway integration for Lunar, providing both onl
 
 This package includes two payment types (online and terminal), terminal management tools, database synchronization with the Fortis API, and a complete Filament admin interface for managing payment terminals.
 
+## Requirements
+
+- **PHP**: ^8.3
+- **Laravel**: ^11.0 || ^12.0
+- **Lunar**: ^1.0
+- **Livewire**: ^3.0
+
+> **Note**: This package requires Laravel 11+ because it depends on Lunar PHP, which only supports Laravel 11 and 12.
+
 ## Support us
 
 [<img src="https://github-ads.s3.eu-central-1.amazonaws.com/lunar-fortis.jpg?t=1" width="419px" />](https://spatie.be/github-ad-click/lunar-fortis)
@@ -137,7 +146,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-<<<<<<< HEAD
     | HTTP Configuration
     |--------------------------------------------------------------------------
     | Configure HTTP client behavior for Fortis API requests.
@@ -189,8 +197,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-=======
->>>>>>> origin/main
     | Debug Logging
     |--------------------------------------------------------------------------
     | Turn debug logging on to view each step of the payment process.
@@ -214,16 +220,12 @@ php artisan vendor:publish --tag="lunar-fortis-views"
 Add the following environment variables to your `.env` file:
 
 ```env
-<<<<<<< HEAD
 # Required Fortis API credentials
-=======
->>>>>>> origin/main
 FORTIS_USER_ID=your_fortis_user_id
 FORTIS_USER_API_KEY=your_fortis_api_key
 FORTIS_DEVELOPER_ID=your_fortis_developer_id
 FORTIS_LOCATION_ID=your_fortis_location_id
 FORTIS_ENVIRONMENT=sandbox  # or 'production'
-<<<<<<< HEAD
 
 # Optional: HTTP Configuration (defaults shown)
 FORTIS_HTTP_TIMEOUT=30                      # Request timeout in seconds
@@ -235,8 +237,6 @@ FORTIS_HTTP_RETRY_EXPONENTIAL=false         # Use exponential backoff
 FORTIS_HTTP_RETRY_MAX_DELAY=10000          # Max delay with exponential backoff (ms)
 
 # Optional: Debug logging
-=======
->>>>>>> origin/main
 FORTIS_DEBUG=false  # Set to true to enable debug logging
 ```
 
@@ -367,18 +367,12 @@ use Hyrograsper\LunarFortis\Models\Terminal;
 
 $terminal = Terminal::where('active', true)->first();
 
-<<<<<<< HEAD
 // Complete payment (authorize + capture)
 $result = $terminal->processCompletePayment(1099, [
-=======
-// Simple payment
-$result = $terminal->processPayment(1099, [
->>>>>>> origin/main
     'order_number' => 'ORD-12345',
     'description' => 'Coffee purchase'
 ]);
 
-<<<<<<< HEAD
 // Authorization only
 $authResult = $terminal->authorizePayment(1099, [
     'order_number' => 'ORD-12345',
@@ -394,11 +388,6 @@ if ($authResult['success']) {
 // Check terminal readiness
 if ($terminal->isReadyForPayments()) {
     $result = $terminal->processCompletePayment(1099, [
-=======
-// Check terminal readiness
-if ($terminal->isReadyForPayments()) {
-    $result = $terminal->processPayment(1099, [
->>>>>>> origin/main
         'order_number' => 'ORD-12345',
         'description' => 'Payment'
     ]);
@@ -410,18 +399,12 @@ if ($terminal->isReadyForPayments()) {
 ```php
 $fortis = app(LunarFortis::class);
 
-<<<<<<< HEAD
 // Complete authorization processing with automatic monitoring
 $result = $fortis->processTerminalCreditCardAuth('terminal_123', 1099, [
-=======
-// Complete payment processing
-$result = $fortis->processTerminalCreditCard('terminal_123', 1099, [
->>>>>>> origin/main
     'order_number' => 'ORD-12345',
     'customer_id' => 'CUST-456'
 ]);
 
-<<<<<<< HEAD
 // Manual authorization handling
 $response = $fortis->authorizeTerminalCreditCard('terminal_123', 1099, [
     'order_number' => 'ORD-12345'
@@ -436,12 +419,6 @@ if ($finalStatus['data']['progress'] >= 100) {
         'order_number' => 'ORD-12345'
     ]);
 }
-=======
-// Manual async handling
-$response = $fortis->chargeTerminalCreditCard('terminal_123', 1099);
-$statusCode = $response->getData()->getAsync()->getCode();
-$finalStatus = $fortis->waitForTerminalTransaction($statusCode);
->>>>>>> origin/main
 ```
 
 ### Lunar Integration
@@ -458,7 +435,6 @@ $finalStatus = $fortis->waitForTerminalTransaction($statusCode);
 ## Testing
 
 ```bash
-<<<<<<< HEAD
 # Run all tests
 composer test
 
@@ -479,10 +455,6 @@ composer test-integration
 
 # Run quality checks (format, analyse, test)
 composer quality
-=======
-# No tests  yet
-# composer test
->>>>>>> origin/main
 ```
 
 ### Code Coverage Setup
