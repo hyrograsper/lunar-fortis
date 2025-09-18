@@ -7,24 +7,28 @@
 /**
  * Get a unique test identifier for parallel test isolation
  */
-function getTestIdentifier(): string {
+function getTestIdentifier(): string
+{
     // Use process ID and timestamp for uniqueness
     $processId = getmypid();
     $timestamp = hrtime(true); // High-resolution timestamp
+
     return "test_{$processId}_{$timestamp}";
 }
 
 /**
  * Get a unique terminal title for parallel testing
  */
-function getUniqueTerminalTitle(string $baseName = 'Test Terminal'): string {
-    return $baseName . ' - ' . getTestIdentifier();
+function getUniqueTerminalTitle(string $baseName = 'Test Terminal'): string
+{
+    return $baseName.' - '.getTestIdentifier();
 }
 
 /**
  * Add random delay to prevent parallel test conflicts
  */
-function addParallelTestDelay(int $minMs = 100, int $maxMs = 1000): void {
+function addParallelTestDelay(int $minMs = 100, int $maxMs = 1000): void
+{
     $delay = mt_rand($minMs, $maxMs) * 1000; // Convert to microseconds
     usleep($delay);
 }
@@ -32,7 +36,8 @@ function addParallelTestDelay(int $minMs = 100, int $maxMs = 1000): void {
 /**
  * Retry function for handling parallel test conflicts
  */
-function retryOnConflict(callable $callback, int $maxRetries = 3, int $delayMs = 500): mixed {
+function retryOnConflict(callable $callback, int $maxRetries = 3, int $delayMs = 500): mixed
+{
     $attempt = 0;
 
     while ($attempt < $maxRetries) {
@@ -53,6 +58,7 @@ function retryOnConflict(callable $callback, int $maxRetries = 3, int $delayMs =
                 // Add exponential backoff delay
                 $delay = $delayMs * pow(2, $attempt - 1);
                 usleep($delay * 1000);
+
                 continue;
             }
 
@@ -67,7 +73,8 @@ function retryOnConflict(callable $callback, int $maxRetries = 3, int $delayMs =
 /**
  * Check if we have valid Fortis credentials for integration testing
  */
-function hasValidFortisCredentials(): bool {
+function hasValidFortisCredentials(): bool
+{
     $requiredEnvVars = [
         'FORTIS_INTEGRATION_USER_ID',
         'FORTIS_INTEGRATION_USER_API_KEY',
@@ -88,7 +95,8 @@ function hasValidFortisCredentials(): bool {
 /**
  * Set up real Fortis configuration for integration testing
  */
-function setupIntegrationConfig(): void {
+function setupIntegrationConfig(): void
+{
     config()->set('lunar-fortis.environment', env('FORTIS_INTEGRATION_ENVIRONMENT', 'sandbox'));
     config()->set('lunar-fortis.debug', env('FORTIS_INTEGRATION_DEBUG', true));
     config()->set('services.fortis', [
@@ -104,9 +112,10 @@ function setupIntegrationConfig(): void {
 /**
  * Set up database for terminal integration tests
  */
-function setupIntegrationDatabase(): void {
+function setupIntegrationDatabase(): void
+{
     // Create basic tables needed for integration tests
-    if (!app('db')->getSchemaBuilder()->hasTable('fortis_terminals')) {
+    if (! app('db')->getSchemaBuilder()->hasTable('fortis_terminals')) {
         app('db')->getSchemaBuilder()->create('fortis_terminals', function ($table) {
             $table->id();
             $table->string('fortis_id')->nullable();

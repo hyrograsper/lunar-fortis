@@ -3,6 +3,7 @@
 use Carbon\Carbon;
 use Hyrograsper\LunarFortis\Facades\LunarFortis;
 use Hyrograsper\LunarFortis\Models\Terminal;
+
 beforeEach(function () {
     $this->terminal = Terminal::create([
         'fortis_id' => 'terminal-123',
@@ -157,11 +158,11 @@ describe('Terminal Payment Processing', function () {
             ->with('terminal-123', 1000, ['order_number' => 'ORD-123'])
             ->andReturn([
                 'success' => true,
-                'transaction_id' => 'auth-trans-123'
+                'transaction_id' => 'auth-trans-123',
             ]);
 
         $result = $this->terminal->authorizePayment(1000, [
-            'order_number' => 'ORD-123'
+            'order_number' => 'ORD-123',
         ]);
 
         expect($result['success'])->toBeTrue();
@@ -176,7 +177,7 @@ describe('Terminal Payment Processing', function () {
             'active' => false,
         ]);
 
-        expect(fn() => $inactiveTerminal->authorizePayment(1000))
+        expect(fn () => $inactiveTerminal->authorizePayment(1000))
             ->toThrow(Exception::class, 'Terminal inactive-terminal is not active');
     });
 
@@ -187,7 +188,7 @@ describe('Terminal Payment Processing', function () {
             ->with('terminal-123', 1500, ['description' => 'Test'])
             ->andReturn([
                 'success' => true,
-                'transaction_id' => 'auth-trans-456'
+                'transaction_id' => 'auth-trans-456',
             ]);
 
         // Mock capture
@@ -197,12 +198,12 @@ describe('Terminal Payment Processing', function () {
             ->andReturn([
                 'data' => [
                     'id' => 'captured-trans-456',
-                    'status_code' => 101
-                ]
+                    'status_code' => 101,
+                ],
             ]);
 
         $result = $this->terminal->processCompletePayment(1500, [
-            'description' => 'Test'
+            'description' => 'Test',
         ]);
 
         expect($result['success'])->toBeTrue();
@@ -215,7 +216,7 @@ describe('Terminal Payment Processing', function () {
             ->once()
             ->andReturn([
                 'success' => false,
-                'error' => 'Authorization failed'
+                'error' => 'Authorization failed',
             ]);
 
         $result = $this->terminal->processCompletePayment(1000);
@@ -231,9 +232,9 @@ describe('Terminal Payment Processing', function () {
             ->andReturn([
                 'data' => [
                     'async' => [
-                        'code' => 'status-code-789'
-                    ]
-                ]
+                        'code' => 'status-code-789',
+                    ],
+                ],
             ]);
 
         $statusCode = $this->terminal->initiateAuthorization(2000);
@@ -246,7 +247,7 @@ describe('Terminal Payment Processing', function () {
             ->once()
             ->andReturn(['data' => []]);
 
-        expect(fn() => $this->terminal->initiateAuthorization(1000))
+        expect(fn () => $this->terminal->initiateAuthorization(1000))
             ->toThrow(Exception::class, 'No async status code received from terminal authorization initiation');
     });
 
@@ -258,8 +259,8 @@ describe('Terminal Payment Processing', function () {
                 'data' => [
                     'progress' => 75,
                     'id' => 'trans-123',
-                    'error' => null
-                ]
+                    'error' => null,
+                ],
             ]);
 
         $status = $this->terminal->checkAuthorizationStatus('status-123');
@@ -278,8 +279,8 @@ describe('Terminal Payment Processing', function () {
                 'data' => [
                     'progress' => 100,
                     'id' => 'completed-trans-456',
-                    'error' => null
-                ]
+                    'error' => null,
+                ],
             ]);
 
         $result = $this->terminal->waitForAuthorization('status-456');
@@ -295,18 +296,18 @@ describe('Terminal Payment Processing', function () {
             ->once()
             ->with('trans-789', 2500, [
                 'order_number' => 'ORD-789',
-                'customer_id' => 'CUST-456'
+                'customer_id' => 'CUST-456',
             ])
             ->andReturn([
                 'data' => [
                     'id' => 'captured-trans-789',
-                    'status_code' => 101
-                ]
+                    'status_code' => 101,
+                ],
             ]);
 
         $result = $this->terminal->captureTransaction('trans-789', 2500, [
             'order_number' => 'ORD-789',
-            'customer_id' => 'CUST-456'
+            'customer_id' => 'CUST-456',
         ]);
 
         expect($result['data']['id'])->toBe('captured-trans-789');
@@ -325,7 +326,7 @@ describe('Terminal Sync Operations', function () {
                         'serial_number' => 'FORTIS123',
                         'active' => true,
                         'created_ts' => 1640995200, // 2022-01-01 00:00:00
-                        'location_id' => 'loc-123'
+                        'location_id' => 'loc-123',
                     ],
                     [
                         'id' => 'fortis-terminal-2',
@@ -333,9 +334,9 @@ describe('Terminal Sync Operations', function () {
                         'serial_number' => 'FORTIS456',
                         'active' => false,
                         'created_ts' => 1640995200,
-                        'location_id' => 'loc-456'
-                    ]
-                ]
+                        'location_id' => 'loc-456',
+                    ],
+                ],
             ]);
 
         $stats = Terminal::syncFromFortis();
@@ -360,8 +361,8 @@ describe('Terminal Sync Operations', function () {
                     'title' => 'Single Terminal',
                     'serial_number' => 'SINGLE123',
                     'active' => true,
-                    'location_id' => 'single-loc'
-                ]
+                    'location_id' => 'single-loc',
+                ],
             ]);
 
         $terminal = Terminal::syncSingleFromFortis('single-terminal-123');
@@ -440,7 +441,7 @@ describe('Terminal Data Mapping', function () {
             'created_ts' => 1640995200,
             'modified_ts' => 1641081600,
             'created_user_id' => 'creator-123',
-            'modified_user_id' => 'modifier-456'
+            'modified_user_id' => 'modifier-456',
         ];
 
         $reflection = new ReflectionClass(Terminal::class);

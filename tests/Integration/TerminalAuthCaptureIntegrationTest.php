@@ -3,17 +3,17 @@
 use Hyrograsper\LunarFortis\Models\Terminal;
 use Hyrograsper\LunarFortis\Services\FortisHttpService;
 
-require_once __DIR__ . '/helpers.php';
+require_once __DIR__.'/helpers.php';
 
 beforeEach(function () {
-    if (!hasValidFortisCredentials()) {
+    if (! hasValidFortisCredentials()) {
         $this->markTestSkipped('Integration tests require real Fortis API credentials.');
     }
 
     setupIntegrationConfig();
     setupIntegrationDatabase();
 
-    $this->fortisHttpService = new FortisHttpService();
+    $this->fortisHttpService = new FortisHttpService;
 });
 
 describe('Terminal Authorization and Capture Integration', function () {
@@ -47,7 +47,7 @@ describe('Terminal Authorization and Capture Integration', function () {
         addParallelTestDelay();
 
         $testAmount = 150; // $1.50
-        $statusCode = retryOnConflict(function() use ($terminal, $testAmount) {
+        $statusCode = retryOnConflict(function () use ($terminal, $testAmount) {
             return $terminal->initiateAuthorization($testAmount);
         });
 
@@ -66,15 +66,15 @@ describe('Terminal Authorization and Capture Integration', function () {
         expect($authResult)->toHaveKey('success');
         expect($authResult)->toHaveKey('progress');
 
-        fwrite(STDERR, "Authorization result - Progress: {$authResult['progress']}%, Completed: " .
-               ($authResult['completed'] ? 'YES' : 'NO') . ", Success: " .
-               ($authResult['success'] ? 'YES' : 'NO') . "\n");
+        fwrite(STDERR, "Authorization result - Progress: {$authResult['progress']}%, Completed: ".
+               ($authResult['completed'] ? 'YES' : 'NO').', Success: '.
+               ($authResult['success'] ? 'YES' : 'NO')."\n");
 
-        if (!$authResult['completed']) {
+        if (! $authResult['completed']) {
             $this->markTestSkipped('Authorization did not complete within timeout - may require physical terminal interaction');
         }
 
-        if (!$authResult['success']) {
+        if (! $authResult['success']) {
             $this->markTestSkipped('Authorization was not successful - may have been declined or cancelled');
         }
 
@@ -88,11 +88,11 @@ describe('Terminal Authorization and Capture Integration', function () {
         fwrite(STDERR, "Authorization successful! Transaction ID: $transactionId\n");
 
         // Step 4: Capture the authorized transaction
-        fwrite(STDERR, "Capturing transaction for \$" . ($testAmount/100) . "...\n");
+        fwrite(STDERR, 'Capturing transaction for $'.($testAmount / 100)."...\n");
 
         $captureResult = $terminal->captureTransaction($transactionId, $testAmount, [
-            'order_number' => 'TEST-AUTH-CAPTURE-' . time(),
-            'description' => 'Integration test auth/capture'
+            'order_number' => 'TEST-AUTH-CAPTURE-'.time(),
+            'description' => 'Integration test auth/capture',
         ]);
 
         expect($captureResult)->toBeArray();
@@ -130,7 +130,7 @@ describe('Terminal Authorization and Capture Integration', function () {
 
         // Initiate authorization with retry logic
         addParallelTestDelay();
-        $statusCode = retryOnConflict(function() use ($terminal) {
+        $statusCode = retryOnConflict(function () use ($terminal) {
             return $terminal->initiateAuthorization(100); // $1.00
         });
         expect($statusCode)->toBeString();
@@ -168,7 +168,7 @@ describe('Terminal Authorization and Capture Integration', function () {
 
         // Initiate authorization with retry logic
         addParallelTestDelay();
-        $statusCode = retryOnConflict(function() use ($terminal) {
+        $statusCode = retryOnConflict(function () use ($terminal) {
             return $terminal->initiateAuthorization(200); // $2.00
         });
         expect($statusCode)->toBeString();
@@ -190,8 +190,8 @@ describe('Terminal Authorization and Capture Integration', function () {
             $progress = $status['progress'] ?? 0;
             $completed = $status['completed'] ?? false;
 
-            fwrite(STDERR, "Status check #$checkCount - Progress: $progress%, Completed: " .
-                   ($completed ? 'YES' : 'NO') . "\n");
+            fwrite(STDERR, "Status check #$checkCount - Progress: $progress%, Completed: ".
+                   ($completed ? 'YES' : 'NO')."\n");
 
             if ($completed) {
                 break;
@@ -201,7 +201,7 @@ describe('Terminal Authorization and Capture Integration', function () {
                 sleep(2); // Wait 2 seconds between checks
             }
 
-        } while ($checkCount < $maxChecks && !$completed);
+        } while ($checkCount < $maxChecks && ! $completed);
 
         // Final verification
         expect($status['progress'])->toBeGreaterThanOrEqual(0);

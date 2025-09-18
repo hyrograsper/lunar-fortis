@@ -168,7 +168,7 @@ describe('StatusCode Edge Cases', function () {
         $testCodes = [101, 102, 111, 191, 201, 301, 331, 999];
 
         foreach ($testCodes as $code) {
-            expect(StatusCode::isSuccessful($code))->toBe(!StatusCode::isUnsuccessful($code));
+            expect(StatusCode::isSuccessful($code))->toBe(! StatusCode::isUnsuccessful($code));
         }
     });
 

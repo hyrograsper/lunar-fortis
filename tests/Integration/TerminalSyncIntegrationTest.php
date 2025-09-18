@@ -2,11 +2,11 @@
 
 use Hyrograsper\LunarFortis\Models\Terminal;
 
-require_once __DIR__ . '/helpers.php';
+require_once __DIR__.'/helpers.php';
 
 beforeEach(function () {
     // Check if we have real Fortis credentials configured for integration testing
-    if (!hasValidFortisCredentials()) {
+    if (! hasValidFortisCredentials()) {
         $this->markTestSkipped('Integration tests require real Fortis API credentials. Set FORTIS_INTEGRATION_* environment variables to run these tests.');
     }
 
@@ -108,4 +108,3 @@ describe('Terminal Sync Integration Tests', function () {
         expect($terminal->needsSync())->toBeTrue();
     })->group('integration', 'slow', 'database');
 });
-

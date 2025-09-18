@@ -1,22 +1,22 @@
 <?php
 
-use Hyrograsper\LunarFortis\Services\FortisHttpService;
 use Hyrograsper\LunarFortis\LunarFortis;
+use Hyrograsper\LunarFortis\Services\FortisHttpService;
 use Illuminate\Support\Facades\Http;
 
-require_once __DIR__ . '/helpers.php';
+require_once __DIR__.'/helpers.php';
 
 beforeEach(function () {
     // Check if we have real Fortis credentials configured for integration testing
-    if (!hasValidFortisCredentials()) {
+    if (! hasValidFortisCredentials()) {
         $this->markTestSkipped('Integration tests require real Fortis API credentials. Set FORTIS_INTEGRATION_* environment variables to run these tests.');
     }
 
     // Set up real Fortis configuration for integration testing
     setupIntegrationConfig();
 
-    $this->fortisHttpService = new FortisHttpService();
-    $this->lunarFortis = new LunarFortis();
+    $this->fortisHttpService = new FortisHttpService;
+    $this->lunarFortis = new LunarFortis;
 });
 
 describe('Fortis API Integration Tests', function () {
@@ -61,7 +61,7 @@ describe('Fortis API Integration Tests', function () {
 
     it('handles API errors gracefully', function () {
         // Try to get a non-existent transaction
-        expect(fn() => $this->fortisHttpService->getTransaction('invalid-transaction-id'))
+        expect(fn () => $this->fortisHttpService->getTransaction('invalid-transaction-id'))
             ->toThrow(Exception::class);
     })->group('integration', 'slow');
 

@@ -1,7 +1,6 @@
 <?php
 
 use Hyrograsper\LunarFortis\Enums\StatusCode;
-use Hyrograsper\LunarFortis\Facades\LunarFortis;
 use Hyrograsper\LunarFortis\PaymentTypes\FortisPaymentType;
 use Illuminate\Support\Facades\Config;
 use Lunar\Base\DataTransferObjects\PaymentAuthorize;

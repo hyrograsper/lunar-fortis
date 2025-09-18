@@ -1,27 +1,27 @@
 <?php
 
-use Hyrograsper\LunarFortis\Services\FortisHttpService;
 use Hyrograsper\LunarFortis\LunarFortis;
 use Hyrograsper\LunarFortis\Models\Terminal;
+use Hyrograsper\LunarFortis\Services\FortisHttpService;
 
-require_once __DIR__ . '/helpers.php';
+require_once __DIR__.'/helpers.php';
 
 beforeEach(function () {
     // Check if we have real Fortis credentials configured for integration testing
-    if (!hasValidFortisCredentials()) {
+    if (! hasValidFortisCredentials()) {
         $this->markTestSkipped('Integration tests require real Fortis API credentials. Set FORTIS_INTEGRATION_* environment variables to run these tests.');
     }
 
     // Check if test cards are configured
-    if (!hasTestCardConfiguration()) {
+    if (! hasTestCardConfiguration()) {
         $this->markTestSkipped('Payment processing tests require test card configuration. Set FORTIS_TEST_* environment variables to run these tests.');
     }
 
     // Set up real Fortis configuration for integration testing
     setupIntegrationConfig();
 
-    $this->fortisHttpService = new FortisHttpService();
-    $this->lunarFortis = new LunarFortis();
+    $this->fortisHttpService = new FortisHttpService;
+    $this->lunarFortis = new LunarFortis;
 });
 
 describe('Payment Processing Integration Tests', function () {
@@ -62,7 +62,7 @@ describe('Payment Processing Integration Tests', function () {
         // Wait for authorization completion
         $authResult = $terminal->waitForAuthorization($statusCode, 60, 3);
 
-        if (!$authResult['completed'] || !$authResult['success']) {
+        if (! $authResult['completed'] || ! $authResult['success']) {
             $this->markTestSkipped('Authorization did not complete successfully - cannot test refund without completed transaction');
         }
 
@@ -73,8 +73,8 @@ describe('Payment Processing Integration Tests', function () {
 
         // Capture the transaction
         $captureResult = $terminal->captureTransaction($transactionId, $testAmount, [
-            'order_number' => 'REFUND-TEST-' . time(),
-            'description' => 'Transaction for refund testing'
+            'order_number' => 'REFUND-TEST-'.time(),
+            'description' => 'Transaction for refund testing',
         ]);
 
         expect($captureResult)->toHaveKey('data');
@@ -86,7 +86,7 @@ describe('Payment Processing Integration Tests', function () {
         // Step 2: Now test the refund functionality
         $refundAmount = 100; // Partial refund of $1.00 out of $3.00
 
-        fwrite(STDERR, "Attempting to refund \\$" . ($refundAmount/100) . " from captured transaction\n");
+        fwrite(STDERR, 'Attempting to refund \$'.($refundAmount / 100)." from captured transaction\n");
 
         $refundResult = $this->fortisHttpService->refund($capturedTransactionId, $refundAmount);
 
@@ -142,7 +142,7 @@ describe('Payment Processing Integration Tests', function () {
 
         foreach ($declineScenarios as $scenario => $amount) {
             try {
-                fwrite(STDERR, "Testing {$scenario} scenario with amount \\$" . ($amount/100) . "...\n");
+                fwrite(STDERR, "Testing {$scenario} scenario with amount \\$".($amount / 100)."...\n");
 
                 $statusCode = $terminal->initiateAuthorization($amount);
                 expect($statusCode)->toBeString();
@@ -153,7 +153,7 @@ describe('Payment Processing Integration Tests', function () {
                 // Depending on the test environment, this might complete as declined
                 // or might timeout if the terminal requires physical interaction
                 if ($authResult['completed']) {
-                    if (!$authResult['success']) {
+                    if (! $authResult['success']) {
                         fwrite(STDERR, "Successfully tested decline scenario: {$scenario}\n");
                         expect($authResult['success'])->toBeFalse();
                     } else {
@@ -165,7 +165,7 @@ describe('Payment Processing Integration Tests', function () {
 
             } catch (\Exception $e) {
                 // Expected for some decline scenarios
-                fwrite(STDERR, "Decline scenario {$scenario} threw exception (expected): " . $e->getMessage() . "\n");
+                fwrite(STDERR, "Decline scenario {$scenario} threw exception (expected): ".$e->getMessage()."\n");
                 expect($e->getMessage())->toContain('terminal');
             }
         }
@@ -206,7 +206,7 @@ describe('Payment Processing Integration Tests', function () {
             }
 
         } catch (\Exception $e) {
-            fwrite(STDERR, "Error scenario test (expected): " . $e->getMessage() . "\n");
+            fwrite(STDERR, 'Error scenario test (expected): '.$e->getMessage()."\n");
             expect($e->getMessage())->toContain('terminal');
         }
 
@@ -237,7 +237,7 @@ describe('Payment Processing Integration Tests', function () {
 
         foreach ($testCases as $testName => $amount) {
             try {
-                fwrite(STDERR, "Testing {$testName}: \\$" . ($amount/100) . "...\n");
+                fwrite(STDERR, "Testing {$testName}: \\$".($amount / 100)."...\n");
 
                 $statusCode = $terminal->initiateAuthorization($amount);
                 expect($statusCode)->toBeString();
@@ -253,15 +253,15 @@ describe('Payment Processing Integration Tests', function () {
             } catch (\Exception $e) {
                 if ($amount === 1) {
                     // Some terminals might reject very small amounts
-                    fwrite(STDERR, "Minimum amount test failed as expected: " . $e->getMessage() . "\n");
+                    fwrite(STDERR, 'Minimum amount test failed as expected: '.$e->getMessage()."\n");
                 } else {
-                    fwrite(STDERR, "Amount test {$testName} failed: " . $e->getMessage() . "\n");
+                    fwrite(STDERR, "Amount test {$testName} failed: ".$e->getMessage()."\n");
                 }
             }
         }
 
         // Test invalid amount (should throw exception)
-        expect(fn() => $terminal->initiateAuthorization(0))
+        expect(fn () => $terminal->initiateAuthorization(0))
             ->toThrow(\Exception::class);
 
     })->group('integration', 'slow', 'payment', 'validation');
@@ -287,7 +287,7 @@ describe('Payment Processing Integration Tests', function () {
             // If no exception, should still return proper structure
             expect($status)->toBeArray();
         } catch (\Exception $e) {
-            fwrite(STDERR, "Invalid status code format error (expected): " . substr($e->getMessage(), 0, 100) . "...\n");
+            fwrite(STDERR, 'Invalid status code format error (expected): '.substr($e->getMessage(), 0, 100)."...\n");
             expect($e->getMessage())->toContain('status');
         }
 
@@ -296,7 +296,7 @@ describe('Payment Processing Integration Tests', function () {
             $status = $terminal->checkAuthorizationStatus('00000000-0000-0000-0000-000000000000');
             expect($status)->toBeArray();
         } catch (\Exception $e) {
-            fwrite(STDERR, "Non-existent UUID error (expected): " . substr($e->getMessage(), 0, 100) . "...\n");
+            fwrite(STDERR, 'Non-existent UUID error (expected): '.substr($e->getMessage(), 0, 100)."...\n");
             expect($e->getMessage())->toContain('status');
         }
 
@@ -306,7 +306,7 @@ describe('Payment Processing Integration Tests', function () {
             // Should throw exception for non-existent transaction
             expect(false)->toBeTrue(); // Should not reach this line
         } catch (\Exception $e) {
-            fwrite(STDERR, "Invalid refund error (expected): " . substr($e->getMessage(), 0, 100) . "...\n");
+            fwrite(STDERR, 'Invalid refund error (expected): '.substr($e->getMessage(), 0, 100)."...\n");
             expect($e->getMessage())->toContain('refund');
         }
 
@@ -315,7 +315,7 @@ describe('Payment Processing Integration Tests', function () {
             $terminal->captureTransaction('00000000-0000-0000-0000-000000000000', 100);
             expect(false)->toBeTrue(); // Should not reach this line
         } catch (\Exception $e) {
-            fwrite(STDERR, "Invalid capture error (expected): " . substr($e->getMessage(), 0, 100) . "...\n");
+            fwrite(STDERR, 'Invalid capture error (expected): '.substr($e->getMessage(), 0, 100)."...\n");
             expect($e->getMessage())->toContain('capture');
         }
 
@@ -331,25 +331,25 @@ describe('Payment Processing Integration Tests', function () {
         $avsTestCases = [
             'good_match' => [
                 'amount' => 1000, // $10.00 - Should pass AVS
-                'description' => 'AVS Good Match Test'
+                'description' => 'AVS Good Match Test',
             ],
             'street_mismatch' => [
                 'amount' => 1001, // $10.01 - Might trigger street mismatch
-                'description' => 'AVS Street Mismatch Test'
+                'description' => 'AVS Street Mismatch Test',
             ],
             'zip_mismatch' => [
                 'amount' => 1002, // $10.02 - Might trigger ZIP mismatch
-                'description' => 'AVS ZIP Mismatch Test'
+                'description' => 'AVS ZIP Mismatch Test',
             ],
             'full_mismatch' => [
                 'amount' => 1003, // $10.03 - Might trigger full AVS mismatch
-                'description' => 'AVS Full Mismatch Test'
+                'description' => 'AVS Full Mismatch Test',
             ],
         ];
 
         foreach ($avsTestCases as $testCase => $testData) {
             try {
-                fwrite(STDERR, "Testing AVS scenario: {$testCase} with amount \\$" . ($testData['amount']/100) . "...\n");
+                fwrite(STDERR, "Testing AVS scenario: {$testCase} with amount \\$".($testData['amount'] / 100)."...\n");
 
                 // Create transaction intention - this is where AVS would be processed in Elements flow
                 $intention = $this->fortisHttpService->createTransactionIntention(
@@ -364,13 +364,13 @@ describe('Payment Processing Integration Tests', function () {
                 expect($clientToken)->toBeString();
                 expect(strlen($clientToken))->toBeGreaterThan(50);
 
-                fwrite(STDERR, "AVS test case {$testCase} - Elements token created (length: " . strlen($clientToken) . ")\n");
+                fwrite(STDERR, "AVS test case {$testCase} - Elements token created (length: ".strlen($clientToken).")\n");
 
                 // In a real scenario, the frontend would use this token with Elements
                 // and include billing address information that would trigger different AVS responses
 
             } catch (\Exception $e) {
-                fwrite(STDERR, "AVS test case {$testCase} failed: " . $e->getMessage() . "\n");
+                fwrite(STDERR, "AVS test case {$testCase} failed: ".$e->getMessage()."\n");
                 expect($e->getMessage())->toContain('transaction');
             }
         }
@@ -386,29 +386,29 @@ describe('Payment Processing Integration Tests', function () {
         $cvvTestCases = [
             'cvv_match' => [
                 'amount' => 2000, // $20.00 - Should pass CVV
-                'description' => 'CVV Match Test'
+                'description' => 'CVV Match Test',
             ],
             'cvv_no_match' => [
                 'amount' => 2001, // $20.01 - Might trigger CVV mismatch
-                'description' => 'CVV No Match Test'
+                'description' => 'CVV No Match Test',
             ],
             'cvv_not_processed' => [
                 'amount' => 2002, // $20.02 - Might trigger CVV not processed
-                'description' => 'CVV Not Processed Test'
+                'description' => 'CVV Not Processed Test',
             ],
             'cvv_unreadable' => [
                 'amount' => 2003, // $20.03 - Might trigger CVV unreadable
-                'description' => 'CVV Unreadable Test'
+                'description' => 'CVV Unreadable Test',
             ],
             'cvv_unknown' => [
                 'amount' => 2004, // $20.04 - Might trigger CVV unknown
-                'description' => 'CVV Unknown Test'
+                'description' => 'CVV Unknown Test',
             ],
         ];
 
         foreach ($cvvTestCases as $testCase => $testData) {
             try {
-                fwrite(STDERR, "Testing CVV scenario: {$testCase} with amount \\$" . ($testData['amount']/100) . "...\n");
+                fwrite(STDERR, "Testing CVV scenario: {$testCase} with amount \\$".($testData['amount'] / 100)."...\n");
 
                 // Create transaction intention - this is where CVV would be verified in Elements flow
                 $intention = $this->fortisHttpService->createTransactionIntention(
@@ -422,13 +422,13 @@ describe('Payment Processing Integration Tests', function () {
                 $clientToken = $intention['data']['client_token'];
                 expect($clientToken)->toBeString();
 
-                fwrite(STDERR, "CVV test case {$testCase} - Elements token created (length: " . strlen($clientToken) . ")\n");
+                fwrite(STDERR, "CVV test case {$testCase} - Elements token created (length: ".strlen($clientToken).")\n");
 
                 // In a real scenario, the frontend would use this token with Elements
                 // and include CVV data that would trigger different CVV verification responses
 
             } catch (\Exception $e) {
-                fwrite(STDERR, "CVV test case {$testCase} failed: " . $e->getMessage() . "\n");
+                fwrite(STDERR, "CVV test case {$testCase} failed: ".$e->getMessage()."\n");
                 expect($e->getMessage())->toContain('transaction');
             }
         }
@@ -452,7 +452,7 @@ describe('Payment Processing Integration Tests', function () {
                 expect($avsCode->value)->toBe('Both street and zip do not match');
             }
 
-            fwrite(STDERR, "AVS Code {$code}: " . ($avsCode ? $avsCode->value : 'null') . "\n");
+            fwrite(STDERR, "AVS Code {$code}: ".($avsCode ? $avsCode->value : 'null')."\n");
         }
 
         // Test CVV enum mappings
@@ -470,7 +470,7 @@ describe('Payment Processing Integration Tests', function () {
                 expect($cvvCode->value)->toBe('No Match');
             }
 
-            fwrite(STDERR, "CVV Code {$code}: " . $cvvCode->value . "\n");
+            fwrite(STDERR, "CVV Code {$code}: ".$cvvCode->value."\n");
         }
 
         // Test invalid codes
@@ -513,7 +513,7 @@ describe('Payment Processing Integration Tests', function () {
                 'avs' => 'BAD',
                 'cvv_response' => 'N',
                 'transaction_amount' => 1500,
-            ]
+            ],
         ];
 
         foreach ($testResponseData as $scenario => $responseData) {
@@ -525,7 +525,7 @@ describe('Payment Processing Integration Tests', function () {
                 expect($avsCode)->not->toBeNull();
 
                 $avsPass = ($avsCode == \Hyrograsper\LunarFortis\Enums\AvsResponseCode::GOOD);
-                fwrite(STDERR, "  AVS: {$avsCode->value} - " . ($avsPass ? 'PASS' : 'FAIL') . "\n");
+                fwrite(STDERR, "  AVS: {$avsCode->value} - ".($avsPass ? 'PASS' : 'FAIL')."\n");
             }
 
             // Test CVV processing
@@ -534,7 +534,7 @@ describe('Payment Processing Integration Tests', function () {
                 expect($cvvCode)->not->toBeNull();
 
                 $cvvPass = ($cvvCode != \Hyrograsper\LunarFortis\Enums\CvvResponseCode::N);
-                fwrite(STDERR, "  CVV: {$cvvCode->value} - " . ($cvvPass ? 'PASS' : 'FAIL') . "\n");
+                fwrite(STDERR, "  CVV: {$cvvCode->value} - ".($cvvPass ? 'PASS' : 'FAIL')."\n");
             }
         }
 
@@ -569,7 +569,7 @@ describe('Terminal Payment Integration Tests', function () {
 
         } catch (\Exception $e) {
             // Terminal might not be active or configured for card processing
-            $this->markTestSkipped('Terminal not ready for credit card processing: ' . $e->getMessage());
+            $this->markTestSkipped('Terminal not ready for credit card processing: '.$e->getMessage());
         }
     })->group('integration', 'slow', 'terminal', 'payment');
 
@@ -591,7 +591,7 @@ describe('Elements Payment Flow Integration', function () {
         // with Fortis Elements to process the actual payment
         // We can't easily simulate that in server-side tests
 
-        fwrite(STDERR, "Elements client token created successfully (length: " . strlen($clientToken) . ")\n");
+        fwrite(STDERR, 'Elements client token created successfully (length: '.strlen($clientToken).")\n");
         fwrite(STDERR, "In real usage, this token would be used with Fortis Elements JS SDK\n");
 
     })->group('integration', 'slow', 'elements');
@@ -601,4 +601,3 @@ afterEach(function () {
     // Clean up any test data if needed
     // Be careful with real API - don't leave test transactions hanging
 });
-

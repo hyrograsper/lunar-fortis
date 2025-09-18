@@ -8,11 +8,11 @@ use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Throwable;
 
 class FortisHttpService
 {
     protected string $baseUrl;
+
     protected array $headers;
 
     public function __construct()
@@ -34,7 +34,7 @@ class FortisHttpService
      */
     protected function makeRequest(string $method, string $endpoint, array $data = [], array $queryParams = []): array
     {
-        $url = $this->baseUrl . $endpoint;
+        $url = $this->baseUrl.$endpoint;
 
         $httpClient = Http::retry(3, 1000, function ($exception, $request) {
             // Retry on network errors or 429 rate limiting
@@ -44,6 +44,7 @@ class FortisHttpService
                         'exception' => $exception->getMessage(),
                     ]);
                 }
+
                 return true;
             }
 
@@ -56,14 +57,15 @@ class FortisHttpService
                             'response' => $response->getBody()->getContents(),
                         ]);
                     }
+
                     return true;
                 }
             }
 
             return false;
         })
-        ->withHeaders($this->headers)
-        ->timeout(30);
+            ->withHeaders($this->headers)
+            ->timeout(30);
 
         $response = match ($method) {
             'GET' => $httpClient->get($url, $queryParams),
@@ -89,7 +91,7 @@ class FortisHttpService
                     [
                         'type' => 'cc',
                         'product_transaction_id' => config('services.fortis.productTransactionId'),
-                    ]
+                    ],
                 ],
                 'amount' => $amount,
                 'location_id' => config('services.fortis.locationId'),
@@ -120,7 +122,7 @@ class FortisHttpService
             if ($responseBody) {
                 $errorData = json_decode($responseBody, true);
                 if ($errorData && isset($errorData['detail'])) {
-                    $errorDetail = ' - ' . $errorData['detail'];
+                    $errorDetail = ' - '.$errorData['detail'];
                 }
             }
 
@@ -185,7 +187,7 @@ class FortisHttpService
 
                 // Miscellaneous
                 'description', 'notification_email_address', 'tags', 'iias_ind',
-                'ebt_type', 'currency_code', 'deferred_auth'
+                'ebt_type', 'currency_code', 'deferred_auth',
             ];
 
             foreach ($optionalFields as $field) {
@@ -505,7 +507,7 @@ class FortisHttpService
             $terminalProductId = config('services.fortis.terminalProductTransactionId');
             if ($terminalProductId) {
                 $data['product_transaction_id'] = $terminalProductId;
-            } elseif (!isset($options['product_transaction_id'])) {
+            } elseif (! isset($options['product_transaction_id'])) {
                 // Fallback to ecommerce product ID if no terminal-specific ID and none provided in options
                 $data['product_transaction_id'] = config('services.fortis.productTransactionId');
             }
@@ -517,7 +519,7 @@ class FortisHttpService
                 'po_number', 'notification_email_address', 'save_account', 'save_account_title',
                 'product_transaction_id', 'checkin_date', 'checkout_date', 'room_num', 'room_rate',
                 'billing_address', 'cardholder_present', 'currency_code', 'terminal_api_id',
-                'e_format', 'e_track_data', 'e_serial_number', 'additional_amounts'
+                'e_format', 'e_track_data', 'e_serial_number', 'additional_amounts',
             ];
 
             foreach ($optionalFields as $field) {

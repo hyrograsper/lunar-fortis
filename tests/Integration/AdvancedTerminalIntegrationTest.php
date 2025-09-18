@@ -3,17 +3,17 @@
 use Hyrograsper\LunarFortis\Models\Terminal;
 use Hyrograsper\LunarFortis\Services\FortisHttpService;
 
-require_once __DIR__ . '/helpers.php';
+require_once __DIR__.'/helpers.php';
 
 beforeEach(function () {
-    if (!hasValidFortisCredentials()) {
+    if (! hasValidFortisCredentials()) {
         $this->markTestSkipped('Integration tests require real Fortis API credentials.');
     }
 
     setupIntegrationConfig();
     setupIntegrationDatabase();
 
-    $this->fortisHttpService = new FortisHttpService();
+    $this->fortisHttpService = new FortisHttpService;
 });
 
 describe('Advanced Terminal Payment Integration', function () {
@@ -31,7 +31,7 @@ describe('Advanced Terminal Payment Integration', function () {
         // Test the complete workflow through the Terminal model
         $terminal = Terminal::where('fortis_id', $terminalId)->first();
 
-        if (!$terminal) {
+        if (! $terminal) {
             // Create the terminal in our database for testing
             $terminal = Terminal::create([
                 'fortis_id' => $terminalId,
@@ -60,15 +60,15 @@ describe('Advanced Terminal Payment Integration', function () {
             expect($status)->toHaveKey('completed');
             expect($status)->toHaveKey('success');
 
-            fwrite(STDERR, "Authorization status - Progress: {$status['progress']}%, Completed: " .
-                   ($status['completed'] ? 'YES' : 'NO') . "\n");
+            fwrite(STDERR, "Authorization status - Progress: {$status['progress']}%, Completed: ".
+                   ($status['completed'] ? 'YES' : 'NO')."\n");
 
             // Note: For full testing, you'd need to physically interact with the terminal
             // or have it configured for automated testing
 
         } catch (\Exception $e) {
             // This is expected if terminal isn't ready or requires physical interaction
-            fwrite(STDERR, "Terminal authorization test skipped: " . $e->getMessage() . "\n");
+            fwrite(STDERR, 'Terminal authorization test skipped: '.$e->getMessage()."\n");
 
             // Still validate that we get a proper exception structure
             expect($e->getMessage())->toContain('terminal');
@@ -101,7 +101,7 @@ describe('Advanced Terminal Payment Integration', function () {
                 $statusCode = $terminal->initiateAuthorization($amount);
                 expect($statusCode)->toBeString();
 
-                fwrite(STDERR, "Successfully initiated authorization for \$" . ($amount/100) . "\n");
+                fwrite(STDERR, 'Successfully initiated authorization for $'.($amount / 100)."\n");
 
                 // Check status immediately
                 $status = $terminal->checkAuthorizationStatus($statusCode);
@@ -137,7 +137,7 @@ describe('Advanced Terminal Payment Integration', function () {
         } catch (\Exception $e) {
             // Expected - invalid status codes should cause errors
             expect($e->getMessage())->toContain('status');
-            fwrite(STDERR, "Expected error for invalid status code: " . $e->getMessage() . "\n");
+            fwrite(STDERR, 'Expected error for invalid status code: '.$e->getMessage()."\n");
         }
 
         // Test 2: Very small amount (should work)
@@ -148,11 +148,11 @@ describe('Advanced Terminal Payment Integration', function () {
         } catch (\Exception $e) {
             // Some terminals might not allow very small amounts
             expect($e->getMessage())->toContain('terminal');
-            fwrite(STDERR, "Small amount test failed as expected: " . $e->getMessage() . "\n");
+            fwrite(STDERR, 'Small amount test failed as expected: '.$e->getMessage()."\n");
         }
 
         // Test 3: Zero amount (should fail validation)
-        expect(fn() => $terminal->initiateAuthorization(0))
+        expect(fn () => $terminal->initiateAuthorization(0))
             ->toThrow(\Exception::class);
 
     })->group('integration', 'slow', 'terminal', 'error-handling');

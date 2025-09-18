@@ -2,7 +2,6 @@
 
 use Hyrograsper\LunarFortis\LunarFortis;
 use Hyrograsper\LunarFortis\Services\FortisHttpService;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Lunar\Models\Contracts\Transaction as TransactionContract;
 use Lunar\Models\Order;
@@ -16,7 +15,7 @@ beforeEach(function () {
         'productTransactionId' => 'test-product-id',
     ]);
 
-    $this->lunarFortis = new LunarFortis();
+    $this->lunarFortis = new LunarFortis;
 });
 
 describe('LunarFortis Client Token Management', function () {
@@ -27,8 +26,8 @@ describe('LunarFortis Client Token Management', function () {
             ->with(1000, 'sale')
             ->andReturn([
                 'data' => [
-                    'client_token' => 'test-client-token-123'
-                ]
+                    'client_token' => 'test-client-token-123',
+                ],
             ]);
 
         $reflection = new ReflectionClass($this->lunarFortis);
@@ -68,7 +67,7 @@ describe('LunarFortis Client Token Management', function () {
         $httpServiceProperty->setAccessible(true);
         $httpServiceProperty->setValue($this->lunarFortis, $mockHttpService);
 
-        expect(fn() => $this->lunarFortis->getClientTokenForSaleAmount(1000))
+        expect(fn () => $this->lunarFortis->getClientTokenForSaleAmount(1000))
             ->toThrow(Exception::class, 'Unable to get client token for sale: API Error');
     });
 });
@@ -88,13 +87,13 @@ describe('LunarFortis Transaction Completion', function () {
             ->once()
             ->with('trans-123', 1000, [
                 'order_number' => 'ORD-456',
-                'customer_id' => '789'
+                'customer_id' => '789',
             ])
             ->andReturn([
                 'data' => [
                     'id' => 'completed-trans-123',
-                    'status_code' => 101
-                ]
+                    'status_code' => 101,
+                ],
             ]);
 
         $reflection = new ReflectionClass($this->lunarFortis);
@@ -123,7 +122,7 @@ describe('LunarFortis Transaction Completion', function () {
                 'order_number' => 'ORD-456',
                 'customer_id' => '789',
                 'tip_amount' => 200,
-                'description' => 'Test payment'
+                'description' => 'Test payment',
             ])
             ->andReturn(['data' => []]);
 
@@ -134,7 +133,7 @@ describe('LunarFortis Transaction Completion', function () {
 
         $this->lunarFortis->completeAuthorizedTransaction($mockTransaction, 1000, [
             'tip_amount' => 200,
-            'description' => 'Test payment'
+            'description' => 'Test payment',
         ]);
     });
 
@@ -191,14 +190,14 @@ describe('LunarFortis Credit Card Authorization', function () {
                     'city' => 'Anytown',
                     'state' => 'CA',
                     'postal_code' => '12345',
-                    'country' => 'USA'
-                ]
+                    'country' => 'USA',
+                ],
             ])
             ->andReturn([
                 'data' => [
                     'id' => 'auth-trans-123',
-                    'status_code' => 102
-                ]
+                    'status_code' => 102,
+                ],
             ]);
 
         $reflection = new ReflectionClass($this->lunarFortis);
@@ -224,8 +223,8 @@ describe('LunarFortis Refund Processing', function () {
             ->andReturn([
                 'data' => [
                     'id' => 'refund-trans-123',
-                    'status_code' => 111
-                ]
+                    'status_code' => 111,
+                ],
             ]);
 
         $reflection = new ReflectionClass($this->lunarFortis);
@@ -249,8 +248,8 @@ describe('LunarFortis Transaction Retrieval', function () {
                 'data' => [
                     'id' => 'trans-123',
                     'status_code' => 101,
-                    'transaction_amount' => 1000
-                ]
+                    'transaction_amount' => 1000,
+                ],
             ]);
 
         $reflection = new ReflectionClass($this->lunarFortis);
@@ -269,7 +268,7 @@ describe('LunarFortis Terminal Management', function () {
         $terminalData = [
             'title' => 'Test Terminal',
             'serial_number' => 'SN123456',
-            'terminal_application_id' => 'app-123'
+            'terminal_application_id' => 'app-123',
         ];
 
         $mockHttpService = Mockery::mock(FortisHttpService::class);
@@ -279,8 +278,8 @@ describe('LunarFortis Terminal Management', function () {
             ->andReturn([
                 'data' => [
                     'id' => 'new-terminal-123',
-                    'title' => 'Test Terminal'
-                ]
+                    'title' => 'Test Terminal',
+                ],
             ]);
 
         $reflection = new ReflectionClass($this->lunarFortis);
@@ -303,8 +302,8 @@ describe('LunarFortis Terminal Management', function () {
             ->andReturn([
                 'list' => [
                     ['id' => 'terminal-1', 'title' => 'Terminal 1'],
-                    ['id' => 'terminal-2', 'title' => 'Terminal 2']
-                ]
+                    ['id' => 'terminal-2', 'title' => 'Terminal 2'],
+                ],
             ]);
 
         $reflection = new ReflectionClass($this->lunarFortis);
@@ -326,7 +325,7 @@ describe('LunarFortis Terminal Management', function () {
                 'serial_number' => 'SN789',
                 'terminal_application_id' => 'app-456',
                 'active' => true,
-                'location_id' => 'custom-location'
+                'location_id' => 'custom-location',
             ])
             ->andReturn(['data' => []]);
 
@@ -396,9 +395,9 @@ describe('LunarFortis Terminal Credit Card Processing', function () {
             ->andReturn([
                 'data' => [
                     'async' => [
-                        'code' => 'async-456'
-                    ]
-                ]
+                        'code' => 'async-456',
+                    ],
+                ],
             ]);
 
         $reflection = new ReflectionClass($this->lunarFortis);
@@ -407,7 +406,7 @@ describe('LunarFortis Terminal Credit Card Processing', function () {
         $httpServiceProperty->setValue($this->lunarFortis, $mockHttpService);
 
         $result = $this->lunarFortis->authorizeTerminalCreditCard('terminal-123', 2000, [
-            'description' => 'Test'
+            'description' => 'Test',
         ]);
 
         expect($result['data']['async']['code'])->toBe('async-456');
@@ -419,13 +418,13 @@ describe('LunarFortis Terminal Credit Card Processing', function () {
             ->once()
             ->with('trans-123', 1500, [
                 'order_number' => 'ORD-999',
-                'customer_id' => 'CUST-888'
+                'customer_id' => 'CUST-888',
             ])
             ->andReturn([
                 'data' => [
                     'id' => 'captured-trans-123',
-                    'status_code' => 101
-                ]
+                    'status_code' => 101,
+                ],
             ]);
 
         $reflection = new ReflectionClass($this->lunarFortis);
@@ -435,7 +434,7 @@ describe('LunarFortis Terminal Credit Card Processing', function () {
 
         $result = $this->lunarFortis->captureTerminalTransaction('trans-123', 1500, [
             'order_number' => 'ORD-999',
-            'customer_id' => 'CUST-888'
+            'customer_id' => 'CUST-888',
         ]);
 
         expect($result['data']['id'])->toBe('captured-trans-123');
@@ -452,9 +451,9 @@ describe('LunarFortis Terminal Credit Card Processing', function () {
                 'data' => [
                     'async' => [
                         'code' => 'async-789',
-                        'link' => 'https://api.sandbox.fortis.tech/v1/async/status/async-789'
-                    ]
-                ]
+                        'link' => 'https://api.sandbox.fortis.tech/v1/async/status/async-789',
+                    ],
+                ],
             ]);
 
         // Mock the status checking calls (simulating completion)
@@ -464,8 +463,8 @@ describe('LunarFortis Terminal Credit Card Processing', function () {
             ->andReturn([
                 'data' => [
                     'progress' => 100,
-                    'id' => 'completed-trans-789'
-                ]
+                    'id' => 'completed-trans-789',
+                ],
             ]);
 
         $reflection = new ReflectionClass($this->lunarFortis);
@@ -478,7 +477,7 @@ describe('LunarFortis Terminal Credit Card Processing', function () {
         $result = $this->lunarFortis->processTerminalCreditCardAuth('terminal-123', 3000, [
             'description' => 'Full workflow',
             'timeout_seconds' => 10,
-            'poll_interval_seconds' => 1
+            'poll_interval_seconds' => 1,
         ]);
 
         expect($result['success'])->toBeTrue();

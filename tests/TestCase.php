@@ -56,7 +56,7 @@ class TestCase extends Orchestra
     protected function setUpDatabase(): void
     {
         // Create basic tables needed for tests
-        if (!$this->app['db']->getSchemaBuilder()->hasTable('fortis_terminals')) {
+        if (! $this->app['db']->getSchemaBuilder()->hasTable('fortis_terminals')) {
             $this->app['db']->getSchemaBuilder()->create('fortis_terminals', function ($table) {
                 $table->id();
                 $table->string('fortis_id')->nullable();

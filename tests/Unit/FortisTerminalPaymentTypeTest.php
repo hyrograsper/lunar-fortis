@@ -2,15 +2,9 @@
 
 use Hyrograsper\LunarFortis\Enums\ReasonCode;
 use Hyrograsper\LunarFortis\Enums\StatusCode;
-use Hyrograsper\LunarFortis\Facades\LunarFortis;
 use Hyrograsper\LunarFortis\Models\Terminal;
 use Hyrograsper\LunarFortis\PaymentTypes\FortisTerminalPaymentType;
 use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\Log;
-use Lunar\Base\DataTransferObjects\PaymentAuthorize;
-use Lunar\Base\DataTransferObjects\PaymentCapture;
-use Lunar\Base\DataTransferObjects\PaymentRefund;
-use Lunar\Events\PaymentAttemptEvent;
 
 beforeEach(function () {
     // Set up test configuration
@@ -27,7 +21,7 @@ beforeEach(function () {
         'serial_number' => 'SN12345',
     ]);
 
-    $this->paymentType = new FortisTerminalPaymentType();
+    $this->paymentType = new FortisTerminalPaymentType;
 });
 
 describe('FortisTerminalPaymentType Configuration', function () {
@@ -36,7 +30,7 @@ describe('FortisTerminalPaymentType Configuration', function () {
     });
 
     it('sets automatic policy by default', function () {
-        $paymentType = new FortisTerminalPaymentType();
+        $paymentType = new FortisTerminalPaymentType;
 
         $reflection = new ReflectionClass($paymentType);
         $policyProperty = $reflection->getProperty('policy');
@@ -48,7 +42,7 @@ describe('FortisTerminalPaymentType Configuration', function () {
     it('uses terminal-specific policy when configured', function () {
         Config::set('lunar-fortis.terminal_policy', 'manual');
 
-        $paymentType = new FortisTerminalPaymentType();
+        $paymentType = new FortisTerminalPaymentType;
         $reflection = new ReflectionClass($paymentType);
         $policyProperty = $reflection->getProperty('policy');
         $policyProperty->setAccessible(true);

@@ -1,10 +1,7 @@
 <?php
 
-use Hyrograsper\LunarFortis\Facades\LunarFortis;
 use Hyrograsper\LunarFortis\Livewire\PaymentForm;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\Log;
 
 beforeEach(function () {
     // Set up test configuration
@@ -12,17 +9,17 @@ beforeEach(function () {
     Config::set('lunar-fortis.environment', 'sandbox');
     Config::set('lunar-fortis.elements.appearance', [
         'theme' => 'stripe',
-        'variables' => ['colorPrimary' => '#0570de']
+        'variables' => ['colorPrimary' => '#0570de'],
     ]);
 
-    $this->paymentForm = new PaymentForm();
+    $this->paymentForm = new PaymentForm;
 });
 
 describe('PaymentForm Configuration', function () {
     it('sets policy from config on mount', function () {
         Config::set('lunar-fortis.policy', 'manual');
 
-        $form = new PaymentForm();
+        $form = new PaymentForm;
         $form->mount();
 
         expect($form->policy)->toBe('manual');
@@ -33,7 +30,7 @@ describe('PaymentForm Configuration', function () {
         // Remove the config key entirely by not setting it in this test
         // but since we have a default value, it should still work
 
-        $form = new PaymentForm();
+        $form = new PaymentForm;
         $form->mount();
 
         expect($form->policy)->toBe('automatic');
@@ -56,7 +53,7 @@ describe('Component Properties', function () {
     it('returns correct sandbox JavaScript URL', function () {
         Config::set('lunar-fortis.environment', 'sandbox');
 
-        $form = new PaymentForm();
+        $form = new PaymentForm;
         $jsUrl = $form->getFortisJSUrlProperty();
 
         expect($jsUrl)->toBe('https://js.sandbox.fortis.tech/commercejs-v1.0.0.min.js');
@@ -65,7 +62,7 @@ describe('Component Properties', function () {
     it('returns correct production JavaScript URL', function () {
         Config::set('lunar-fortis.environment', 'production');
 
-        $form = new PaymentForm();
+        $form = new PaymentForm;
         $jsUrl = $form->getFortisJSUrlProperty();
 
         expect($jsUrl)->toBe('https://js.fortis.tech/commercejs-v1.0.0.min.js');

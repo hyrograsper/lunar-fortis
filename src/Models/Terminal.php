@@ -90,7 +90,7 @@ class Terminal extends Model
             }
         }
 
-        if (!$syncedAt instanceof \Carbon\Carbon) {
+        if (! $syncedAt instanceof \Carbon\Carbon) {
             // If it's still not a Carbon instance, assume it needs sync
             return true;
         }
@@ -223,7 +223,6 @@ class Terminal extends Model
         );
     }
 
-
     /**
      * Initiate an authorization and return async status code for manual monitoring
      *
@@ -245,13 +244,12 @@ class Terminal extends Model
         $asyncData = $response['data']['async'] ?? [];
         $statusCode = $asyncData['code'] ?? null;
 
-        if (!$statusCode) {
+        if (! $statusCode) {
             throw new Exception('No async status code received from terminal authorization initiation');
         }
 
         return $statusCode;
     }
-
 
     /**
      * Check the status of an authorization by async status code
@@ -323,7 +321,6 @@ class Terminal extends Model
         return LunarFortis::captureTerminalTransaction($transactionId, $amount, $options);
     }
 
-
     /**
      * Complete auth-only flow: authorize and capture in one call
      *
@@ -334,12 +331,12 @@ class Terminal extends Model
         // Step 1: Authorize
         $authResult = $this->authorizePayment($amount, $options);
 
-        if (!$authResult['success']) {
+        if (! $authResult['success']) {
             return $authResult;
         }
 
         $transactionId = $authResult['transaction_id'];
-        if (!$transactionId) {
+        if (! $transactionId) {
             throw new Exception('No transaction ID returned from authorization');
         }
 

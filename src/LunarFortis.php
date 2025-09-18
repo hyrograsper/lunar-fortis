@@ -19,9 +19,8 @@ class LunarFortis
             return $this->httpService;
         }
 
-        return $this->httpService = new FortisHttpService();
+        return $this->httpService = new FortisHttpService;
     }
-
 
     /**
      * @throws Exception
@@ -30,6 +29,7 @@ class LunarFortis
     {
         try {
             $response = $this->getHttpService()->createTransactionIntention($amount, $action);
+
             return $response['data']['client_token'] ?? null;
         } catch (Exception $e) {
             throw new Exception("Unable to get client token for {$action}: {$e->getMessage()}");
@@ -334,7 +334,7 @@ class LunarFortis
             $asyncData = $processingResponse['data']['async'] ?? [];
             $statusCode = $asyncData['code'] ?? null;
 
-            if (!$statusCode) {
+            if (! $statusCode) {
                 throw new Exception('No async status code received from terminal authorization');
             }
 

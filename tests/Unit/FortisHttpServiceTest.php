@@ -1,8 +1,6 @@
 <?php
 
 use Hyrograsper\LunarFortis\Services\FortisHttpService;
-use Illuminate\Http\Client\ConnectionException;
-use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -20,13 +18,13 @@ beforeEach(function () {
         'terminalProductTransactionId' => 'test-terminal-product-id',
     ]);
 
-    $this->service = new FortisHttpService();
+    $this->service = new FortisHttpService;
 });
 
 describe('FortisHttpService Configuration', function () {
     it('sets sandbox base URL for sandbox environment', function () {
         Config::set('lunar-fortis.environment', 'sandbox');
-        $service = new FortisHttpService();
+        $service = new FortisHttpService;
 
         $reflection = new ReflectionClass($service);
         $baseUrlProperty = $reflection->getProperty('baseUrl');
@@ -37,7 +35,7 @@ describe('FortisHttpService Configuration', function () {
 
     it('sets production base URL for production environment', function () {
         Config::set('lunar-fortis.environment', 'production');
-        $service = new FortisHttpService();
+        $service = new FortisHttpService;
 
         $reflection = new ReflectionClass($service);
         $baseUrlProperty = $reflection->getProperty('baseUrl');
@@ -66,9 +64,9 @@ describe('Transaction Intention', function () {
             'api.sandbox.fortis.tech/v1/elements/transaction/intention' => Http::response([
                 'data' => [
                     'client_token' => 'test-client-token',
-                    'id' => 'test-transaction-id'
-                ]
-            ], 200)
+                    'id' => 'test-transaction-id',
+                ],
+            ], 200),
         ]);
 
         Log::shouldReceive('debug')->once();
@@ -89,13 +87,13 @@ describe('Transaction Intention', function () {
     it('handles transaction intention creation failure', function () {
         Http::fake([
             'api.sandbox.fortis.tech/v1/elements/transaction/intention' => Http::response([
-                'detail' => 'Invalid amount'
-            ], 422)
+                'detail' => 'Invalid amount',
+            ], 422),
         ]);
 
         Log::shouldReceive('error')->once();
 
-        expect(fn() => $this->service->createTransactionIntention(0, 'sale'))
+        expect(fn () => $this->service->createTransactionIntention(0, 'sale'))
             ->toThrow(Exception::class, 'Failed to create transaction intention');
     });
 });
@@ -107,16 +105,16 @@ describe('Authorization Complete', function () {
                 'data' => [
                     'id' => 'test-transaction-id',
                     'status_code' => 101,
-                    'transaction_amount' => 1000
-                ]
-            ], 200)
+                    'transaction_amount' => 1000,
+                ],
+            ], 200),
         ]);
 
         Log::shouldReceive('debug')->once();
 
         $result = $this->service->completeAuthorizedTransaction('test-transaction-id', 1000, [
             'order_number' => 'ORD-123',
-            'customer_id' => '456'
+            'customer_id' => '456',
         ]);
 
         expect($result['data']['id'])->toBe('test-transaction-id');
@@ -132,11 +130,11 @@ describe('Authorization Complete', function () {
 
     it('casts customer_id to string', function () {
         Http::fake([
-            '*' => Http::response(['data' => []], 200)
+            '*' => Http::response(['data' => []], 200),
         ]);
 
         $this->service->completeAuthorizedTransaction('test-id', 1000, [
-            'customer_id' => 123 // Integer input
+            'customer_id' => 123, // Integer input
         ]);
 
         Http::assertSent(function ($request) {
@@ -146,7 +144,7 @@ describe('Authorization Complete', function () {
 
     it('includes all optional fields', function () {
         Http::fake([
-            '*' => Http::response(['data' => []], 200)
+            '*' => Http::response(['data' => []], 200),
         ]);
 
         $options = [
@@ -156,17 +154,17 @@ describe('Authorization Complete', function () {
                 'street' => '123 Main St',
                 'city' => 'Anytown',
                 'state' => 'CA',
-                'postal_code' => '12345'
+                'postal_code' => '12345',
             ],
             'tip_amount' => 200,
             'tax' => 100,
             'room_num' => '101',
-            'room_rate' => 9900
+            'room_rate' => 9900,
         ];
 
         $this->service->completeAuthorizedTransaction('test-id', 1000, $options);
 
-        Http::assertSent(function ($request) use ($options) {
+        Http::assertSent(function ($request) {
             return $request['order_number'] === 'ORD-123' &&
                    $request['billing_address']['street'] === '123 Main St' &&
                    $request['tip_amount'] === 200 &&
@@ -181,15 +179,15 @@ describe('Credit Card Authorization from Token', function () {
             'api.sandbox.fortis.tech/v1/transactions/cc/auth-only/token' => Http::response([
                 'data' => [
                     'id' => 'auth-transaction-id',
-                    'status_code' => 102
-                ]
-            ], 200)
+                    'status_code' => 102,
+                ],
+            ], 200),
         ]);
 
         Log::shouldReceive('debug')->once();
 
         $result = $this->service->authorizeCcFromToken('test-token-id', 1500, [
-            'order_number' => 'ORD-456'
+            'order_number' => 'ORD-456',
         ]);
 
         expect($result['data']['id'])->toBe('auth-transaction-id');
@@ -209,9 +207,9 @@ describe('Refund Processing', function () {
             'api.sandbox.fortis.tech/v1/transactions/original-transaction-id/refund' => Http::response([
                 'data' => [
                     'id' => 'refund-transaction-id',
-                    'status_code' => 111
-                ]
-            ], 200)
+                    'status_code' => 111,
+                ],
+            ], 200),
         ]);
 
         Log::shouldReceive('debug')->once();
@@ -235,9 +233,9 @@ describe('Transaction Retrieval', function () {
                 'data' => [
                     'id' => 'test-transaction-id',
                     'status_code' => 101,
-                    'transaction_amount' => 1000
-                ]
-            ], 200)
+                    'transaction_amount' => 1000,
+                ],
+            ], 200),
         ]);
 
         Log::shouldReceive('debug')->once();
@@ -259,9 +257,9 @@ describe('Terminal Management', function () {
             'api.sandbox.fortis.tech/v1/terminals' => Http::response([
                 'data' => [
                     'id' => 'new-terminal-id',
-                    'title' => 'Test Terminal'
-                ]
-            ], 201)
+                    'title' => 'Test Terminal',
+                ],
+            ], 201),
         ]);
 
         Log::shouldReceive('debug')->once();
@@ -269,7 +267,7 @@ describe('Terminal Management', function () {
         $terminalData = [
             'title' => 'Test Terminal',
             'serial_number' => 'SN123456',
-            'terminal_application_id' => 'app-123'
+            'terminal_application_id' => 'app-123',
         ];
 
         $result = $this->service->createTerminal($terminalData);
@@ -288,9 +286,9 @@ describe('Terminal Management', function () {
             'api.sandbox.fortis.tech/v1/terminals*' => Http::response([
                 'list' => [
                     ['id' => 'terminal-1', 'title' => 'Terminal 1'],
-                    ['id' => 'terminal-2', 'title' => 'Terminal 2']
-                ]
-            ], 200)
+                    ['id' => 'terminal-2', 'title' => 'Terminal 2'],
+                ],
+            ], 200),
         ]);
 
         Log::shouldReceive('debug')->once();
@@ -298,8 +296,8 @@ describe('Terminal Management', function () {
         $result = $this->service->listTerminals([
             'page' => 1,
             'filterBy' => [
-                ['key' => 'active', 'operator' => '=', 'value' => '1']
-            ]
+                ['key' => 'active', 'operator' => '=', 'value' => '1'],
+            ],
         ]);
 
         expect($result['list'])->toHaveCount(2);
@@ -315,9 +313,9 @@ describe('Terminal Management', function () {
             'api.sandbox.fortis.tech/v1/terminals/terminal-123*' => Http::response([
                 'data' => [
                     'id' => 'terminal-123',
-                    'title' => 'Test Terminal'
-                ]
-            ], 200)
+                    'title' => 'Test Terminal',
+                ],
+            ], 200),
         ]);
 
         Log::shouldReceive('debug')->once();
@@ -337,16 +335,16 @@ describe('Terminal Management', function () {
             'api.sandbox.fortis.tech/v1/terminals/terminal-123*' => Http::response([
                 'data' => [
                     'id' => 'terminal-123',
-                    'title' => 'Updated Terminal'
-                ]
-            ], 200)
+                    'title' => 'Updated Terminal',
+                ],
+            ], 200),
         ]);
 
         Log::shouldReceive('debug')->once();
 
         $result = $this->service->updateTerminal('terminal-123', [
             'title' => 'Updated Terminal',
-            'active' => true
+            'active' => true,
         ]);
 
         expect($result['data']['title'])->toBe('Updated Terminal');
@@ -366,16 +364,16 @@ describe('Terminal Transaction Processing', function () {
                 'data' => [
                     'async' => [
                         'code' => 'async-123',
-                        'link' => 'https://api.sandbox.fortis.tech/v1/async/status/async-123'
-                    ]
-                ]
-            ], 202)
+                        'link' => 'https://api.sandbox.fortis.tech/v1/async/status/async-123',
+                    ],
+                ],
+            ], 202),
         ]);
 
         Log::shouldReceive('debug')->once();
 
         $result = $this->service->authorizeTerminalCreditCard('terminal-123', 2500, [
-            'description' => 'Test payment'
+            'description' => 'Test payment',
         ]);
 
         expect($result['data']['async']['code'])->toBe('async-123');
@@ -397,9 +395,9 @@ describe('Async Status Checking', function () {
             'api.sandbox.fortis.tech/v1/async/status/async-123' => Http::response([
                 'data' => [
                     'progress' => 100,
-                    'id' => 'completed-transaction-id'
-                ]
-            ], 200)
+                    'id' => 'completed-transaction-id',
+                ],
+            ], 200),
         ]);
 
         Log::shouldReceive('debug')->once();
@@ -418,7 +416,7 @@ describe('Async Status Checking', function () {
 describe('HTTP Retry Logic', function () {
     it('handles successful request without retry', function () {
         Http::fake([
-            '*' => Http::response(['data' => ['success' => true]], 200)
+            '*' => Http::response(['data' => ['success' => true]], 200),
         ]);
 
         Log::shouldReceive('debug')->once(); // Success log
@@ -430,23 +428,23 @@ describe('HTTP Retry Logic', function () {
 
     it('handles 429 rate limiting response', function () {
         Http::fake([
-            '*' => Http::response('Rate limited', 429)
+            '*' => Http::response('Rate limited', 429),
         ]);
 
         Log::shouldReceive('error')->once();
 
-        expect(fn() => $this->service->createTransactionIntention(1000, 'sale'))
+        expect(fn () => $this->service->createTransactionIntention(1000, 'sale'))
             ->toThrow(Exception::class);
     });
 
     it('handles other HTTP errors', function () {
         Http::fake([
-            '*' => Http::response('Bad request', 400)
+            '*' => Http::response('Bad request', 400),
         ]);
 
         Log::shouldReceive('error')->once();
 
-        expect(fn() => $this->service->createTransactionIntention(1000, 'sale'))
+        expect(fn () => $this->service->createTransactionIntention(1000, 'sale'))
             ->toThrow(Exception::class);
     });
 });
@@ -454,7 +452,7 @@ describe('HTTP Retry Logic', function () {
 describe('Error Handling', function () {
     it('logs detailed error information', function () {
         Http::fake([
-            '*' => Http::response(['detail' => 'Validation failed'], 422)
+            '*' => Http::response(['detail' => 'Validation failed'], 422),
         ]);
 
         Log::shouldReceive('error')->once()->withArgs(function ($message, $context) {
@@ -463,18 +461,18 @@ describe('Error Handling', function () {
                    isset($context['response']);
         });
 
-        expect(fn() => $this->service->createTransactionIntention(1000, 'sale'))
+        expect(fn () => $this->service->createTransactionIntention(1000, 'sale'))
             ->toThrow(Exception::class, 'Failed to create transaction intention');
     });
 
     it('includes API error details in exception message', function () {
         Http::fake([
-            '*' => Http::response(['detail' => 'Invalid payment method'], 422)
+            '*' => Http::response(['detail' => 'Invalid payment method'], 422),
         ]);
 
         Log::shouldReceive('error');
 
-        expect(fn() => $this->service->createTransactionIntention(1000, 'sale'))
+        expect(fn () => $this->service->createTransactionIntention(1000, 'sale'))
             ->toThrow(Exception::class, 'Invalid payment method');
     });
 });
