@@ -18,6 +18,9 @@ beforeEach(function () {
         'terminalProductTransactionId' => 'test-terminal-product-id',
     ]);
 
+    // Mock Log facade to handle channel() calls that may happen in Laravel 11+
+    Log::shouldReceive('channel')->andReturnSelf();
+
     $this->service = new FortisHttpService;
 });
 
@@ -91,7 +94,7 @@ describe('Transaction Intention', function () {
             ], 422),
         ]);
 
-        Log::shouldReceive('error')->once();
+        Log::shouldReceive('error')->once()->withAnyArgs();
 
         expect(fn () => $this->service->createTransactionIntention(0, 'sale'))
             ->toThrow(Exception::class, 'Failed to create transaction intention');
@@ -133,6 +136,8 @@ describe('Authorization Complete', function () {
             '*' => Http::response(['data' => []], 200),
         ]);
 
+        Log::shouldReceive('debug')->once();
+
         $this->service->completeAuthorizedTransaction('test-id', 1000, [
             'customer_id' => 123, // Integer input
         ]);
@@ -146,6 +151,8 @@ describe('Authorization Complete', function () {
         Http::fake([
             '*' => Http::response(['data' => []], 200),
         ]);
+
+        Log::shouldReceive('debug')->once();
 
         $options = [
             'order_number' => 'ORD-123',
