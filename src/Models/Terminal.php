@@ -10,6 +10,25 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
+/**
+ * @property string $fortis_id
+ * @property string|null $location_id
+ * @property string $title
+ * @property string $serial_number
+ * @property string|null $terminal_application_id
+ * @property string $terminal_manufacturer_code
+ * @property string|null $default_product_transaction_id
+ * @property bool $active
+ * @property Carbon|null $fortis_created_at
+ * @property Carbon|null $fortis_modified_at
+ * @property string|null $created_user_id
+ * @property string|null $modified_user_id
+ * @property Carbon|null $synced_at
+ * @property array|null $fortis_data
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ * @property-read string $display_name
+ */
 class Terminal extends Model
 {
     use HasFactory;

@@ -73,6 +73,7 @@ class FortisHttpService
             'PUT' => $httpClient->put($url, $data),
             'PATCH' => $httpClient->patch($url, $data),
             'DELETE' => $httpClient->delete($url),
+            default => throw new \InvalidArgumentException("Unsupported HTTP method: {$method}"),
         };
 
         return $response->throw()->json();
@@ -108,11 +109,11 @@ class FortisHttpService
 
             return $response;
         } catch (RequestException $e) {
-            $responseBody = $e->response?->body();
+            $responseBody = $e->response->body();
             Log::error('LunarFortis: Failed to create transaction intention', [
                 'amount' => $amount,
                 'action' => $action,
-                'status_code' => $e->response?->status(),
+                'status_code' => $e->response->status(),
                 'error' => $e->getMessage(),
                 'response' => $responseBody,
                 'request_data' => $data,
@@ -216,7 +217,7 @@ class FortisHttpService
                 'transaction_id' => $transactionId,
                 'amount' => $amount,
                 'error' => $e->getMessage(),
-                'response' => $e->response?->body(),
+                'response' => $e->response->body(),
             ]);
 
             throw new Exception("Failed to complete authorized transaction: {$e->getMessage()}");
@@ -261,7 +262,7 @@ class FortisHttpService
                 'token_id' => $tokenId,
                 'amount' => $amount,
                 'error' => $e->getMessage(),
-                'response' => $e->response?->body(),
+                'response' => $e->response->body(),
             ]);
 
             throw new Exception("Failed to authorize credit card from token: {$e->getMessage()}");
@@ -294,7 +295,7 @@ class FortisHttpService
                 'previous_transaction_id' => $previousTransactionId,
                 'amount' => $amount,
                 'error' => $e->getMessage(),
-                'response' => $e->response?->body(),
+                'response' => $e->response->body(),
             ]);
 
             throw new Exception("Failed to process refund: {$e->getMessage()}");
@@ -320,7 +321,7 @@ class FortisHttpService
             Log::error('LunarFortis: Failed to retrieve transaction', [
                 'transaction_id' => $transactionId,
                 'error' => $e->getMessage(),
-                'response' => $e->response?->body(),
+                'response' => $e->response->body(),
             ]);
 
             throw new Exception("Failed to retrieve transaction: {$e->getMessage()}");
@@ -365,7 +366,7 @@ class FortisHttpService
             Log::error('LunarFortis: Failed to create terminal', [
                 'terminal_data' => $terminalData,
                 'error' => $e->getMessage(),
-                'response' => $e->response?->body(),
+                'response' => $e->response->body(),
             ]);
 
             throw new Exception("Failed to create terminal: {$e->getMessage()}");
@@ -412,7 +413,7 @@ class FortisHttpService
             Log::error('LunarFortis: Failed to list terminals', [
                 'options' => $options,
                 'error' => $e->getMessage(),
-                'response' => $e->response?->body(),
+                'response' => $e->response->body(),
             ]);
 
             throw new Exception("Failed to list terminals: {$e->getMessage()}");
@@ -446,7 +447,7 @@ class FortisHttpService
             Log::error('LunarFortis: Failed to retrieve terminal', [
                 'terminal_id' => $terminalId,
                 'error' => $e->getMessage(),
-                'response' => $e->response?->body(),
+                'response' => $e->response->body(),
             ]);
 
             throw new Exception("Failed to retrieve terminal {$terminalId}: {$e->getMessage()}");
@@ -479,7 +480,7 @@ class FortisHttpService
                 'terminal_id' => $terminalId,
                 'terminal_data' => $terminalData,
                 'error' => $e->getMessage(),
-                'response' => $e->response?->body(),
+                'response' => $e->response->body(),
             ]);
 
             throw new Exception("Failed to update terminal {$terminalId}: {$e->getMessage()}");
@@ -543,7 +544,7 @@ class FortisHttpService
                 'terminal_id' => $terminalId,
                 'amount' => $amount,
                 'error' => $e->getMessage(),
-                'response' => $e->response?->body(),
+                'response' => $e->response->body(),
             ]);
 
             throw new Exception("Failed to authorize terminal credit card: {$e->getMessage()}");
@@ -570,7 +571,7 @@ class FortisHttpService
             Log::error('LunarFortis: Failed to check async status', [
                 'status_code' => $statusCode,
                 'error' => $e->getMessage(),
-                'response' => $e->response?->body(),
+                'response' => $e->response->body(),
             ]);
 
             throw new Exception("Failed to check async status: {$e->getMessage()}");

@@ -55,7 +55,7 @@
     "scripts": {
         "post-autoload-dump": "@composer run prepare",
         "prepare": "@php vendor/bin/testbench package:discover --ansi",
-        "analyse": "vendor/bin/phpstan analyse",
+        "analyse": "vendor/bin/phpstan analyse --memory-limit=256M",
         "test": "vendor/bin/pest",
         "test-coverage": "vendor/bin/pest --coverage",
         "test-parallel": "vendor/bin/pest --parallel --processes=8",
