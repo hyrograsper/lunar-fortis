@@ -2,6 +2,78 @@
 
 All notable changes to `lunar-fortis` will be documented in this file.
 
+## 🔧 v2.0.1 - Configuration Fix - 2025-09-18
+
+### 🔧 **Lunar-Fortis v2.0.1** - Configuration Fix
+
+#### 🐛 **Bug Fix**
+
+##### **Missing Product Transaction IDs**
+
+- ✅ **Added missing configuration keys** to `config/services.php`
+- ✅ **Updated documentation** with required environment variables
+
+#### 📋 **What's Fixed**
+
+##### **config/services.php**
+
+Added missing configuration keys:
+
+```php
+'fortis' => [
+    'userId' => env('FORTIS_USER_ID'),
+    'userApiKey' => env('FORTIS_USER_API_KEY'),
+    'developerId' => env('FORTIS_DEVELOPER_ID'),
+    'locationId' => env('FORTIS_LOCATION_ID'),
+    'productTransactionId' => env('FORTIS_PRODUCT_TRANSACTION_ID'),                    // ✅ Added
+    'terminalProductTransactionId' => env('FORTIS_TERMINAL_PRODUCT_TRANSACTION_ID'),  // ✅ Added
+],
+
+```
+##### **Environment Variables**
+
+Updated `.env` documentation:
+
+```env
+# Required Fortis API credentials
+FORTIS_USER_ID=your_fortis_user_id
+FORTIS_USER_API_KEY=your_fortis_api_key
+FORTIS_DEVELOPER_ID=your_fortis_developer_id
+FORTIS_LOCATION_ID=your_fortis_location_id
+FORTIS_PRODUCT_TRANSACTION_ID=your_product_transaction_id                     # ✅ Added
+FORTIS_TERMINAL_PRODUCT_TRANSACTION_ID=your_terminal_product_transaction_id   # ✅ Added
+FORTIS_ENVIRONMENT=sandbox  # or 'production'
+
+```
+#### 🎯 **Impact**
+
+This fix ensures that:
+
+- **Online payments** work correctly with proper product transaction ID
+- **Terminal payments** work correctly with terminal-specific product transaction ID
+- **Configuration documentation** matches actual code implementation
+- **Out-of-the-box setup** works as expected
+
+#### 📦 **Upgrade Instructions**
+
+```bash
+composer update hyrograsper/lunar-fortis
+
+```
+Then add the missing environment variables to your `.env` file:
+
+```env
+FORTIS_PRODUCT_TRANSACTION_ID=your_product_transaction_id
+FORTIS_TERMINAL_PRODUCT_TRANSACTION_ID=your_terminal_product_transaction_id
+
+```
+
+---
+
+**Full Changelog**: https://github.com/hyrograsper/lunar-fortis/compare/v2.0.0...v2.0.1
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
 ## 🚀 v2.0.0 - Enterprise-Grade HTTP Configuration & Laravel 11+ Compatibility - 2025-09-18
 
 🚀 Major Release: Enhanced HTTP Configuration & Enterprise-Grade Reliability (#10)
@@ -554,6 +626,7 @@ Co-Authored-By: Claude [noreply@anthropic.com](mailto:noreply@anthropic.com)
 FORTIS_HTTP_RETRY_STATUS_CODES="429,502,503,504"
 FORTIS_HTTP_RETRY_EXPONENTIAL=false
 FORTIS_HTTP_RETRY_MAX_DELAY=10000
+
 
 ```
 **Enhanced Features:**
