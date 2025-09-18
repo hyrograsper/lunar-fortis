@@ -98,23 +98,16 @@ class Terminal extends Model
             return true;
         }
 
-        // Handle case where synced_at might be stored as integer (SQLite issue)
-        $syncedAt = $this->synced_at;
-        if (is_int($syncedAt) || is_string($syncedAt)) {
-            try {
-                $syncedAt = \Carbon\Carbon::createFromTimestamp($syncedAt);
-            } catch (\Exception $e) {
-                // If we can't parse the timestamp, assume it needs sync
-                return true;
-            }
-        }
+        try {
+            $syncedAt = $this->synced_at instanceof Carbon
+                ? $this->synced_at
+                : Carbon::parse($this->synced_at);
 
-        if (! $syncedAt instanceof \Carbon\Carbon) {
-            // If it's still not a Carbon instance, assume it needs sync
+            return $syncedAt->diffInHours(now()) > $hoursThreshold;
+        } catch (\Exception) {
+            // If we can't parse the timestamp, assume it needs sync
             return true;
         }
-
-        return $syncedAt->diffInHours(now()) > $hoursThreshold;
     }
 
     public function markSynced(): void

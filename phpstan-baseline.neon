@@ -3,7 +3,7 @@ parameters:
 		-
 			message: '#^Called ''env'' outside of the config directory which returns null when the config is cached, use ''config''\.$#'
 			identifier: larastan.noEnvCallsOutsideOfConfig
-			count: 5
+			count: 12
 			path: config/lunar-fortis.php
 
 		-
@@ -73,18 +73,6 @@ parameters:
 			path: src/LunarFortis.php
 
 		-
-			message: '#^Call to function is_int\(\) with Carbon\\Carbon will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 1
-			path: src/Models/Terminal.php
-
-		-
-			message: '#^Call to function is_string\(\) with Carbon\\Carbon will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 1
-			path: src/Models/Terminal.php
-
-		-
 			message: '#^Instanceof between Carbon\\Carbon and Carbon\\Carbon will always evaluate to true\.$#'
 			identifier: instanceof.alwaysTrue
 			count: 1
@@ -93,12 +81,6 @@ parameters:
 		-
 			message: '#^Method Hyrograsper\\LunarFortis\\Models\\Terminal\:\:syncSingleFromFortis\(\) should return static\(Hyrograsper\\LunarFortis\\Models\\Terminal\)\|null but returns Hyrograsper\\LunarFortis\\Models\\Terminal\.$#'
 			identifier: return.type
-			count: 1
-			path: src/Models/Terminal.php
-
-		-
-			message: '#^Result of \|\| is always false\.$#'
-			identifier: booleanOr.alwaysFalse
 			count: 1
 			path: src/Models/Terminal.php
 

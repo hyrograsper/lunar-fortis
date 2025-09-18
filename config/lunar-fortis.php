@@ -91,6 +91,57 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | HTTP Configuration
+    |--------------------------------------------------------------------------
+    | Configure HTTP client behavior for Fortis API requests.
+    |
+    */
+    'http' => [
+        /*
+         * Request timeout in seconds
+         */
+        'timeout' => env('FORTIS_HTTP_TIMEOUT', 30),
+
+        /*
+         * Retry configuration
+         */
+        'retry' => [
+            /*
+             * Number of retry attempts for failed requests
+             */
+            'attempts' => env('FORTIS_HTTP_RETRY_ATTEMPTS', 3),
+
+            /*
+             * Delay between retries in milliseconds
+             */
+            'delay' => env('FORTIS_HTTP_RETRY_DELAY', 1000),
+
+            /*
+             * Whether to retry on connection errors (network issues)
+             */
+            'on_connection_error' => env('FORTIS_HTTP_RETRY_CONNECTION', true),
+
+            /*
+             * HTTP status codes that should trigger a retry
+             * Common defaults: 429 (rate limit), 502 (bad gateway), 503 (service unavailable), 504 (gateway timeout)
+             */
+            'on_status_codes' => array_map('intval', explode(',', env('FORTIS_HTTP_RETRY_STATUS_CODES', '429,502,503,504'))),
+
+            /*
+             * Whether to use exponential backoff (multiplies delay by attempt number)
+             * If false, uses fixed delay between retries
+             */
+            'exponential_backoff' => env('FORTIS_HTTP_RETRY_EXPONENTIAL', false),
+
+            /*
+             * Maximum delay in milliseconds when using exponential backoff
+             */
+            'max_delay' => env('FORTIS_HTTP_RETRY_MAX_DELAY', 10000),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Debug Logging
     |--------------------------------------------------------------------------
     | Turn debug logging on to view each step of the payment process.

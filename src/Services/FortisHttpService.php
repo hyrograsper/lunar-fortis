@@ -36,9 +36,26 @@ class FortisHttpService
     {
         $url = $this->baseUrl.$endpoint;
 
-        $httpClient = Http::retry(3, 1000, function ($exception, $request) {
-            // Retry on network errors or 429 rate limiting
-            if ($exception instanceof ConnectionException) {
+        // Get HTTP configuration
+        $retryAttempts = config('lunar-fortis.http.retry.attempts', 3);
+        $retryDelay = config('lunar-fortis.http.retry.delay', 1000);
+        $retryOnConnection = config('lunar-fortis.http.retry.on_connection_error', true);
+        $retryStatusCodes = config('lunar-fortis.http.retry.on_status_codes', [429, 502, 503, 504]);
+        $exponentialBackoff = config('lunar-fortis.http.retry.exponential_backoff', false);
+        $maxDelay = config('lunar-fortis.http.retry.max_delay', 10000);
+        $timeout = config('lunar-fortis.http.timeout', 30);
+
+        // Build the retry delay function
+        $delayCallback = $exponentialBackoff
+            ? function ($attempt) use ($retryDelay, $maxDelay) {
+                $delay = $retryDelay * $attempt;
+                return min($delay, $maxDelay);
+            }
+            : $retryDelay;
+
+        $httpClient = Http::retry($retryAttempts, $delayCallback, function ($exception, $request) use ($retryOnConnection, $retryStatusCodes) {
+            // Retry on connection errors if configured
+            if ($retryOnConnection && $exception instanceof ConnectionException) {
                 if (config('lunar-fortis.debug')) {
                     Log::debug('LunarFortis: Retrying due to connection error', [
                         'exception' => $exception->getMessage(),
@@ -48,13 +65,15 @@ class FortisHttpService
                 return true;
             }
 
-            // Check if we have a response from the exception
+            // Retry on specific HTTP status codes if configured
             if ($exception && method_exists($exception, 'getResponse')) {
                 $response = $exception->getResponse();
-                if ($response && $response->getStatusCode() === 429) {
+                if ($response && in_array($response->getStatusCode(), $retryStatusCodes)) {
                     if (config('lunar-fortis.debug')) {
-                        Log::debug('LunarFortis: Retrying due to rate limiting (429)', [
-                            'response' => $response->getBody()->getContents(),
+                        Log::debug('LunarFortis: Retrying due to HTTP status code', [
+                            'status_code' => $response->getStatusCode(),
+                            'configured_codes' => $retryStatusCodes,
+                            'response_preview' => substr($response->getBody()->getContents(), 0, 200),
                         ]);
                     }
 
@@ -65,7 +84,7 @@ class FortisHttpService
             return false;
         })
             ->withHeaders($this->headers)
-            ->timeout(30);
+            ->timeout($timeout);
 
         $response = match ($method) {
             'GET' => $httpClient->get($url, $queryParams),

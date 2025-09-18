@@ -9,10 +9,9 @@ use Illuminate\Support\Facades\Log;
 
 class TerminalObserver
 {
-    public function __construct(protected LunarFortis $fortis)
-    {
-        //
-    }
+    public function __construct(
+        protected LunarFortis $fortis,
+    ) {}
 
     public function updating(Terminal $terminal): bool
     {
