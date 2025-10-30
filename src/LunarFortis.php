@@ -36,7 +36,6 @@ class LunarFortis
         }
     }
 
-
     /**
      * @throws Exception
      */

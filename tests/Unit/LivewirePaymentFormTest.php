@@ -117,7 +117,7 @@ describe('Edge Cases and Error Handling', function () {
         // The component will dispatch an event, but we can't easily mock it in unit tests
         // So we just verify the method doesn't throw an exception
         $this->paymentForm->handlePaymentResponse($response);
-        
+
         // If we get here without exception, the test passes
         expect(true)->toBeTrue();
     });
@@ -128,7 +128,7 @@ describe('Edge Cases and Error Handling', function () {
         // The component will dispatch an event, but we can't easily mock it in unit tests
         // So we just verify the method doesn't throw an exception
         $this->paymentForm->handlePaymentResponse($response);
-        
+
         // If we get here without exception, the test passes
         expect(true)->toBeTrue();
     });

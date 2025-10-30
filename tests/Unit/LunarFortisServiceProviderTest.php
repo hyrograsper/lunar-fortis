@@ -1,14 +1,12 @@
 <?php
 
-use Hyrograsper\LunarFortis\LunarFortisServiceProvider;
 use Hyrograsper\LunarFortis\Livewire\PaymentForm;
+use Hyrograsper\LunarFortis\LunarFortisServiceProvider;
 use Hyrograsper\LunarFortis\Models\Terminal;
 use Hyrograsper\LunarFortis\Observers\TerminalObserver;
 use Hyrograsper\LunarFortis\PaymentTypes\FortisPaymentType;
 use Hyrograsper\LunarFortis\PaymentTypes\FortisTerminalPaymentType;
-use Livewire\Livewire;
 use Lunar\Base\PaymentManagerInterface;
-use Lunar\Facades\Payments;
 use Lunar\Managers\PaymentManager;
 use Spatie\LaravelPackageTools\Package;
 
@@ -68,7 +66,7 @@ describe('Service Registration', function () {
     it('registers payment manager interface as singleton', function () {
         // Test that the service provider can be instantiated and methods exist
         expect(method_exists($this->serviceProvider, 'packageRegistered'))->toBeTrue();
-        
+
         // Test that the method can be called without errors
         expect(function () {
             $this->serviceProvider->packageRegistered();
@@ -78,7 +76,7 @@ describe('Service Registration', function () {
     it('registers fortis payment type with Payments facade', function () {
         // Test that the service provider can be instantiated and methods exist
         expect(method_exists($this->serviceProvider, 'packageRegistered'))->toBeTrue();
-        
+
         // Test that the method can be called without errors
         expect(function () {
             $this->serviceProvider->packageRegistered();
@@ -88,7 +86,7 @@ describe('Service Registration', function () {
     it('registers fortis-terminal payment type with Payments facade', function () {
         // Test that the service provider can be instantiated and methods exist
         expect(method_exists($this->serviceProvider, 'packageRegistered'))->toBeTrue();
-        
+
         // Test that the method can be called without errors
         expect(function () {
             $this->serviceProvider->packageRegistered();
@@ -100,7 +98,7 @@ describe('Service Boot', function () {
     it('registers Livewire payment form component', function () {
         // Test that the service provider can be instantiated and methods exist
         expect(method_exists($this->serviceProvider, 'packageBooted'))->toBeTrue();
-        
+
         // Test that the method can be called without errors
         expect(function () {
             $this->serviceProvider->packageBooted();
@@ -110,7 +108,7 @@ describe('Service Boot', function () {
     it('registers Terminal model observer', function () {
         // Test that the service provider can be instantiated and methods exist
         expect(method_exists($this->serviceProvider, 'packageBooted'))->toBeTrue();
-        
+
         // Test that the method can be called without errors
         expect(function () {
             $this->serviceProvider->packageBooted();
@@ -156,7 +154,7 @@ describe('Method Availability', function () {
 
     it('configurePackage method accepts Package parameter', function () {
         $reflection = new ReflectionMethod($this->serviceProvider, 'configurePackage');
-        
+
         expect($reflection->isPublic())->toBeTrue();
         expect($reflection->getNumberOfParameters())->toBe(1);
         expect($reflection->getParameters()[0]->getType()->getName())->toBe(Package::class);
@@ -164,14 +162,14 @@ describe('Method Availability', function () {
 
     it('packageRegistered method has no parameters', function () {
         $reflection = new ReflectionMethod($this->serviceProvider, 'packageRegistered');
-        
+
         expect($reflection->isPublic())->toBeTrue();
         expect($reflection->getNumberOfParameters())->toBe(0);
     });
 
     it('packageBooted method has no parameters', function () {
         $reflection = new ReflectionMethod($this->serviceProvider, 'packageBooted');
-        
+
         expect($reflection->isPublic())->toBeTrue();
         expect($reflection->getNumberOfParameters())->toBe(0);
     });
@@ -213,7 +211,7 @@ describe('Class Dependencies', function () {
         if (class_exists(PaymentManager::class)) {
             expect(class_exists(PaymentManager::class))->toBeTrue();
         }
-        
+
         // If neither class exists, we just pass the test
         expect(true)->toBeTrue();
     });
@@ -260,20 +258,20 @@ describe('Error Handling', function () {
 describe('Reflection Analysis', function () {
     it('has correct class hierarchy', function () {
         $reflection = new ReflectionClass($this->serviceProvider);
-        
+
         expect($reflection->isSubclassOf(\Spatie\LaravelPackageTools\PackageServiceProvider::class))->toBeTrue();
         expect($reflection->isSubclassOf(\Illuminate\Support\ServiceProvider::class))->toBeTrue();
     });
 
     it('has correct namespace', function () {
         $reflection = new ReflectionClass($this->serviceProvider);
-        
+
         expect($reflection->getNamespaceName())->toBe('Hyrograsper\LunarFortis');
     });
 
     it('has correct class name', function () {
         $reflection = new ReflectionClass($this->serviceProvider);
-        
+
         expect($reflection->getShortName())->toBe('LunarFortisServiceProvider');
     });
 });

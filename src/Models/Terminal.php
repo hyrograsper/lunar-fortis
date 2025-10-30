@@ -361,7 +361,6 @@ class Terminal extends Model
         ]);
     }
 
-
     // ========================================
     // Validation & Configuration Methods
     // ========================================

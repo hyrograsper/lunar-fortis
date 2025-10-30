@@ -10,7 +10,7 @@ describe('TerminalObserver - Basic Functionality', function () {
         // Create a fresh mock for each test
         $this->mockFortis = Mockery::mock(LunarFortis::class);
         $this->observer = new TerminalObserver($this->mockFortis);
-        
+
         // Mock Log facade
         Log::shouldReceive('info')->withAnyArgs();
         Log::shouldReceive('error')->withAnyArgs();
@@ -97,7 +97,7 @@ describe('TerminalObserver - Direct Method Testing', function () {
         // Create a fresh mock for each test
         $this->mockFortis = Mockery::mock(LunarFortis::class);
         $this->observer = new TerminalObserver($this->mockFortis);
-        
+
         // Mock Log facade
         Log::shouldReceive('info')->withAnyArgs();
         Log::shouldReceive('error')->withAnyArgs();
@@ -160,7 +160,7 @@ describe('TerminalObserver - Direct Method Testing', function () {
                 'data' => [
                     'id' => 'fortis-terminal-456',
                     'title' => 'New Terminal',
-                ]
+                ],
             ]);
 
         // Call the protected method directly
@@ -198,7 +198,7 @@ describe('TerminalObserver - Direct Method Testing', function () {
                 'data' => [
                     'id' => 'fortis-terminal-789',
                     'title' => 'New Terminal',
-                ]
+                ],
             ]);
 
         $method->invoke($this->observer, $terminal);
@@ -236,7 +236,7 @@ describe('TerminalObserver - Direct Method Testing', function () {
                 'data' => [
                     'id' => 'fortis-terminal-optional',
                     'title' => 'New Terminal',
-                ]
+                ],
             ]);
 
         $method->invoke($this->observer, $terminal);
@@ -251,7 +251,7 @@ describe('TerminalObserver - Field Mapping', function () {
         // Create a fresh mock for each test
         $this->mockFortis = Mockery::mock(LunarFortis::class);
         $this->observer = new TerminalObserver($this->mockFortis);
-        
+
         // Mock Log facade
         Log::shouldReceive('info')->withAnyArgs();
         Log::shouldReceive('error')->withAnyArgs();
@@ -285,8 +285,8 @@ describe('TerminalObserver - Field Mapping', function () {
 
         $method->invoke($this->observer, $terminal, [
             'terminal_application_id',
-            'terminal_manufacturer_code', 
-            'default_product_transaction_id'
+            'terminal_manufacturer_code',
+            'default_product_transaction_id',
         ]);
     });
 });

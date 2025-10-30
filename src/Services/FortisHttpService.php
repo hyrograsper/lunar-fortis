@@ -5,7 +5,6 @@ namespace Hyrograsper\LunarFortis\Services;
 use Exception;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
-use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -49,9 +48,10 @@ class FortisHttpService
         $delayCallback = $exponentialBackoff
             ? function ($attempt) use ($retryDelay, $maxDelay) {
                 $delay = $retryDelay * $attempt;
+
                 return min($delay, $maxDelay);
             }
-            : $retryDelay;
+        : $retryDelay;
 
         $httpClient = Http::retry($retryAttempts, $delayCallback, function ($exception, $request) use ($retryOnConnection, $retryStatusCodes) {
             // Retry on connection errors if configured

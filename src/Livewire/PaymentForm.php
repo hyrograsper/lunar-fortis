@@ -2,7 +2,6 @@
 
 namespace Hyrograsper\LunarFortis\Livewire;
 
-use FortisAPILib\Models\ActionEnum;
 use Hyrograsper\LunarFortis\Facades\LunarFortis;
 use Hyrograsper\LunarFortis\PaymentTypes\FortisPaymentType;
 use Illuminate\Support\Facades\Cache;
@@ -149,6 +148,7 @@ class PaymentForm extends Component
     {
         /** @var view-string $viewName */
         $viewName = 'lunar-fortis::components.payment-form';
+
         return view($viewName);
     }
 }

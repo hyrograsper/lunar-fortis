@@ -76,7 +76,6 @@ describe('Transaction Intention', function () {
             ], 200),
         ]);
 
-
         $result = $this->service->createTransactionIntention(1000, 'auth-only');
 
         expect($result)->toHaveKey('data.client_token', 'test-client-token');
@@ -97,7 +96,6 @@ describe('Transaction Intention', function () {
             ], 422),
         ]);
 
-
         expect(fn () => $this->service->createTransactionIntention(0, 'sale'))
             ->toThrow(Exception::class, 'Failed to create transaction intention');
     });
@@ -114,7 +112,6 @@ describe('Authorization Complete', function () {
                 ],
             ], 200),
         ]);
-
 
         $result = $this->service->completeAuthorizedTransaction('test-transaction-id', 1000, [
             'order_number' => 'ORD-123',
@@ -137,7 +134,6 @@ describe('Authorization Complete', function () {
             '*' => Http::response(['data' => []], 200),
         ]);
 
-
         $this->service->completeAuthorizedTransaction('test-id', 1000, [
             'customer_id' => 123, // Integer input
         ]);
@@ -151,7 +147,6 @@ describe('Authorization Complete', function () {
         Http::fake([
             '*' => Http::response(['data' => []], 200),
         ]);
-
 
         $options = [
             'order_number' => 'ORD-123',
@@ -190,7 +185,6 @@ describe('Credit Card Authorization from Token', function () {
             ], 200),
         ]);
 
-
         $result = $this->service->authorizeCcFromToken('test-token-id', 1500, [
             'order_number' => 'ORD-456',
         ]);
@@ -217,7 +211,6 @@ describe('Refund Processing', function () {
             ], 200),
         ]);
 
-
         $result = $this->service->refund('original-transaction-id', 500);
 
         expect($result['data']['id'])->toBe('refund-transaction-id');
@@ -242,7 +235,6 @@ describe('Transaction Retrieval', function () {
             ], 200),
         ]);
 
-
         $result = $this->service->getTransaction('test-transaction-id');
 
         expect($result['data']['id'])->toBe('test-transaction-id');
@@ -264,7 +256,6 @@ describe('Terminal Management', function () {
                 ],
             ], 201),
         ]);
-
 
         $terminalData = [
             'title' => 'Test Terminal',
@@ -293,7 +284,6 @@ describe('Terminal Management', function () {
             ], 200),
         ]);
 
-
         $result = $this->service->listTerminals([
             'page' => 1,
             'filterBy' => [
@@ -319,7 +309,6 @@ describe('Terminal Management', function () {
             ], 200),
         ]);
 
-
         $result = $this->service->getTerminal('terminal-123', ['location'], ['id', 'title']);
 
         expect($result['data']['id'])->toBe('terminal-123');
@@ -339,7 +328,6 @@ describe('Terminal Management', function () {
                 ],
             ], 200),
         ]);
-
 
         $result = $this->service->updateTerminal('terminal-123', [
             'title' => 'Updated Terminal',
@@ -369,7 +357,6 @@ describe('Terminal Transaction Processing', function () {
             ], 202),
         ]);
 
-
         $result = $this->service->authorizeTerminalCreditCard('terminal-123', 2500, [
             'description' => 'Test payment',
         ]);
@@ -398,7 +385,6 @@ describe('Async Status Checking', function () {
             ], 200),
         ]);
 
-
         $result = $this->service->checkAsyncStatus('async-123');
 
         expect($result['data']['progress'])->toBe(100);
@@ -416,7 +402,6 @@ describe('HTTP Retry Logic', function () {
             '*' => Http::response(['data' => ['success' => true]], 200),
         ]);
 
-
         $result = $this->service->createTransactionIntention(1000, 'sale');
 
         expect($result['data']['success'])->toBeTrue();
@@ -427,7 +412,6 @@ describe('HTTP Retry Logic', function () {
             '*' => Http::response('Rate limited', 429),
         ]);
 
-
         expect(fn () => $this->service->createTransactionIntention(1000, 'sale'))
             ->toThrow(Exception::class);
     });
@@ -436,7 +420,6 @@ describe('HTTP Retry Logic', function () {
         Http::fake([
             '*' => Http::response('Bad request', 400),
         ]);
-
 
         expect(fn () => $this->service->createTransactionIntention(1000, 'sale'))
             ->toThrow(Exception::class);
@@ -449,7 +432,6 @@ describe('Error Handling', function () {
             '*' => Http::response(['detail' => 'Validation failed'], 422),
         ]);
 
-
         expect(fn () => $this->service->createTransactionIntention(1000, 'sale'))
             ->toThrow(Exception::class, 'Failed to create transaction intention');
     });
@@ -458,7 +440,6 @@ describe('Error Handling', function () {
         Http::fake([
             '*' => Http::response(['detail' => 'Invalid payment method'], 422),
         ]);
-
 
         expect(fn () => $this->service->createTransactionIntention(1000, 'sale'))
             ->toThrow(Exception::class, 'Invalid payment method');
