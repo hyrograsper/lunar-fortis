@@ -1,5 +1,6 @@
 <?php
 
+use Exception;
 use Hyrograsper\LunarFortis\Models\Terminal;
 use Hyrograsper\LunarFortis\Services\FortisHttpService;
 
@@ -66,12 +67,12 @@ describe('Advanced Terminal Payment Integration', function () {
             // Note: For full testing, you'd need to physically interact with the terminal
             // or have it configured for automated testing
 
-        } catch (\Exception $e) {
+        } catch (Exception $exception) {
             // This is expected if terminal isn't ready or requires physical interaction
-            fwrite(STDERR, 'Terminal authorization test skipped: '.$e->getMessage()."\n");
+            fwrite(STDERR, 'Terminal authorization test skipped: '.$exception->getMessage()."\n");
 
             // Still validate that we get a proper exception structure
-            expect($e->getMessage())->toContain('terminal');
+            expect($exception->getMessage())->toContain('terminal');
         }
 
     })->group('integration', 'slow', 'terminal', 'advanced');
@@ -107,8 +108,8 @@ describe('Advanced Terminal Payment Integration', function () {
                 $status = $terminal->checkAuthorizationStatus($statusCode);
                 expect($status)->toBeArray();
 
-            } catch (\Exception $e) {
-                fwrite(STDERR, "Amount {$amount} test failed (expected): {$e->getMessage()}\n");
+            } catch (Exception $exception) {
+                fwrite(STDERR, "Amount {$amount} test failed (expected): {$exception->getMessage()}\n");
                 // This is often expected in automated testing without physical terminal
             }
         }
@@ -134,10 +135,10 @@ describe('Advanced Terminal Payment Integration', function () {
             $invalidStatus = $terminal->checkAuthorizationStatus('00000000-0000-0000-0000-000000000000');
             // If it doesn't throw, it should still return an array
             expect($invalidStatus)->toBeArray();
-        } catch (\Exception $e) {
+        } catch (Exception $exception) {
             // Expected - invalid status codes should cause errors
-            expect($e->getMessage())->toContain('status');
-            fwrite(STDERR, 'Expected error for invalid status code: '.$e->getMessage()."\n");
+            expect($exception->getMessage())->toContain('status');
+            fwrite(STDERR, 'Expected error for invalid status code: '.$exception->getMessage()."\n");
         }
 
         // Test 2: Very small amount (should work)
@@ -145,10 +146,10 @@ describe('Advanced Terminal Payment Integration', function () {
             $statusCode = $terminal->initiateAuthorization(1); // $0.01
             expect($statusCode)->toBeString();
             fwrite(STDERR, "Small amount test passed - status: $statusCode\n");
-        } catch (\Exception $e) {
+        } catch (Exception $exception) {
             // Some terminals might not allow very small amounts
-            expect($e->getMessage())->toContain('terminal');
-            fwrite(STDERR, 'Small amount test failed as expected: '.$e->getMessage()."\n");
+            expect($exception->getMessage())->toContain('terminal');
+            fwrite(STDERR, 'Small amount test failed as expected: '.$exception->getMessage()."\n");
         }
 
         // Test 3: Zero amount (should fail validation)

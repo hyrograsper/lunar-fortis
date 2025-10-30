@@ -158,17 +158,17 @@ class TerminalObserver
         }
 
         $response = $this->fortis->createTerminal($terminalData);
-        $fortisTerminal = $response->getData();
+        $fortisTerminal = $response['data'] ?? [];
 
         // Update the local terminal with the Fortis ID and sync timestamp
         $terminal->updateQuietly([
-            'fortis_id' => $fortisTerminal->getId(),
+            'fortis_id' => $fortisTerminal['id'] ?? null,
             'synced_at' => now(),
         ]);
 
         Log::info('LunarFortis: Terminal created in Fortis API', [
             'terminal_id' => $terminal->id,
-            'fortis_id' => $fortisTerminal->getId(),
+            'fortis_id' => $fortisTerminal['id'] ?? null,
         ]);
     }
 }

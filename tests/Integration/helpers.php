@@ -1,5 +1,7 @@
 <?php
 
+use Exception;
+
 /**
  * Integration Test Helpers
  */
@@ -43,16 +45,16 @@ function retryOnConflict(callable $callback, int $maxRetries = 3, int $delayMs =
     while ($attempt < $maxRetries) {
         try {
             return $callback();
-        } catch (\Exception $e) {
+        } catch (Exception $exception) {
             $attempt++;
 
             // Check if this is a resource conflict error
-            if (str_contains($e->getMessage(), '422') ||
-                str_contains($e->getMessage(), 'conflict') ||
-                str_contains($e->getMessage(), 'busy')) {
+            if (str_contains($exception->getMessage(), '422') ||
+                str_contains($exception->getMessage(), 'conflict') ||
+                str_contains($exception->getMessage(), 'busy')) {
 
                 if ($attempt >= $maxRetries) {
-                    throw $e;
+                    throw $exception;
                 }
 
                 // Add exponential backoff delay
@@ -63,11 +65,11 @@ function retryOnConflict(callable $callback, int $maxRetries = 3, int $delayMs =
             }
 
             // Re-throw non-conflict errors immediately
-            throw $e;
+            throw $exception;
         }
     }
 
-    throw new \Exception('Retry logic failed unexpectedly');
+    throw new Exception('Retry logic failed unexpectedly');
 }
 
 /**

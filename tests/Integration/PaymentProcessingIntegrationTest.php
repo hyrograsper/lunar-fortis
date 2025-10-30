@@ -1,5 +1,6 @@
 <?php
 
+use Exception;
 use Hyrograsper\LunarFortis\LunarFortis;
 use Hyrograsper\LunarFortis\Models\Terminal;
 use Hyrograsper\LunarFortis\Services\FortisHttpService;
@@ -163,10 +164,10 @@ describe('Payment Processing Integration Tests', function () {
                     fwrite(STDERR, "Scenario {$scenario} did not complete (may require physical terminal interaction)\n");
                 }
 
-            } catch (\Exception $e) {
+            } catch (Exception $exception) {
                 // Expected for some decline scenarios
-                fwrite(STDERR, "Decline scenario {$scenario} threw exception (expected): ".$e->getMessage()."\n");
-                expect($e->getMessage())->toContain('terminal');
+                fwrite(STDERR, "Decline scenario {$scenario} threw exception (expected): ".$exception->getMessage()."\n");
+                expect($exception->getMessage())->toContain('terminal');
             }
         }
 
@@ -205,9 +206,9 @@ describe('Payment Processing Integration Tests', function () {
                 expect($result)->toHaveKey('completed');
             }
 
-        } catch (\Exception $e) {
-            fwrite(STDERR, 'Error scenario test (expected): '.$e->getMessage()."\n");
-            expect($e->getMessage())->toContain('terminal');
+        } catch (Exception $exception) {
+            fwrite(STDERR, 'Error scenario test (expected): '.$exception->getMessage()."\n");
+            expect($exception->getMessage())->toContain('terminal');
         }
 
     })->group('integration', 'slow', 'payment', 'error-handling');
@@ -250,12 +251,12 @@ describe('Payment Processing Integration Tests', function () {
 
                 fwrite(STDERR, "Amount {$testName} initiated successfully\n");
 
-            } catch (\Exception $e) {
+            } catch (Exception $exception) {
                 if ($amount === 1) {
                     // Some terminals might reject very small amounts
-                    fwrite(STDERR, 'Minimum amount test failed as expected: '.$e->getMessage()."\n");
+                    fwrite(STDERR, 'Minimum amount test failed as expected: '.$exception->getMessage()."\n");
                 } else {
-                    fwrite(STDERR, "Amount test {$testName} failed: ".$e->getMessage()."\n");
+                    fwrite(STDERR, "Amount test {$testName} failed: ".$exception->getMessage()."\n");
                 }
             }
         }
@@ -286,18 +287,18 @@ describe('Payment Processing Integration Tests', function () {
             $status = $terminal->checkAuthorizationStatus('invalid-format');
             // If no exception, should still return proper structure
             expect($status)->toBeArray();
-        } catch (\Exception $e) {
-            fwrite(STDERR, 'Invalid status code format error (expected): '.substr($e->getMessage(), 0, 100)."...\n");
-            expect($e->getMessage())->toContain('status');
+        } catch (Exception $exception) {
+            fwrite(STDERR, 'Invalid status code format error (expected): '.substr($exception->getMessage(), 0, 100)."...\n");
+            expect($exception->getMessage())->toContain('status');
         }
 
         // Test 2: Non-existent but properly formatted UUID
         try {
             $status = $terminal->checkAuthorizationStatus('00000000-0000-0000-0000-000000000000');
             expect($status)->toBeArray();
-        } catch (\Exception $e) {
-            fwrite(STDERR, 'Non-existent UUID error (expected): '.substr($e->getMessage(), 0, 100)."...\n");
-            expect($e->getMessage())->toContain('status');
+        } catch (Exception $exception) {
+            fwrite(STDERR, 'Non-existent UUID error (expected): '.substr($exception->getMessage(), 0, 100)."...\n");
+            expect($exception->getMessage())->toContain('status');
         }
 
         // Test 3: Invalid refund (try to refund non-existent transaction)
@@ -305,18 +306,18 @@ describe('Payment Processing Integration Tests', function () {
             $this->fortisHttpService->refund('00000000-0000-0000-0000-000000000000', 100);
             // Should throw exception for non-existent transaction
             expect(false)->toBeTrue(); // Should not reach this line
-        } catch (\Exception $e) {
-            fwrite(STDERR, 'Invalid refund error (expected): '.substr($e->getMessage(), 0, 100)."...\n");
-            expect($e->getMessage())->toContain('refund');
+        } catch (Exception $exception) {
+            fwrite(STDERR, 'Invalid refund error (expected): '.substr($exception->getMessage(), 0, 100)."...\n");
+            expect($exception->getMessage())->toContain('refund');
         }
 
         // Test 4: Capture non-existent transaction
         try {
             $terminal->captureTransaction('00000000-0000-0000-0000-000000000000', 100);
             expect(false)->toBeTrue(); // Should not reach this line
-        } catch (\Exception $e) {
-            fwrite(STDERR, 'Invalid capture error (expected): '.substr($e->getMessage(), 0, 100)."...\n");
-            expect($e->getMessage())->toContain('capture');
+        } catch (Exception $exception) {
+            fwrite(STDERR, 'Invalid capture error (expected): '.substr($exception->getMessage(), 0, 100)."...\n");
+            expect($exception->getMessage())->toContain('capture');
         }
 
         fwrite(STDERR, "API error handling tests completed\n");
@@ -369,9 +370,9 @@ describe('Payment Processing Integration Tests', function () {
                 // In a real scenario, the frontend would use this token with Elements
                 // and include billing address information that would trigger different AVS responses
 
-            } catch (\Exception $e) {
-                fwrite(STDERR, "AVS test case {$testCase} failed: ".$e->getMessage()."\n");
-                expect($e->getMessage())->toContain('transaction');
+            } catch (Exception $exception) {
+                fwrite(STDERR, "AVS test case {$testCase} failed: ".$exception->getMessage()."\n");
+                expect($exception->getMessage())->toContain('transaction');
             }
         }
 
@@ -427,9 +428,9 @@ describe('Payment Processing Integration Tests', function () {
                 // In a real scenario, the frontend would use this token with Elements
                 // and include CVV data that would trigger different CVV verification responses
 
-            } catch (\Exception $e) {
-                fwrite(STDERR, "CVV test case {$testCase} failed: ".$e->getMessage()."\n");
-                expect($e->getMessage())->toContain('transaction');
+            } catch (Exception $exception) {
+                fwrite(STDERR, "CVV test case {$testCase} failed: ".$exception->getMessage()."\n");
+                expect($exception->getMessage())->toContain('transaction');
             }
         }
 
@@ -567,9 +568,9 @@ describe('Terminal Payment Integration Tests', function () {
             expect($authResult)->toHaveKey('data');
             expect($authResult['data'])->toHaveKey('async');
 
-        } catch (\Exception $e) {
+        } catch (Exception $exception) {
             // Terminal might not be active or configured for card processing
-            $this->markTestSkipped('Terminal not ready for credit card processing: '.$e->getMessage());
+            $this->markTestSkipped('Terminal not ready for credit card processing: '.$exception->getMessage());
         }
     })->group('integration', 'slow', 'terminal', 'payment');
 
