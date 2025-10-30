@@ -31,8 +31,8 @@ class LunarFortis
             $response = $this->getHttpService()->createTransactionIntention($amount, $action);
 
             return $response['data']['client_token'] ?? null;
-        } catch (Exception $e) {
-            throw new Exception("Unable to get client token for {$action}: {$e->getMessage()}");
+        } catch (Exception $exception) {
+            throw new Exception("Unable to get client token for {$action}: {$exception->getMessage()}");
         }
     }
 
@@ -61,8 +61,8 @@ class LunarFortis
                 $amount,
                 $mergedOptions
             );
-        } catch (Exception $e) {
-            throw new Exception("Failed to complete authorized transaction: {$e->getMessage()}");
+        } catch (Exception $exception) {
+            throw new Exception("Failed to complete authorized transaction: {$exception->getMessage()}");
         }
     }
 
@@ -88,8 +88,8 @@ class LunarFortis
             ];
 
             return $this->getHttpService()->authorizeCcFromToken($tokenId, $order->total->value, $options);
-        } catch (Exception $e) {
-            throw new Exception("Failed to authorize credit card from token: {$e->getMessage()}");
+        } catch (Exception $exception) {
+            throw new Exception("Failed to authorize credit card from token: {$exception->getMessage()}");
         }
     }
 
@@ -100,8 +100,8 @@ class LunarFortis
     {
         try {
             return $this->getHttpService()->refund($transaction->reference, $amount);
-        } catch (Exception $e) {
-            throw new Exception("Failed to process refund: {$e->getMessage()}");
+        } catch (Exception $exception) {
+            throw new Exception("Failed to process refund: {$exception->getMessage()}");
         }
     }
 
@@ -112,8 +112,8 @@ class LunarFortis
     {
         try {
             return $this->getHttpService()->getTransaction($transactionId);
-        } catch (Exception $e) {
-            throw new Exception("Failed to retrieve transaction: {$e->getMessage()}");
+        } catch (Exception $exception) {
+            throw new Exception("Failed to retrieve transaction: {$exception->getMessage()}");
         }
     }
 
@@ -128,8 +128,8 @@ class LunarFortis
     {
         try {
             return $this->getHttpService()->createTerminal($terminalData);
-        } catch (Exception $e) {
-            throw new Exception("Failed to create terminal: {$e->getMessage()}");
+        } catch (Exception $exception) {
+            throw new Exception("Failed to create terminal: {$exception->getMessage()}");
         }
     }
 
@@ -142,8 +142,8 @@ class LunarFortis
     {
         try {
             return $this->getHttpService()->listTerminals($options);
-        } catch (Exception $e) {
-            throw new Exception("Failed to list terminals: {$e->getMessage()}");
+        } catch (Exception $exception) {
+            throw new Exception("Failed to list terminals: {$exception->getMessage()}");
         }
     }
 
@@ -156,8 +156,8 @@ class LunarFortis
     {
         try {
             return $this->getHttpService()->getTerminal($terminalId, $expand, $fields);
-        } catch (Exception $e) {
-            throw new Exception("Failed to retrieve terminal {$terminalId}: {$e->getMessage()}");
+        } catch (Exception $exception) {
+            throw new Exception("Failed to retrieve terminal {$terminalId}: {$exception->getMessage()}");
         }
     }
 
@@ -170,8 +170,8 @@ class LunarFortis
     {
         try {
             return $this->getHttpService()->updateTerminal($terminalId, $terminalData, $expand);
-        } catch (Exception $e) {
-            throw new Exception("Failed to update terminal {$terminalId}: {$e->getMessage()}");
+        } catch (Exception $exception) {
+            throw new Exception("Failed to update terminal {$terminalId}: {$exception->getMessage()}");
         }
     }
 
@@ -242,8 +242,8 @@ class LunarFortis
     {
         try {
             return $this->getHttpService()->authorizeTerminalCreditCard($terminalId, $amount, $options);
-        } catch (Exception $e) {
-            throw new Exception("Failed to authorize terminal credit card: {$e->getMessage()}");
+        } catch (Exception $exception) {
+            throw new Exception("Failed to authorize terminal credit card: {$exception->getMessage()}");
         }
     }
 
@@ -256,8 +256,8 @@ class LunarFortis
     {
         try {
             return $this->getHttpService()->checkAsyncStatus($statusCode);
-        } catch (Exception $e) {
-            throw new Exception("Failed to check terminal transaction status: {$e->getMessage()}");
+        } catch (Exception $exception) {
+            throw new Exception("Failed to check terminal transaction status: {$exception->getMessage()}");
         }
     }
 
@@ -369,14 +369,14 @@ class LunarFortis
 
             return $result;
 
-        } catch (Exception $e) {
+        } catch (Exception $exception) {
             Log::error('LunarFortis: Terminal credit card authorization failed', [
                 'terminal_id' => $terminalId,
                 'amount' => $amount,
                 'options' => $options,
-                'error' => $e->getMessage(),
+                'error' => $exception->getMessage(),
             ]);
-            throw new Exception("Terminal credit card authorization failed: {$e->getMessage()}");
+            throw new Exception("Terminal credit card authorization failed: {$exception->getMessage()}");
         }
     }
 
@@ -393,8 +393,8 @@ class LunarFortis
                 $amount,
                 $options
             );
-        } catch (Exception $e) {
-            throw new Exception("Failed to capture terminal transaction: {$e->getMessage()}");
+        } catch (Exception $exception) {
+            throw new Exception("Failed to capture terminal transaction: {$exception->getMessage()}");
         }
     }
 }

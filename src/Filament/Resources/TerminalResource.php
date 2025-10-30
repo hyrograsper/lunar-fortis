@@ -2,6 +2,7 @@
 
 namespace Hyrograsper\LunarFortis\Filament\Resources;
 
+use Exception;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
@@ -161,10 +162,10 @@ class TerminalResource extends Resource
                                     ->warning()
                                     ->send();
                             }
-                        } catch (\Exception $e) {
+                        } catch (Exception $exception) {
                             Notification::make()
                                 ->title('Sync failed')
-                                ->body($e->getMessage())
+                                ->body($exception->getMessage())
                                 ->danger()
                                 ->send();
                         }
@@ -222,10 +223,10 @@ class TerminalResource extends Resource
                                     ->danger()
                                     ->send();
                             }
-                        } catch (\Exception $e) {
+                        } catch (Exception $exception) {
                             Notification::make()
                                 ->title('Payment error')
-                                ->body($e->getMessage())
+                                ->body($exception->getMessage())
                                 ->danger()
                                 ->send();
                         }
@@ -255,7 +256,7 @@ class TerminalResource extends Resource
                                     if ($result) {
                                         $synced++;
                                     }
-                                } catch (\Exception $e) {
+                                } catch (Exception $exception) {
                                     $errors++;
                                 }
                             }
@@ -310,10 +311,10 @@ class TerminalResource extends Resource
                                 ->body("Created: {$stats['created']}, Updated: {$stats['updated']}, Errors: {$stats['errors']}")
                                 ->success()
                                 ->send();
-                        } catch (\Exception $e) {
+                        } catch (Exception $exception) {
                             Notification::make()
                                 ->title('Sync failed')
-                                ->body($e->getMessage())
+                                ->body($exception->getMessage())
                                 ->danger()
                                 ->send();
                         }

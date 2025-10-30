@@ -2,6 +2,7 @@
 
 namespace Hyrograsper\LunarFortis\Filament\Resources\TerminalResource\Pages;
 
+use Exception;
 use Filament\Actions;
 use Filament\Forms;
 use Filament\Infolists;
@@ -135,10 +136,10 @@ class ViewTerminal extends ViewRecord
                                 ->warning()
                                 ->send();
                         }
-                    } catch (\Exception $e) {
+                    } catch (Exception $exception) {
                         Notification::make()
                             ->title('Sync failed')
-                            ->body($e->getMessage())
+                            ->body($exception->getMessage())
                             ->danger()
                             ->send();
                     }
@@ -197,10 +198,10 @@ class ViewTerminal extends ViewRecord
                                 ->danger()
                                 ->send();
                         }
-                    } catch (\Exception $e) {
+                    } catch (Exception $exception) {
                         Notification::make()
                             ->title('Test payment error')
-                            ->body($e->getMessage())
+                            ->body($exception->getMessage())
                             ->danger()
                             ->send();
                     }

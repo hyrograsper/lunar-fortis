@@ -36,10 +36,10 @@ class FortisTerminalPaymentType extends AbstractPayment
         if (! $this->order) {
             try {
                 $this->order = $this->cart->createOrder();
-            } catch (DisallowMultipleCartOrdersException|CartException $e) {
+            } catch (DisallowMultipleCartOrdersException|CartException $exception) {
                 $failure = new PaymentAuthorize(
                     success: false,
-                    message: $e->getMessage(),
+                    message: $exception->getMessage(),
                     orderId: $this->order?->id,
                     paymentType: self::PAYMENT_TYPE,
                 );
@@ -68,12 +68,17 @@ class FortisTerminalPaymentType extends AbstractPayment
             $transaction = $this->storeTerminalTransaction(
                 LunarFortis::getTransaction($this->data['fortis_transaction_id'])
             );
-        } catch (Exception $e) {
-            Log::error('LunarFortis: Failed to fetch fortis transaction and store data. Error: '.$e->getMessage());
+        } catch (Exception $exception) {
+            Log::error('LunarFortis: Failed to fetch fortis transaction and store data. Error: '.$exception->getMessage(), [
+                'error' => $exception->getMessage(),
+                'transaction_id' => $this->data['fortis_transaction_id'] ?? null,
+                'order_id' => $this->order->id ?? null,
+                'error_trace' => $exception->getTraceAsString(),
+            ]);
 
             $paymentAuthorize = new PaymentAuthorize(
                 success: false,
-                message: 'Failed to fetch fortis transaction and store data. Error: '.$e->getMessage(),
+                message: 'Failed to fetch fortis transaction and store data. Error: '.$exception->getMessage(),
                 orderId: $this->order->id,
                 paymentType: self::PAYMENT_TYPE,
             );
@@ -180,12 +185,18 @@ class FortisTerminalPaymentType extends AbstractPayment
                 success: true,
                 message: 'Terminal payment captured successfully'
             );
-        } catch (Exception $e) {
-            Log::error('LunarFortis: Terminal capture failed: '.$e->getMessage());
+        } catch (Exception $exception) {
+            Log::error('LunarFortis: Terminal capture failed', [
+                'error' => $exception->getMessage(),
+                'transaction_id' => $transaction->id ?? null,
+                'order_id' => $this->order->id ?? null,
+                'amount' => $amount,
+                'error_trace' => $exception->getTraceAsString(),
+            ]);
 
             return new PaymentCapture(
                 success: false,
-                message: $e->getMessage()
+                message: $exception->getMessage()
             );
         }
     }
@@ -195,7 +206,13 @@ class FortisTerminalPaymentType extends AbstractPayment
         try {
             $result = LunarFortis::refund($transaction, $amount);
         } catch (Exception $exception) {
-            Log::error('LunarFortis: Unable to process terminal refund: '.$exception->getMessage());
+            Log::error('LunarFortis: Unable to process terminal refund: '.$exception->getMessage(), [
+                'error' => $exception->getMessage(),
+                'transaction_id' => $transaction->id ?? null,
+                'order_id' => $this->order->id ?? null,
+                'amount' => $amount,
+                'error_trace' => $exception->getTraceAsString(),
+            ]);
 
             return new PaymentRefund(
                 success: false,
@@ -338,12 +355,12 @@ class FortisTerminalPaymentType extends AbstractPayment
                 'meta' => $meta,
             ]);
 
-        } catch (Exception $e) {
+        } catch (Exception $exception) {
             Log::error('LunarFortis: Terminal payment processing failed', [
                 'transaction_id' => $data['id'] ?? null,
                 'order_id' => $this->order->id,
                 'amount' => $this->cart->total->value,
-                'error' => $e->getMessage(),
+                'error' => $exception->getMessage(),
             ]);
 
             return Transaction::create([
@@ -354,12 +371,12 @@ class FortisTerminalPaymentType extends AbstractPayment
                 'amount' => $this->cart->total->value,
                 'reference' => $data['id'] ?? now()->timestamp,
                 'status' => 'failed',
-                'notes' => $e->getMessage(),
+                'notes' => $exception->getMessage(),
                 'card_type' => 'unknown',
                 'last_four' => '',
                 'meta' => [
                     'terminal_id' => $data['terminal_id'] ?? null,
-                    'errors' => $e->getMessage(),
+                    'errors' => $exception->getMessage(),
                 ],
             ]);
         }

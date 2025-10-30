@@ -104,7 +104,7 @@ class Terminal extends Model
                 : Carbon::parse($this->synced_at);
 
             return $syncedAt->diffInHours(now()) > $hoursThreshold;
-        } catch (\Exception) {
+        } catch (Exception) {
             // If we can't parse the timestamp, assume it needs sync
             return true;
         }
@@ -164,12 +164,12 @@ class Terminal extends Model
                     $stats['updated']++;
                 }
 
-            } catch (Exception $e) {
+            } catch (Exception $exception) {
                 $stats['errors']++;
                 Log::error('LunarFortis: Failed to sync individual terminal', [
                     'fortis_id' => $terminalAttributes['fortis_id'] ?? 'unknown',
                     'terminal_data' => $terminalData ?? null,
-                    'error' => $e->getMessage(),
+                    'error' => $exception->getMessage(),
                 ]);
             }
         }
@@ -192,7 +192,7 @@ class Terminal extends Model
             if (empty($data)) {
                 return null;
             }
-        } catch (\Exception $e) {
+        } catch (Exception $exception) {
             // Return null if terminal doesn't exist or there's an API error
             return null;
         }

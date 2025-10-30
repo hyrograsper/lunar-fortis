@@ -2,6 +2,7 @@
 
 namespace Hyrograsper\LunarFortis\PaymentTypes;
 
+use Exception;
 use Hyrograsper\LunarFortis\Enums\AvsResponseCode;
 use Hyrograsper\LunarFortis\Enums\CvvResponseCode;
 use Hyrograsper\LunarFortis\Enums\ReasonCode;
@@ -36,10 +37,10 @@ class FortisPaymentType extends AbstractPayment
         if (! $this->order) {
             try {
                 $this->order = $this->cart->createOrder();
-            } catch (DisallowMultipleCartOrdersException|CartException $e) {
+            } catch (DisallowMultipleCartOrdersException|CartException $exception) {
                 $failure = new PaymentAuthorize(
                     success: false,
-                    message: $e->getMessage(),
+                    message: $exception->getMessage(),
                     orderId: $this->order?->id,
                     paymentType: self::PAYMENT_TYPE,
                 );
@@ -162,12 +163,12 @@ class FortisPaymentType extends AbstractPayment
                 success: true,
                 message: 'Payment captured successfully'
             );
-        } catch (\Exception $e) {
-            Log::error('LunarFortis: Capture failed: '.$e->getMessage());
+        } catch (Exception $exception) {
+            Log::error('LunarFortis: Capture failed: '.$exception->getMessage());
 
             return new PaymentCapture(
                 success: false,
-                message: $e->getMessage()
+                message: $exception->getMessage()
             );
         }
     }
