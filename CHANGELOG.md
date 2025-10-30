@@ -2,6 +2,67 @@
 
 All notable changes to `lunar-fortis` will be documented in this file.
 
+## v2.1.0: Comprehensive Test Suite Enhancement - 2025-10-30
+
+### 🚀 Release v2.1.0: Comprehensive Test Suite Enhancement
+
+This release significantly enhances the test coverage and reliability of the Lunar Fortis package with comprehensive test improvements.
+
+#### 📊 Test Coverage Improvements
+
+- **Total Tests**: 231 tests (201 unit + 30 integration)
+- **Total Assertions**: 693 assertions
+- **Success Rate**: 100% passing
+- **Risky Tests**: 0 (fixed 2 risky tests)
+
+#### 🧪 New Test Suites Added
+
+##### TerminalObserver Tests (11 tests)
+
+- Complete lifecycle testing for model observers
+- Direct method testing with reflection
+- Error handling and edge case coverage
+- Field mapping validation
+
+##### Enhanced Livewire Tests (13 tests)
+
+- Component configuration testing
+- Property validation and method availability
+- Error handling for payment responses
+- Edge case coverage
+
+##### Service Provider Tests (29 tests)
+
+- Package configuration validation
+- Service registration testing
+- Method availability and signature validation
+- Class dependency verification
+
+##### Configuration Validation Tests (37 tests)
+
+- Environment and policy validation
+- JavaScript URL configuration
+- Status mapping and elements configuration
+- Type safety and completeness checks
+
+#### 🔧 Quality Improvements
+
+- Fixed 2 risky tests that weren't making assertions
+- Enhanced error handling and edge case coverage
+- Added reflection-based method signature validation
+- Improved test organization and maintainability
+- Better mocking strategies for complex dependencies
+
+#### 🐛 Bug Fixes
+
+- Fixed TerminalObserver array handling bug
+- Resolved Cart model mocking issues
+- Corrected configuration type safety issues
+
+#### 📈 Impact
+
+This release provides excellent confidence in the package's reliability and maintainability, with comprehensive test coverage ensuring robust functionality across all components.
+
 ## 🔧 v2.0.1 - Configuration Fix - 2025-09-18
 
 ### 🔧 **Lunar-Fortis v2.0.1** - Configuration Fix
@@ -29,6 +90,7 @@ Added missing configuration keys:
     'terminalProductTransactionId' => env('FORTIS_TERMINAL_PRODUCT_TRANSACTION_ID'),  // ✅ Added
 ],
 
+
 ```
 ##### **Environment Variables**
 
@@ -43,6 +105,7 @@ FORTIS_LOCATION_ID=your_fortis_location_id
 FORTIS_PRODUCT_TRANSACTION_ID=your_product_transaction_id                     # ✅ Added
 FORTIS_TERMINAL_PRODUCT_TRANSACTION_ID=your_terminal_product_transaction_id   # ✅ Added
 FORTIS_ENVIRONMENT=sandbox  # or 'production'
+
 
 ```
 #### 🎯 **Impact**
@@ -59,12 +122,14 @@ This fix ensures that:
 ```bash
 composer update hyrograsper/lunar-fortis
 
+
 ```
 Then add the missing environment variables to your `.env` file:
 
 ```env
 FORTIS_PRODUCT_TRANSACTION_ID=your_product_transaction_id
 FORTIS_TERMINAL_PRODUCT_TRANSACTION_ID=your_terminal_product_transaction_id
+
 
 ```
 
@@ -626,6 +691,7 @@ Co-Authored-By: Claude [noreply@anthropic.com](mailto:noreply@anthropic.com)
 FORTIS_HTTP_RETRY_STATUS_CODES="429,502,503,504"
 FORTIS_HTTP_RETRY_EXPONENTIAL=false
 FORTIS_HTTP_RETRY_MAX_DELAY=10000
+
 
 
 ```
