@@ -2,6 +2,27 @@
 
 All notable changes to `lunar-fortis` will be documented in this file.
 
+## v2.1.1 - Zero-Dollar Cart Fix & Dependency Updates - 2026-02-15
+
+### What's Changed
+
+**Bug Fix 🐛**
+
+- Fixed crash when cart total is below minimum payment amount (/bin/zsh.01) (#14)
+  - Payment form now displays "Payment Not Required" message for zero-dollar carts
+  - Added `isZeroDollarCart()` method for explicit detection
+  - Enhanced null-safety in component mount
+  - Applied strict type comparisons and PSR-12 standards
+  
+
+**Dependencies 📦**
+
+- Bumped actions/checkout from 5 to 6 in GitHub Actions workflows (#12)
+
+**Full Changelog**: https://github.com/hyrograsper/lunar-fortis/compare/v2.1.0...v2.1.1
+
+Fixes hyrograsper/fastmetal#254
+
 ## v2.1.0: Comprehensive Test Suite Enhancement - 2025-10-30
 
 ### 🚀 Release v2.1.0: Comprehensive Test Suite Enhancement
@@ -91,6 +112,7 @@ Added missing configuration keys:
 ],
 
 
+
 ```
 ##### **Environment Variables**
 
@@ -105,6 +127,7 @@ FORTIS_LOCATION_ID=your_fortis_location_id
 FORTIS_PRODUCT_TRANSACTION_ID=your_product_transaction_id                     # ✅ Added
 FORTIS_TERMINAL_PRODUCT_TRANSACTION_ID=your_terminal_product_transaction_id   # ✅ Added
 FORTIS_ENVIRONMENT=sandbox  # or 'production'
+
 
 
 ```
@@ -123,12 +146,14 @@ This fix ensures that:
 composer update hyrograsper/lunar-fortis
 
 
+
 ```
 Then add the missing environment variables to your `.env` file:
 
 ```env
 FORTIS_PRODUCT_TRANSACTION_ID=your_product_transaction_id
 FORTIS_TERMINAL_PRODUCT_TRANSACTION_ID=your_terminal_product_transaction_id
+
 
 
 ```
@@ -691,6 +716,7 @@ Co-Authored-By: Claude [noreply@anthropic.com](mailto:noreply@anthropic.com)
 FORTIS_HTTP_RETRY_STATUS_CODES="429,502,503,504"
 FORTIS_HTTP_RETRY_EXPONENTIAL=false
 FORTIS_HTTP_RETRY_MAX_DELAY=10000
+
 
 
 
