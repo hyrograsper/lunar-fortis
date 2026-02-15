@@ -2,6 +2,7 @@
 
 namespace Hyrograsper\LunarFortis\Livewire;
 
+use Exception;
 use Hyrograsper\LunarFortis\Facades\LunarFortis;
 use Hyrograsper\LunarFortis\PaymentTypes\FortisPaymentType;
 use Illuminate\Support\Facades\Cache;
@@ -24,7 +25,7 @@ class PaymentForm extends Component
 
     public function mount(): void
     {
-        $this->policy = config('lunar-fortis.policy', 'automatic');
+        $this->policy = config('lunar-fortis.policy') ?? 'automatic';
     }
 
     #[On('handle-payment-response')]
@@ -44,28 +45,27 @@ class PaymentForm extends Component
             ->authorize();
 
         if (! $paymentAuthorize->success) {
-            // Dispatch an event that Alpine can listen for
             $this->dispatch('payment-error', $paymentAuthorize->message);
 
             return;
         }
 
-        $success_event_class = config('lunar-fortis.success_event_class');
-        $success_livewire_event = config('lunar-fortis.success_livewire_event');
+        $successEventClass = config('lunar-fortis.success_event_class');
+        $successLivewireEvent = config('lunar-fortis.success_livewire_event');
 
         $order = Order::find($paymentAuthorize->orderId);
 
         if ($order) {
-            if (class_exists($success_event_class)) {
+            if (class_exists($successEventClass)) {
                 try {
-                    $success_event_class::dispatch($order);
-                } catch (\Exception $exception) {
+                    $successEventClass::dispatch($order);
+                } catch (Exception $exception) {
                     Log::error('LunarFortis: Unable to dispatch Success Event Class: '.$exception->getMessage());
                 }
             }
 
-            if ($success_livewire_event) {
-                $this->dispatch($success_livewire_event, $order);
+            if ($successLivewireEvent) {
+                $this->dispatch($successLivewireEvent, $order);
             }
 
             if (config('lunar-fortis.success_redirect', false)) {
@@ -93,9 +93,19 @@ class PaymentForm extends Component
         }
     }
 
-    public function clientToken(): ?string
+    /** Fortis API requires a minimum amount of 1 cent. */
+    public function isZeroDollarCart(): bool
     {
         $this->cart->calculate();
+
+        return $this->cart->total->value < 1;
+    }
+
+    public function clientToken(): ?string
+    {
+        if ($this->isZeroDollarCart()) {
+            return null;
+        }
 
         return Cache::remember($this->clientTokenCacheKey(), 5, function () {
             return LunarFortis::getClientTokenForSaleAmount($this->cart->total->value, 'auth-only');
@@ -104,22 +114,17 @@ class PaymentForm extends Component
 
     #[On('regenerate-client-token')]
     public function regenerateClientToken(): void
-    {// Clear the cached token
+    {
         Cache::forget($this->clientTokenCacheKey());
 
-        // Generate and return a new token
         $this->dispatch('token-regenerated', $this->clientToken());
     }
 
     public function clientTokenCacheKey(): string
     {
-        $key = 'fortis_client_token:';
+        $identifier = $this->cart->user_id ?: $this->cart->id;
 
-        if ($this->cart->user_id) {
-            return $key.$this->cart->user_id;
-        }
-
-        return $key.$this->cart->id;
+        return "fortis_client_token:{$identifier}";
     }
 
     public function getBillingProperty(): ?OrderAddress
@@ -139,7 +144,7 @@ class PaymentForm extends Component
 
     public function getFortisJSUrlProperty(): string
     {
-        return $this->getFortisEnvironmentProperty() == 'production'
+        return $this->getFortisEnvironmentProperty() === 'production'
             ? 'https://js.fortis.tech/commercejs-v1.0.0.min.js'
             : 'https://js.sandbox.fortis.tech/commercejs-v1.0.0.min.js';
     }
