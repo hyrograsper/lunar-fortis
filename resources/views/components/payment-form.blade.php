@@ -9,6 +9,11 @@
             sourceUrl: @js($this->fortisJSUrl),
 
             init() {
+                if (this.token === null) {
+                    this.loading = false;
+                    return;
+                }
+
                 this.loadScript();
 
                 Livewire.on('token-regenerated', (event) => {
@@ -190,19 +195,37 @@
                 });
             }
     }">
-    <div id="elements" x-show="! loading"></div>
+    @if($this->isZeroDollarCart())
+        <div class="rounded-md bg-yellow-50 dark:bg-yellow-900/20 p-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <flux:icon.exclamation-triangle class="h-5 w-5 text-yellow-400" />
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                        Payment Not Required
+                    </h3>
+                    <div class="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
+                        <p>Your cart total is $0.00. No payment is required to complete this order.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @else
+        <div id="elements" x-show="! loading"></div>
 
-    <flux:button
-        id="submit-payment"
-        variant="primary"
-        type="submit"
-        @click="submitPayment()"
-        x-show="! loading"
-    >
-        Submit Payment
-    </flux:button>
+        <flux:button
+            id="submit-payment"
+            variant="primary"
+            type="submit"
+            @click="submitPayment()"
+            x-show="! loading"
+        >
+            Submit Payment
+        </flux:button>
 
-    <flux:icon.loading x-show="loading" />
+        <flux:icon.loading x-show="loading" />
+    @endif
 
     <flux:modal name="payment-processing" class="min-w-[22rem] space-y-6" :dismissible="false">
         <div class="flex items-center gap-2">

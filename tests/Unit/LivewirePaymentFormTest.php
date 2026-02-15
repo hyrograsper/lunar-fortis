@@ -4,7 +4,6 @@ use Hyrograsper\LunarFortis\Livewire\PaymentForm;
 use Illuminate\Support\Facades\Config;
 
 beforeEach(function () {
-    // Set up test configuration
     Config::set('lunar-fortis.policy', 'automatic');
     Config::set('lunar-fortis.environment', 'sandbox');
     Config::set('lunar-fortis.elements.appearance', [
@@ -26,8 +25,7 @@ describe('PaymentForm Configuration', function () {
     });
 
     it('defaults to automatic policy when config is not set', function () {
-        // Set a default value to avoid null assignment
-        Config::set('lunar-fortis.policy', 'automatic');
+        Config::set('lunar-fortis.policy');
 
         $form = new PaymentForm;
         $form->mount();
@@ -44,27 +42,25 @@ describe('Component Properties', function () {
     });
 
     it('returns correct fortis environment', function () {
-        $environment = $this->paymentForm->getFortisEnvironmentProperty();
-
-        expect($environment)->toBe('sandbox');
+        expect($this->paymentForm->getFortisEnvironmentProperty())->toBe('sandbox');
     });
 
     it('returns correct sandbox JavaScript URL', function () {
         Config::set('lunar-fortis.environment', 'sandbox');
 
         $form = new PaymentForm;
-        $jsUrl = $form->getFortisJSUrlProperty();
 
-        expect($jsUrl)->toBe('https://js.sandbox.fortis.tech/commercejs-v1.0.0.min.js');
+        expect($form->getFortisJSUrlProperty())
+            ->toBe('https://js.sandbox.fortis.tech/commercejs-v1.0.0.min.js');
     });
 
     it('returns correct production JavaScript URL', function () {
         Config::set('lunar-fortis.environment', 'production');
 
         $form = new PaymentForm;
-        $jsUrl = $form->getFortisJSUrlProperty();
 
-        expect($jsUrl)->toBe('https://js.fortis.tech/commercejs-v1.0.0.min.js');
+        expect($form->getFortisJSUrlProperty())
+            ->toBe('https://js.fortis.tech/commercejs-v1.0.0.min.js');
     });
 });
 
@@ -77,8 +73,9 @@ describe('Component Rendering', function () {
 });
 
 describe('Methods Availability', function () {
-    it('has required methods available', function () {
+    it('has required public methods', function () {
         expect(method_exists($this->paymentForm, 'mount'))->toBeTrue();
+        expect(method_exists($this->paymentForm, 'isZeroDollarCart'))->toBeTrue();
         expect(method_exists($this->paymentForm, 'clientToken'))->toBeTrue();
         expect(method_exists($this->paymentForm, 'clientTokenCacheKey'))->toBeTrue();
         expect(method_exists($this->paymentForm, 'handlePaymentResponse'))->toBeTrue();
@@ -86,18 +83,18 @@ describe('Methods Availability', function () {
         expect(method_exists($this->paymentForm, 'render'))->toBeTrue();
     });
 
-    it('validates response handling method signature', function () {
+    it('validates handlePaymentResponse accepts one parameter', function () {
         $reflection = new ReflectionMethod($this->paymentForm, 'handlePaymentResponse');
 
-        expect($reflection->isPublic())->toBeTrue();
-        expect($reflection->getNumberOfParameters())->toBe(1);
+        expect($reflection->isPublic())->toBeTrue()
+            ->and($reflection->getNumberOfParameters())->toBe(1);
     });
 
-    it('validates regenerate client token method signature', function () {
+    it('validates regenerateClientToken accepts no parameters', function () {
         $reflection = new ReflectionMethod($this->paymentForm, 'regenerateClientToken');
 
-        expect($reflection->isPublic())->toBeTrue();
-        expect($reflection->getNumberOfParameters())->toBe(0);
+        expect($reflection->isPublic())->toBeTrue()
+            ->and($reflection->getNumberOfParameters())->toBe(0);
     });
 });
 
@@ -111,25 +108,14 @@ describe('Configuration Properties', function () {
 });
 
 describe('Edge Cases and Error Handling', function () {
-    it('handles empty payment response array', function () {
-        $response = [];
-
-        // The component will dispatch an event, but we can't easily mock it in unit tests
-        // So we just verify the method doesn't throw an exception
-        $this->paymentForm->handlePaymentResponse($response);
-
-        // If we get here without exception, the test passes
-        expect(true)->toBeTrue();
+    it('handles empty payment response without throwing', function () {
+        expect(fn () => $this->paymentForm->handlePaymentResponse([]))
+            ->not->toThrow(Exception::class);
     });
 
-    it('handles null payment response', function () {
-        $response = [];
-
-        // The component will dispatch an event, but we can't easily mock it in unit tests
-        // So we just verify the method doesn't throw an exception
-        $this->paymentForm->handlePaymentResponse($response);
-
-        // If we get here without exception, the test passes
-        expect(true)->toBeTrue();
-    });
+    // TODO: Add integration test for zero-dollar cart scenario.
+    // Unit testing requires complex mocking of Lunar\DataTypes\Price.
+    // - PaymentForm::isZeroDollarCart() returns true when cart total < 1
+    // - PaymentForm::clientToken() returns null for zero-dollar carts
+    // - Blade view shows "Payment Not Required" message accordingly
 });
