@@ -2,6 +2,29 @@
 
 All notable changes to `lunar-fortis` will be documented in this file.
 
+## v2.2.0 - 2026-02-16
+
+### What's Changed
+
+Comprehensive code simplification and cleanup with no functional changes.
+
+#### Improvements
+
+- Extracted duplicated logic into private helper methods across payment types
+- Added proper `Builder` type hints and return types to query scopes
+- Simplified terminal observer sync logic
+- Improved test quality with proper mocked unit tests
+
+#### Cleanup
+
+- Removed redundant comments, docblocks, and section header dividers
+- Standardized string formatting (interpolation over concatenation)
+- Replaced loose `==` comparisons with strict `===`
+- Used imports over fully qualified class names throughout
+- Updated PHPStan baseline
+
+**Full Changelog**: https://github.com/hyrograsper/lunar-fortis/compare/v2.1.1...v2.2.0
+
 ## v2.1.1 - Zero-Dollar Cart Fix & Dependency Updates - 2026-02-15
 
 ### What's Changed
@@ -113,6 +136,7 @@ Added missing configuration keys:
 
 
 
+
 ```
 ##### **Environment Variables**
 
@@ -127,6 +151,7 @@ FORTIS_LOCATION_ID=your_fortis_location_id
 FORTIS_PRODUCT_TRANSACTION_ID=your_product_transaction_id                     # ✅ Added
 FORTIS_TERMINAL_PRODUCT_TRANSACTION_ID=your_terminal_product_transaction_id   # ✅ Added
 FORTIS_ENVIRONMENT=sandbox  # or 'production'
+
 
 
 
@@ -147,12 +172,14 @@ composer update hyrograsper/lunar-fortis
 
 
 
+
 ```
 Then add the missing environment variables to your `.env` file:
 
 ```env
 FORTIS_PRODUCT_TRANSACTION_ID=your_product_transaction_id
 FORTIS_TERMINAL_PRODUCT_TRANSACTION_ID=your_terminal_product_transaction_id
+
 
 
 
@@ -716,6 +743,7 @@ Co-Authored-By: Claude [noreply@anthropic.com](mailto:noreply@anthropic.com)
 FORTIS_HTTP_RETRY_STATUS_CODES="429,502,503,504"
 FORTIS_HTTP_RETRY_EXPONENTIAL=false
 FORTIS_HTTP_RETRY_MAX_DELAY=10000
+
 
 
 
