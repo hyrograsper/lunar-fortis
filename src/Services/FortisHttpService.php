@@ -66,7 +66,7 @@ class FortisHttpService
             }
 
             // Retry on specific HTTP status codes if configured
-            if ($exception && method_exists($exception, 'getResponse')) {
+            if (method_exists($exception, 'getResponse')) {
                 $response = $exception->getResponse();
                 if ($response && in_array($response->getStatusCode(), $retryStatusCodes)) {
                     if (config('lunar-fortis.debug')) {

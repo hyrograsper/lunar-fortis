@@ -1,6 +1,5 @@
 <?php
 
-use Exception;
 use Hyrograsper\LunarFortis\Models\Terminal;
 use Hyrograsper\LunarFortis\Services\FortisHttpService;
 

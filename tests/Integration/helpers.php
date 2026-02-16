@@ -1,7 +1,5 @@
 <?php
 
-use Exception;
-
 /**
  * Integration Test Helpers
  */
