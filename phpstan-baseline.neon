@@ -33,12 +33,6 @@ parameters:
 		-
 			message: '#^Cannot call method processCompletePayment\(\) on Illuminate\\Database\\Eloquent\\Model\|int\|string\.$#'
 			identifier: method.nonObject
-			count: 2
-			path: src/Filament/Resources/TerminalResource/Pages/ViewTerminal.php
-
-		-
-			message: '#^Match expression does not handle remaining value\: string$#'
-			identifier: match.unhandled
 			count: 1
 			path: src/Filament/Resources/TerminalResource/Pages/ViewTerminal.php
 
@@ -71,12 +65,6 @@ parameters:
 			identifier: property.nonObject
 			count: 1
 			path: src/LunarFortis.php
-
-		-
-			message: '#^Instanceof between Carbon\\Carbon and Carbon\\Carbon will always evaluate to true\.$#'
-			identifier: instanceof.alwaysTrue
-			count: 1
-			path: src/Models/Terminal.php
 
 		-
 			message: '#^Method Hyrograsper\\LunarFortis\\Models\\Terminal\:\:syncSingleFromFortis\(\) should return static\(Hyrograsper\\LunarFortis\\Models\\Terminal\)\|null but returns Hyrograsper\\LunarFortis\\Models\\Terminal\.$#'
@@ -180,8 +168,3 @@ parameters:
 			count: 1
 			path: src/PaymentTypes/FortisTerminalPaymentType.php
 
-		-
-			message: '#^Variable \$data might not be defined\.$#'
-			identifier: variable.undefined
-			count: 1
-			path: src/Services/FortisHttpService.php

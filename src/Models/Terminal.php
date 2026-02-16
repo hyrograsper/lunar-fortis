@@ -81,7 +81,7 @@ class Terminal extends Model
 
     public function getDisplayNameAttribute(): string
     {
-        return $this->title.' ('.$this->serial_number.')';
+        return "{$this->title} ({$this->serial_number})";
     }
 
     public function needsSync(?int $hoursThreshold = 24): bool
@@ -90,16 +90,7 @@ class Terminal extends Model
             return true;
         }
 
-        try {
-            $syncedAt = $this->synced_at instanceof Carbon
-                ? $this->synced_at
-                : Carbon::parse($this->synced_at);
-
-            return $syncedAt->diffInHours(now()) > $hoursThreshold;
-        } catch (Exception) {
-            // If we can't parse the timestamp, assume it needs sync
-            return true;
-        }
+        return Carbon::parse($this->synced_at)->diffInHours(now()) > $hoursThreshold;
     }
 
     public function markSynced(): void
@@ -134,16 +125,13 @@ class Terminal extends Model
             $stats['total_processed']++;
 
             try {
-                // Extract terminal data
                 $terminalAttributes = static::mapFortisDataToAttributes($terminalData);
 
-                // Update or create terminal
                 $terminal = static::updateOrCreate(
                     ['fortis_id' => $terminalAttributes['fortis_id']],
                     $terminalAttributes
                 );
 
-                // Mark as synced
                 $terminal->markSynced();
 
                 if ($terminal->wasRecentlyCreated) {
@@ -173,28 +161,23 @@ class Terminal extends Model
     public static function syncSingleFromFortis(string $fortisId): ?static
     {
         try {
-            // Fetch single terminal from Fortis API
             $response = LunarFortis::getTerminal($fortisId);
             $data = $response['data'] ?? [];
 
             if (empty($data)) {
                 return null;
             }
-        } catch (Exception $exception) {
-            // Return null if terminal doesn't exist or there's an API error
+        } catch (Exception) {
             return null;
         }
 
-        // Extract terminal data
         $terminalAttributes = static::mapFortisDataToAttributes($data);
 
-        // Update or create terminal
         $terminal = static::updateOrCreate(
             ['fortis_id' => $terminalAttributes['fortis_id']],
             $terminalAttributes
         );
 
-        // Mark as synced
         $terminal->markSynced();
 
         return $terminal;
@@ -211,7 +194,6 @@ class Terminal extends Model
             throw new Exception("Terminal {$this->fortis_id} is not active");
         }
 
-        // Error handling is now centralized in LunarFortis
         return LunarFortis::processTerminalCreditCardAuth(
             terminalId: $this->fortis_id,
             amount: $amount,
@@ -230,7 +212,6 @@ class Terminal extends Model
             throw new Exception("Terminal {$this->fortis_id} is not active");
         }
 
-        // Error handling is now centralized in LunarFortis
         $response = LunarFortis::authorizeTerminalCreditCard(
             terminalId: $this->fortis_id,
             amount: $amount,
@@ -254,7 +235,6 @@ class Terminal extends Model
      */
     public function checkAuthorizationStatus(string $statusCode): array
     {
-        // Error handling is now centralized in LunarFortis
         $response = LunarFortis::checkTerminalTransactionStatus($statusCode);
         $statusData = $response['data'] ?? [];
 
@@ -281,7 +261,6 @@ class Terminal extends Model
         int $timeoutSeconds = 300,
         int $pollIntervalSeconds = 2
     ): array {
-        // Error handling is now centralized in LunarFortis
         $response = LunarFortis::waitForTerminalTransaction($statusCode, $timeoutSeconds, $pollIntervalSeconds);
         $statusData = $response['data'] ?? [];
 
@@ -307,13 +286,6 @@ class Terminal extends Model
      */
     public function captureTransaction(string $transactionId, int $amount, array $options = []): array
     {
-        // Add terminal context to options
-        $options = array_merge($options, [
-            'order_number' => $options['order_number'] ?? null,
-            'customer_id' => $options['customer_id'] ?? null,
-        ]);
-
-        // Error handling is now centralized in LunarFortis
         return LunarFortis::captureTerminalTransaction($transactionId, $amount, $options);
     }
 
@@ -324,7 +296,6 @@ class Terminal extends Model
      */
     public function processCompletePayment(int $amount, array $options = []): array
     {
-        // Step 1: Authorize
         $authResult = $this->authorizePayment($amount, $options);
 
         if (! $authResult['success']) {
@@ -336,7 +307,6 @@ class Terminal extends Model
             throw new Exception('No transaction ID returned from authorization');
         }
 
-        // Step 2: Capture
         $captureResult = $this->captureTransaction($transactionId, $amount, $options);
 
         return array_merge($authResult, [
@@ -365,7 +335,6 @@ class Terminal extends Model
             'fortis_id' => ['required', 'string', 'max:255'],
         ];
 
-        // Scenario-specific rule modifications
         return match ($scenario) {
             'create' => array_merge($rules, [
                 'fortis_id' => ['required', 'string', 'max:255', 'unique:fortis_terminals,fortis_id'],
@@ -439,7 +408,7 @@ class Terminal extends Model
             'fortis_modified_at' => isset($data['modified_ts']) ? Carbon::createFromTimestamp($data['modified_ts']) : null,
             'created_user_id' => $data['created_user_id'] ?? null,
             'modified_user_id' => $data['modified_user_id'] ?? null,
-            'fortis_data' => $data, // Store full response for reference
+            'fortis_data' => $data,
         ];
     }
 }

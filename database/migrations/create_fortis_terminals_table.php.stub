@@ -10,34 +10,21 @@ return new class extends Migration
     {
         Schema::create('fortis_terminals', function (Blueprint $table) {
             $table->id();
-            
-            // Core terminal identifiers
-            $table->string('fortis_id')->unique()->comment('Terminal ID from Fortis API');
-            $table->string('location_id')->comment('Fortis Location ID');
-            $table->string('title')->comment('Terminal display name');
-            $table->string('serial_number')->unique()->comment('Terminal serial number');
-            
-            // Terminal configuration
-            $table->string('terminal_application_id')->nullable()->comment('Terminal application ID');
-            $table->string('terminal_manufacturer_code')->nullable()->comment('Manufacturer code (1,2,4,100)');
-            $table->string('default_product_transaction_id')->nullable()->comment('Default product transaction ID');
-            $table->boolean('active')->default(true)->comment('Terminal is active');
-            
-            // Timestamps from Fortis API
-            $table->timestamp('fortis_created_at')->nullable()->comment('Created timestamp from Fortis');
-            $table->timestamp('fortis_modified_at')->nullable()->comment('Modified timestamp from Fortis');
-            $table->string('created_user_id')->nullable()->comment('Fortis user ID who created terminal');
-            $table->string('modified_user_id')->nullable()->comment('Fortis user ID who last modified terminal');
-            
-            // Local tracking fields
-            $table->timestamps(); // Laravel created_at and updated_at
-            $table->timestamp('synced_at')->nullable()->comment('Last sync with Fortis API');
-            $table->json('fortis_data')->nullable()->comment('Full Fortis response for reference');
+            $table->string('fortis_id')->unique();
+            $table->string('location_id');
+            $table->string('title');
+            $table->string('serial_number')->unique();
+            $table->string('terminal_application_id')->nullable();
+            $table->string('terminal_manufacturer_code')->nullable();
+            $table->string('default_product_transaction_id')->nullable();
+            $table->boolean('active')->default(true);
+            $table->timestamp('fortis_created_at')->nullable();
+            $table->timestamp('fortis_modified_at')->nullable();
+            $table->string('created_user_id')->nullable();
+            $table->string('modified_user_id')->nullable();
+            $table->timestamps();
+            $table->timestamp('synced_at')->nullable();
+            $table->json('fortis_data')->nullable();
         });
-    }
-
-    public function down(): void
-    {
-        Schema::dropIfExists('fortis_terminals');
     }
 };

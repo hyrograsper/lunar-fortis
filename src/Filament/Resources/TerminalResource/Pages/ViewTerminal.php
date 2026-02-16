@@ -47,7 +47,7 @@ class ViewTerminal extends ViewRecord
                                     ->badge()
                                     ->color(fn (string $state): string => match ($state) {
                                         'Ready' => 'success',
-                                        'Not Ready' => 'warning',
+                                        default => 'warning',
                                     })
                                     ->label('Payment Status'),
 
@@ -179,11 +179,9 @@ class ViewTerminal extends ViewRecord
                             'order_number' => 'TEST-'.now()->format('YmdHis'),
                         ];
 
-                        $result = match ($data['flow_type']) {
-                            'complete' => $this->record->processCompletePayment($amount, $options),
-                            'authorize' => $this->record->authorizePayment($amount, $options),
-                            default => $this->record->processCompletePayment($amount, $options),
-                        };
+                        $result = $data['flow_type'] === 'authorize'
+                            ? $this->record->authorizePayment($amount, $options)
+                            : $this->record->processCompletePayment($amount, $options);
 
                         if ($result['success']) {
                             Notification::make()

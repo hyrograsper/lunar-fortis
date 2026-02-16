@@ -194,7 +194,7 @@ describe('Terminal Payment Processing', function () {
         // Mock capture
         LunarFortis::shouldReceive('captureTerminalTransaction')
             ->once()
-            ->with('auth-trans-456', 1500, ['description' => 'Test', 'order_number' => null, 'customer_id' => null])
+            ->with('auth-trans-456', 1500, ['description' => 'Test'])
             ->andReturn([
                 'data' => [
                     'id' => 'captured-trans-456',

@@ -69,7 +69,7 @@ class FortisTerminalPaymentType extends AbstractPayment
                 LunarFortis::getTransaction($this->data['fortis_transaction_id'])
             );
         } catch (Exception $exception) {
-            Log::error('LunarFortis: Failed to fetch fortis transaction and store data. Error: '.$exception->getMessage(), [
+            Log::error("LunarFortis: Failed to fetch fortis transaction and store data: {$exception->getMessage()}", [
                 'error' => $exception->getMessage(),
                 'transaction_id' => $this->data['fortis_transaction_id'] ?? null,
                 'order_id' => $this->order->id ?? null,
@@ -78,7 +78,7 @@ class FortisTerminalPaymentType extends AbstractPayment
 
             $paymentAuthorize = new PaymentAuthorize(
                 success: false,
-                message: 'Failed to fetch fortis transaction and store data. Error: '.$exception->getMessage(),
+                message: "Failed to fetch fortis transaction and store data: {$exception->getMessage()}",
                 orderId: $this->order->id,
                 paymentType: self::PAYMENT_TYPE,
             );
@@ -101,7 +101,6 @@ class FortisTerminalPaymentType extends AbstractPayment
             return $paymentAuthorize;
         }
 
-        // Check if this was already captured (sale transaction)
         if ($transaction->type === 'capture') {
             $this->order->placed_at = now();
             $this->order->status = config('lunar-fortis.status_mapping.payment-received', 'payment-received');
@@ -119,7 +118,6 @@ class FortisTerminalPaymentType extends AbstractPayment
             return $paymentAuthorize;
         }
 
-        // Handle authorization-only transaction
         $this->order->status = config('lunar-fortis.status_mapping.payment-authorized', 'payment-authorized');
         $this->order->save();
 
@@ -206,7 +204,7 @@ class FortisTerminalPaymentType extends AbstractPayment
         try {
             $result = LunarFortis::refund($transaction, $amount);
         } catch (Exception $exception) {
-            Log::error('LunarFortis: Unable to process terminal refund: '.$exception->getMessage(), [
+            Log::error("LunarFortis: Unable to process terminal refund: {$exception->getMessage()}", [
                 'error' => $exception->getMessage(),
                 'transaction_id' => $transaction->id ?? null,
                 'order_id' => $this->order->id ?? null,
@@ -383,17 +381,14 @@ class FortisTerminalPaymentType extends AbstractPayment
 
     private function determineTransactionType(array $data): string
     {
-        // Check if there's an action field that indicates the transaction type
         if (isset($data['@action'])) {
             return $data['@action'] === 'sale' ? 'capture' : 'intent';
         }
 
-        // Check status code - if it's already captured, it was a sale transaction
         if (StatusCode::isCaptured($data['status_code'] ?? null)) {
             return 'capture';
         }
 
-        // Default to intent for authorization-only transactions
         return 'intent';
     }
 

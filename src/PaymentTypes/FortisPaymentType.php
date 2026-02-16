@@ -53,7 +53,6 @@ class FortisPaymentType extends AbstractPayment
         }
 
         if ($this->order->placed_at) {
-            // Order has already been placed - prevent duplicate processing
             $failedResponse = new PaymentAuthorize(
                 success: false,
                 message: 'This order has already been placed',
@@ -164,7 +163,7 @@ class FortisPaymentType extends AbstractPayment
                 message: 'Payment captured successfully'
             );
         } catch (Exception $exception) {
-            Log::error('LunarFortis: Capture failed: '.$exception->getMessage());
+            Log::error("LunarFortis: Capture failed: {$exception->getMessage()}");
 
             return new PaymentCapture(
                 success: false,
@@ -178,7 +177,7 @@ class FortisPaymentType extends AbstractPayment
         try {
             $result = $this->fortis->refund($transaction, $amount);
         } catch (Exception $exception) {
-            Log::error('LunarFortis: Unable to process refund: '.$exception->getMessage());
+            Log::error("LunarFortis: Unable to process refund: {$exception->getMessage()}");
 
             return new PaymentRefund(
                 success: false,
@@ -264,25 +263,7 @@ class FortisPaymentType extends AbstractPayment
 
     private function buildElementsMetaArray(array $data): array
     {
-        $errors = $this->buildVerificationErrors($data);
-
-        if (! $errors && StatusCode::isUnsuccessful($data['status_code'])) {
-            $errors = ReasonCode::fromCode((int) $data['reason_code_id']);
-
-            if (isset($data['verbiage'])) {
-                $errors .= '. '.$data['verbiage'];
-            }
-        }
-
-        $meta = [];
-
-        if ($errors) {
-            $meta['errors'] = $errors;
-        }
-
-        if (isset($data['reason_code_id'])) {
-            $meta['reason_code_message'] = ReasonCode::fromCode((int) $data['reason_code_id']);
-        }
+        $meta = $this->buildBaseMeta($data);
 
         $metaFields = [
             '@action', 'status_code', 'reason_code_id', 'auth_code',
@@ -339,13 +320,28 @@ class FortisPaymentType extends AbstractPayment
 
     private function buildResponseTransactionMetaArray(array $data): array
     {
+        $meta = $this->buildBaseMeta($data);
+
+        $metaFields = [
+            'status_code', 'reason_code_id', 'auth_code',
+            'avs', 'avs_enhanced', 'cvv_response', 'auth_amount',
+            'first_six', 'account_holder_name', 'payment_method',
+            'par', 'entry_mode_id', 'customer_ip',
+            'transaction_batch_id', 'verbiage',
+        ];
+
+        return $this->appendMetaFields($meta, $data, $metaFields);
+    }
+
+    private function buildBaseMeta(array $data): array
+    {
         $errors = $this->buildVerificationErrors($data);
 
         if (! $errors && StatusCode::isUnsuccessful($data['status_code'] ?? null)) {
             $errors = ReasonCode::fromCode((int) ($data['reason_code_id'] ?? 0));
 
             if (isset($data['verbiage'])) {
-                $errors .= '. '.$data['verbiage'];
+                $errors .= ". {$data['verbiage']}";
             }
         }
 
@@ -359,28 +355,20 @@ class FortisPaymentType extends AbstractPayment
             $meta['reason_code_message'] = ReasonCode::fromCode((int) $data['reason_code_id']);
         }
 
-        $metaFields = [
-            'status_code', 'reason_code_id', 'auth_code',
-            'avs', 'avs_enhanced', 'cvv_response', 'auth_amount',
-            'first_six', 'account_holder_name', 'payment_method',
-            'par', 'entry_mode_id', 'customer_ip',
-            'transaction_batch_id', 'verbiage',
-        ];
-
-        return $this->appendMetaFields($meta, $data, $metaFields);
+        return $meta;
     }
 
     private function buildVerificationErrors(array $data): ?string
     {
-        $errors = null;
+        $errors = [];
 
         if (isset($data['avs'])) {
             $avsCode = AvsResponseCode::fromCode($data['avs']);
 
             if ($avsCode && $avsCode !== AvsResponseCode::GOOD) {
-                $errors = 'AVS Failed: '.$avsCode->value;
+                $errors[] = "AVS Failed: {$avsCode->value}";
             } elseif (! $avsCode) {
-                $errors = "AVS Failed: Unknown code ({$data['avs']})";
+                $errors[] = "AVS Failed: Unknown code ({$data['avs']})";
             }
         }
 
@@ -388,14 +376,13 @@ class FortisPaymentType extends AbstractPayment
             $cvvCode = CvvResponseCode::fromCode($data['cvv_response']);
 
             if ($cvvCode && $cvvCode === CvvResponseCode::N) {
-                $errors = $errors ? "{$errors}. CVV Failed: {$cvvCode->value}" : "CVV Failed: {$cvvCode->value}";
+                $errors[] = "CVV Failed: {$cvvCode->value}";
             } elseif ($cvvCode === null && $data['cvv_response'] !== null) {
-                $message = "CVV Info: Unknown code ({$data['cvv_response']})";
-                $errors = $errors ? "{$errors}. {$message}" : $message;
+                $errors[] = "CVV Info: Unknown code ({$data['cvv_response']})";
             }
         }
 
-        return $errors;
+        return $errors ? implode('. ', $errors) : null;
     }
 
     private function resolveTransactionStatus(bool $success, ?int $statusCode): string

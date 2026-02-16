@@ -42,7 +42,6 @@ class LunarFortis
     public function completeAuthorizedTransaction(TransactionContract $transaction, int $amount = 0, array $options = []): array
     {
         try {
-            // Build options from transaction data and merge with provided options
             $transactionOptions = [];
 
             if ($transaction->order?->reference) {
@@ -271,12 +270,10 @@ class LunarFortis
             $status = $this->checkTerminalTransactionStatus($statusCode);
             $statusData = $status['data'] ?? [];
 
-            // Check if transaction is complete
             if (($statusData['progress'] ?? 0) >= 100) {
                 return $status;
             }
 
-            // Check for errors
             if ($statusData['error'] ?? null) {
                 Log::error('LunarFortis: Terminal transaction failed', [
                     'status_code' => $statusCode,
@@ -287,11 +284,9 @@ class LunarFortis
                 return $status;
             }
 
-            // Wait before next poll
             sleep($pollIntervalSeconds);
         }
 
-        // Timeout reached - get final status
         $finalStatus = $this->checkTerminalTransactionStatus($statusCode);
         Log::warning('LunarFortis: Terminal transaction polling timed out', [
             'status_code' => $statusCode,
@@ -309,13 +304,11 @@ class LunarFortis
      */
     public function processTerminalCreditCardAuth(string $terminalId, int $amount, array $options = []): array
     {
-        // Extract polling options
         $timeoutSeconds = $options['timeout_seconds'] ?? 300;
         $pollIntervalSeconds = $options['poll_interval_seconds'] ?? 2;
         unset($options['timeout_seconds'], $options['poll_interval_seconds']);
 
         try {
-            // Step 1: Initiate the terminal authorization
             if (config('lunar-fortis.debug')) {
                 Log::debug('LunarFortis: Initiating terminal credit card authorization', [
                     'terminal_id' => $terminalId,
@@ -339,11 +332,9 @@ class LunarFortis
                 ]);
             }
 
-            // Step 2: Wait for completion
             $finalStatus = $this->waitForTerminalTransaction($statusCode, $timeoutSeconds, $pollIntervalSeconds);
             $statusData = $finalStatus['data'] ?? [];
 
-            // Step 3: Build result array
             $result = [
                 'success' => ($statusData['progress'] ?? 0) >= 100 && ! ($statusData['error'] ?? null),
                 'status_code' => $statusCode,
