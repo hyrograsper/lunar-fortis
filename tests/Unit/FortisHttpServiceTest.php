@@ -19,7 +19,7 @@ beforeEach(function () {
     ]);
 
     // Mock Log facade to handle all log methods that may happen in Laravel 11+
-    Log::shouldReceive('channel')->andReturnSelf();
+    Log::shouldReceive('channel')->withAnyArgs()->andReturnSelf();
     Log::shouldReceive('debug')->withAnyArgs();
     Log::shouldReceive('info')->withAnyArgs();
     Log::shouldReceive('warning')->withAnyArgs();
