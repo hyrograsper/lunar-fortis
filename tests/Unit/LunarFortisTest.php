@@ -68,7 +68,7 @@ describe('LunarFortis Client Token Management', function () {
         $httpServiceProperty->setValue($this->lunarFortis, $mockHttpService);
 
         expect(fn () => $this->lunarFortis->getClientTokenForSaleAmount(1000))
-            ->toThrow(Exception::class, 'API Error');
+            ->toThrow(Exception::class, 'Unable to get client token for sale: API Error');
     });
 });
 

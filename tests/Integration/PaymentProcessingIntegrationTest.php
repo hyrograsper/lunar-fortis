@@ -316,7 +316,7 @@ describe('Payment Processing Integration Tests', function () {
             expect(false)->toBeTrue(); // Should not reach this line
         } catch (Exception $exception) {
             fwrite(STDERR, 'Invalid capture error (expected): '.substr($exception->getMessage(), 0, 100)."...\n");
-            expect($exception->getMessage())->toContain('transaction');
+            expect($exception->getMessage())->toContain('capture');
         }
 
         fwrite(STDERR, "API error handling tests completed\n");

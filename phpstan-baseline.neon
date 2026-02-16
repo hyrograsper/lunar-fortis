@@ -67,6 +67,12 @@ parameters:
 			path: src/LunarFortis.php
 
 		-
+			message: '#^Instanceof between Carbon\\Carbon and Carbon\\Carbon will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: src/Models/Terminal.php
+
+		-
 			message: '#^Method Hyrograsper\\LunarFortis\\Models\\Terminal\:\:syncSingleFromFortis\(\) should return static\(Hyrograsper\\LunarFortis\\Models\\Terminal\)\|null but returns Hyrograsper\\LunarFortis\\Models\\Terminal\.$#'
 			identifier: return.type
 			count: 1

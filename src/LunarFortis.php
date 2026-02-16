@@ -21,86 +21,122 @@ class LunarFortis
     /** @throws Exception */
     public function getClientTokenForSaleAmount(int $amount, string $action = 'sale'): ?string
     {
-        $response = $this->getHttpService()->createTransactionIntention($amount, $action);
+        try {
+            $response = $this->getHttpService()->createTransactionIntention($amount, $action);
 
-        return $response['data']['client_token'] ?? null;
+            return $response['data']['client_token'] ?? null;
+        } catch (Exception $exception) {
+            throw new Exception("Unable to get client token for {$action}: {$exception->getMessage()}");
+        }
     }
 
     /** @throws Exception */
     public function completeAuthorizedTransaction(TransactionContract $transaction, int $amount = 0, array $options = []): array
     {
-        $transactionOptions = [];
+        try {
+            $transactionOptions = [];
 
-        if ($transaction->order?->reference) {
-            $transactionOptions['order_number'] = $transaction->order->reference;
+            if ($transaction->order?->reference) {
+                $transactionOptions['order_number'] = $transaction->order->reference;
+            }
+
+            if ($transaction->order?->customer_id) {
+                $transactionOptions['customer_id'] = $transaction->order->customer_id;
+            }
+
+            return $this->getHttpService()->completeAuthorizedTransaction(
+                $transaction->reference,
+                $amount,
+                array_merge($transactionOptions, $options)
+            );
+        } catch (Exception $exception) {
+            throw new Exception("Failed to complete authorized transaction: {$exception->getMessage()}");
         }
-
-        if ($transaction->order?->customer_id) {
-            $transactionOptions['customer_id'] = $transaction->order->customer_id;
-        }
-
-        return $this->getHttpService()->completeAuthorizedTransaction(
-            $transaction->reference,
-            $amount,
-            array_merge($transactionOptions, $options)
-        );
     }
 
     /** @throws Exception */
     public function authorizeCcFromToken(string $tokenId, Order $order): array
     {
-        /** @var OrderAddress $billingAddress */
-        $billingAddress = $order->billingAddress;
+        try {
+            /** @var OrderAddress $billingAddress */
+            $billingAddress = $order->billingAddress;
 
-        $options = [
-            'order_number' => $order->reference,
-            'customer_id' => $order->customer_id,
-            'billing_address' => [
-                'street' => $billingAddress->line_one,
-                'city' => $billingAddress->city,
-                'state' => $billingAddress->state,
-                'postal_code' => $billingAddress->postcode,
-                'country' => $billingAddress->country->iso3,
-            ],
-        ];
+            $options = [
+                'order_number' => $order->reference,
+                'customer_id' => $order->customer_id,
+                'billing_address' => [
+                    'street' => $billingAddress->line_one,
+                    'city' => $billingAddress->city,
+                    'state' => $billingAddress->state,
+                    'postal_code' => $billingAddress->postcode,
+                    'country' => $billingAddress->country->iso3,
+                ],
+            ];
 
-        return $this->getHttpService()->authorizeCcFromToken($tokenId, $order->total->value, $options);
+            return $this->getHttpService()->authorizeCcFromToken($tokenId, $order->total->value, $options);
+        } catch (Exception $exception) {
+            throw new Exception("Failed to authorize credit card from token: {$exception->getMessage()}");
+        }
     }
 
     /** @throws Exception */
     public function refund(TransactionContract $transaction, int $amount): array
     {
-        return $this->getHttpService()->refund($transaction->reference, $amount);
+        try {
+            return $this->getHttpService()->refund($transaction->reference, $amount);
+        } catch (Exception $exception) {
+            throw new Exception("Failed to process refund: {$exception->getMessage()}");
+        }
     }
 
     /** @throws Exception */
     public function getTransaction(string $transactionId): array
     {
-        return $this->getHttpService()->getTransaction($transactionId);
+        try {
+            return $this->getHttpService()->getTransaction($transactionId);
+        } catch (Exception $exception) {
+            throw new Exception("Failed to retrieve transaction: {$exception->getMessage()}");
+        }
     }
 
     /** @throws Exception */
     public function createTerminal(array $terminalData): array
     {
-        return $this->getHttpService()->createTerminal($terminalData);
+        try {
+            return $this->getHttpService()->createTerminal($terminalData);
+        } catch (Exception $exception) {
+            throw new Exception("Failed to create terminal: {$exception->getMessage()}");
+        }
     }
 
     /** @throws Exception */
     public function listTerminals(array $options = []): array
     {
-        return $this->getHttpService()->listTerminals($options);
+        try {
+            return $this->getHttpService()->listTerminals($options);
+        } catch (Exception $exception) {
+            throw new Exception("Failed to list terminals: {$exception->getMessage()}");
+        }
     }
 
     /** @throws Exception */
     public function getTerminal(string $terminalId, ?array $expand = null, ?array $fields = null): array
     {
-        return $this->getHttpService()->getTerminal($terminalId, $expand, $fields);
+        try {
+            return $this->getHttpService()->getTerminal($terminalId, $expand, $fields);
+        } catch (Exception $exception) {
+            throw new Exception("Failed to retrieve terminal {$terminalId}: {$exception->getMessage()}");
+        }
     }
 
     /** @throws Exception */
     public function updateTerminal(string $terminalId, array $terminalData, ?array $expand = null): array
     {
-        return $this->getHttpService()->updateTerminal($terminalId, $terminalData, $expand);
+        try {
+            return $this->getHttpService()->updateTerminal($terminalId, $terminalData, $expand);
+        } catch (Exception $exception) {
+            throw new Exception("Failed to update terminal {$terminalId}: {$exception->getMessage()}");
+        }
     }
 
     /** @throws Exception */
@@ -146,13 +182,21 @@ class LunarFortis
     /** @throws Exception */
     public function authorizeTerminalCreditCard(string $terminalId, int $amount, array $options = []): array
     {
-        return $this->getHttpService()->authorizeTerminalCreditCard($terminalId, $amount, $options);
+        try {
+            return $this->getHttpService()->authorizeTerminalCreditCard($terminalId, $amount, $options);
+        } catch (Exception $exception) {
+            throw new Exception("Failed to authorize terminal credit card: {$exception->getMessage()}");
+        }
     }
 
     /** @throws Exception */
     public function checkTerminalTransactionStatus(string $statusCode): array
     {
-        return $this->getHttpService()->checkAsyncStatus($statusCode);
+        try {
+            return $this->getHttpService()->checkAsyncStatus($statusCode);
+        } catch (Exception $exception) {
+            throw new Exception("Failed to check terminal transaction status: {$exception->getMessage()}");
+        }
     }
 
     /** @throws Exception */
@@ -261,10 +305,14 @@ class LunarFortis
     /** @throws Exception */
     public function captureTerminalTransaction(string $transactionId, int $amount, array $options = []): array
     {
-        return $this->getHttpService()->completeAuthorizedTransaction(
-            $transactionId,
-            $amount,
-            $options
-        );
+        try {
+            return $this->getHttpService()->completeAuthorizedTransaction(
+                $transactionId,
+                $amount,
+                $options
+            );
+        } catch (Exception $exception) {
+            throw new Exception("Failed to capture terminal transaction: {$exception->getMessage()}");
+        }
     }
 }

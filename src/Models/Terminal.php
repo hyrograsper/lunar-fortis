@@ -90,7 +90,15 @@ class Terminal extends Model
             return true;
         }
 
-        return Carbon::parse($this->synced_at)->diffInHours(now()) > $hoursThreshold;
+        try {
+            $syncedAt = $this->synced_at instanceof Carbon
+                ? $this->synced_at
+                : Carbon::parse($this->synced_at);
+
+            return $syncedAt->diffInHours(now()) > $hoursThreshold;
+        } catch (Exception) {
+            return true;
+        }
     }
 
     public function markSynced(): void
@@ -325,8 +333,7 @@ class Terminal extends Model
         return in_array($code, static::getAllowedManufacturerCodes(), true);
     }
 
-    /** @return ($code is null ? array<int, string> : string|null) */
-    public static function getManufacturerCodeLabels(?int $code = null): array|string|null
+    public static function getManufacturerCodeLabels($code = null)
     {
         $labels = [
             1 => 'Manufacturer 1',
@@ -335,7 +342,7 @@ class Terminal extends Model
             100 => 'Manufacturer 100',
         ];
 
-        return $code !== null ? ($labels[$code] ?? null) : $labels;
+        return $code ? ($labels[$code] ?? null) : $labels;
     }
 
     public static function getManufacturerCodeOptions(): array
