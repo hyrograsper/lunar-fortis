@@ -5,6 +5,7 @@ namespace Hyrograsper\LunarFortis\Models;
 use Carbon\Carbon;
 use Exception;
 use Hyrograsper\LunarFortis\Facades\LunarFortis;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
@@ -60,37 +61,28 @@ class Terminal extends Model
         'fortis_data' => 'array',
     ];
 
-    // ========================================
-    // Query Scopes
-    // ========================================
-
-    public function scopeActive($query)
+    /** @param Builder<Terminal> $query */
+    public function scopeActive(Builder $query): Builder
     {
         return $query->where('active', true);
     }
 
-    public function scopeForLocation($query, string $locationId)
+    /** @param Builder<Terminal> $query */
+    public function scopeForLocation(Builder $query, string $locationId): Builder
     {
         return $query->where('location_id', $locationId);
     }
 
-    public function scopeByManufacturer($query, string $manufacturerCode)
+    /** @param Builder<Terminal> $query */
+    public function scopeByManufacturer(Builder $query, string $manufacturerCode): Builder
     {
         return $query->where('terminal_manufacturer_code', $manufacturerCode);
     }
-
-    // ========================================
-    // Accessors & Mutators
-    // ========================================
 
     public function getDisplayNameAttribute(): string
     {
         return $this->title.' ('.$this->serial_number.')';
     }
-
-    // ========================================
-    // Terminal Status & Sync Methods
-    // ========================================
 
     public function needsSync(?int $hoursThreshold = 24): bool
     {
@@ -119,10 +111,6 @@ class Terminal extends Model
     {
         return $this->active;
     }
-
-    // ========================================
-    // Fortis API Sync Methods
-    // ========================================
 
     /**
      * Sync all terminals from Fortis API
@@ -211,10 +199,6 @@ class Terminal extends Model
 
         return $terminal;
     }
-
-    // ========================================
-    // Payment Processing Methods
-    // ========================================
 
     /**
      * Process a credit card authorization using this terminal (auth-only flow)
@@ -361,10 +345,6 @@ class Terminal extends Model
         ]);
     }
 
-    // ========================================
-    // Validation & Configuration Methods
-    // ========================================
-
     /**
      * Get validation rules for Terminal fields
      */
@@ -410,23 +390,13 @@ class Terminal extends Model
         ];
     }
 
-    /**
-     * Check if a manufacturer code is valid
-     *
-     * @param  mixed  $code
-     */
-    public static function isValidManufacturerCode($code): bool
+    public static function isValidManufacturerCode(mixed $code): bool
     {
         return in_array($code, static::getAllowedManufacturerCodes(), true);
     }
 
-    /**
-     * Get display names for manufacturer codes
-     *
-     * @param  string|null  $code  Optional specific code to get label for
-     * @return array|string|null
-     */
-    public static function getManufacturerCodeLabels($code = null)
+    /** @return ($code is null ? array<int, string> : string|null) */
+    public static function getManufacturerCodeLabels(?int $code = null): array|string|null
     {
         $labels = [
             1 => 'Manufacturer 1',
@@ -435,7 +405,7 @@ class Terminal extends Model
             100 => 'Manufacturer 100',
         ];
 
-        return $code ? ($labels[$code] ?? null) : $labels;
+        return $code !== null ? ($labels[$code] ?? null) : $labels;
     }
 
     /**
@@ -453,10 +423,6 @@ class Terminal extends Model
 
         return $options;
     }
-
-    // ========================================
-    // Private Helper Methods
-    // ========================================
 
     protected static function mapFortisDataToAttributes(array $data): array
     {

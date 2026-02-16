@@ -2,6 +2,7 @@
 
 namespace Hyrograsper\LunarFortis\Tests;
 
+use Dotenv\Dotenv;
 use Hyrograsper\LunarFortis\LunarFortisServiceProvider;
 use Livewire\LivewireServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
@@ -31,7 +32,7 @@ class TestCase extends Orchestra
         // Load .env.testing file if it exists
         $envTestingFile = base_path('.env.testing');
         if (file_exists($envTestingFile)) {
-            $dotenv = \Dotenv\Dotenv::createImmutable(base_path(), '.env.testing');
+            $dotenv = Dotenv::createImmutable(base_path(), '.env.testing');
             $dotenv->safeLoad();
         }
 

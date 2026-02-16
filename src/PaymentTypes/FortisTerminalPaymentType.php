@@ -102,7 +102,7 @@ class FortisTerminalPaymentType extends AbstractPayment
         }
 
         // Check if this was already captured (sale transaction)
-        if ($transaction->type == 'capture') {
+        if ($transaction->type === 'capture') {
             $this->order->placed_at = now();
             $this->order->status = config('lunar-fortis.status_mapping.payment-received', 'payment-received');
             $this->order->save();
@@ -123,7 +123,7 @@ class FortisTerminalPaymentType extends AbstractPayment
         $this->order->status = config('lunar-fortis.status_mapping.payment-authorized', 'payment-authorized');
         $this->order->save();
 
-        if ($this->policy == 'automatic') {
+        if ($this->policy === 'automatic') {
             $captureResponse = $this->capture($transaction, $transaction->amount->value);
 
             if (! $captureResponse->success) {
@@ -298,42 +298,9 @@ class FortisTerminalPaymentType extends AbstractPayment
         try {
             $statusCode = $data['status_code'] ?? null;
             $success = StatusCode::isSuccessful($statusCode);
+            $meta = $this->buildTerminalMeta($data);
 
-            // Build transaction meta data from response
-            $meta = [
-                'status_code' => $data['status_code'] ?? null,
-                'reason_code' => $data['reason_code'] ?? null,
-                'fortis_transaction_id' => $data['id'] ?? null,
-                'description' => $data['description'] ?? null,
-                'verbiage' => $data['verbiage'] ?? null,
-            ];
-
-            // Add terminal ID if available
-            if (isset($data['terminal_id'])) {
-                $meta['terminal_id'] = $data['terminal_id'];
-
-                // Try to get terminal details from the database
-                if ($terminal = Terminal::where('fortis_id', $data['terminal_id'])->first()) {
-                    $meta['terminal_title'] = $terminal->title;
-                    $meta['terminal_serial'] = $terminal->serial_number;
-                }
-            }
-
-            // Add additional transaction details if available
-            if (isset($data['tip_amount'])) {
-                $meta['tip_amount'] = $data['tip_amount'];
-            }
-
-            if (isset($data['clerk_number'])) {
-                $meta['clerk_number'] = $data['clerk_number'];
-            }
-
-            // Determine transaction type based on action or status
             $transactionType = $this->determineTransactionType($data);
-
-            // Determine card details from response data
-            $cardType = $data['account_type'] ?? 'credit';
-            $lastFour = $data['last_four'] ?? '';
 
             return Transaction::create([
                 'order_id' => $this->order->id,
@@ -342,15 +309,10 @@ class FortisTerminalPaymentType extends AbstractPayment
                 'driver' => self::PAYMENT_TYPE,
                 'amount' => $data['transaction_amount'] ?? $this->cart->total->value,
                 'reference' => $data['id'] ?? now()->timestamp,
-                'status' => $success
-                    ? (StatusCode::isCaptured($data['status_code'])
-                        ? 'approved'
-                        : 'authorized'
-                    )
-                    : 'declined',
+                'status' => $this->resolveTransactionStatus($success, $data['status_code']),
                 'notes' => $success ? null : ($data['verbiage'] ?? $data['reason_code'] ?? null),
-                'card_type' => $cardType,
-                'last_four' => $lastFour,
+                'card_type' => $data['account_type'] ?? 'credit',
+                'last_four' => $data['last_four'] ?? '',
                 'captured_at' => StatusCode::isCaptured($data['status_code']) ? now() : null,
                 'meta' => $meta,
             ]);
@@ -382,6 +344,36 @@ class FortisTerminalPaymentType extends AbstractPayment
         }
     }
 
+    private function buildTerminalMeta(array $data): array
+    {
+        $meta = [
+            'status_code' => $data['status_code'] ?? null,
+            'reason_code' => $data['reason_code'] ?? null,
+            'fortis_transaction_id' => $data['id'] ?? null,
+            'description' => $data['description'] ?? null,
+            'verbiage' => $data['verbiage'] ?? null,
+        ];
+
+        if (isset($data['terminal_id'])) {
+            $meta['terminal_id'] = $data['terminal_id'];
+
+            if ($terminal = Terminal::where('fortis_id', $data['terminal_id'])->first()) {
+                $meta['terminal_title'] = $terminal->title;
+                $meta['terminal_serial'] = $terminal->serial_number;
+            }
+        }
+
+        $optionalFields = ['tip_amount', 'clerk_number'];
+
+        foreach ($optionalFields as $field) {
+            if (isset($data[$field])) {
+                $meta[$field] = $data[$field];
+            }
+        }
+
+        return $meta;
+    }
+
     private function getTerminalIdFromMeta(TransactionContract $transaction): ?string
     {
         $meta = is_array($transaction->meta) ? $transaction->meta : [];
@@ -393,7 +385,7 @@ class FortisTerminalPaymentType extends AbstractPayment
     {
         // Check if there's an action field that indicates the transaction type
         if (isset($data['@action'])) {
-            return $data['@action'] == 'sale' ? 'capture' : 'intent';
+            return $data['@action'] === 'sale' ? 'capture' : 'intent';
         }
 
         // Check status code - if it's already captured, it was a sale transaction
@@ -428,26 +420,7 @@ class FortisTerminalPaymentType extends AbstractPayment
 
         $statusCode = $data['status_code'] ?? null;
         $success = StatusCode::isSuccessful($statusCode);
-
-        // Build transaction meta data from response
-        $meta = [
-            'status_code' => $data['status_code'] ?? null,
-            'reason_code' => $data['reason_code'] ?? null,
-            'fortis_transaction_id' => $data['id'] ?? null,
-            'description' => $data['description'] ?? null,
-            'verbiage' => $data['verbiage'] ?? null,
-        ];
-
-        // Add terminal ID if available
-        if (isset($data['terminal_id'])) {
-            $meta['terminal_id'] = $data['terminal_id'];
-
-            // Try to get terminal details from the database
-            if ($terminal = Terminal::where('fortis_id', $data['terminal_id'])->first()) {
-                $meta['terminal_title'] = $terminal->title;
-                $meta['terminal_serial'] = $terminal->serial_number;
-            }
-        }
+        $meta = $this->buildTerminalMeta($data);
 
         return Transaction::create([
             'parent_transaction_id' => $parentTransaction->id,
@@ -457,17 +430,21 @@ class FortisTerminalPaymentType extends AbstractPayment
             'driver' => self::PAYMENT_TYPE,
             'amount' => $data['transaction_amount'] ?? 0,
             'reference' => $data['id'] ?? now()->timestamp,
-            'status' => $success
-                ? (StatusCode::isCaptured($statusCode)
-                    ? 'approved'
-                    : 'authorized'
-                )
-                : 'declined',
+            'status' => $this->resolveTransactionStatus($success, $statusCode),
             'notes' => $success ? null : ($data['verbiage'] ?? $data['reason_code'] ?? null),
             'card_type' => $data['account_type'] ?? $parentTransaction->card_type ?? 'N/A',
             'last_four' => $data['last_four'] ?? $parentTransaction->last_four ?? '',
             'captured_at' => StatusCode::isCaptured($statusCode) ? now() : null,
             'meta' => $meta,
         ]);
+    }
+
+    private function resolveTransactionStatus(bool $success, ?int $statusCode): string
+    {
+        if (! $success) {
+            return 'declined';
+        }
+
+        return StatusCode::isCaptured($statusCode) ? 'approved' : 'authorized';
     }
 }

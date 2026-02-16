@@ -1,11 +1,9 @@
 <?php
 
-use Hyrograsper\LunarFortis\Enums\StatusCode;
+use Hyrograsper\LunarFortis\LunarFortis;
 use Hyrograsper\LunarFortis\PaymentTypes\FortisPaymentType;
 use Illuminate\Support\Facades\Config;
-use Lunar\Base\DataTransferObjects\PaymentAuthorize;
-use Lunar\Base\DataTransferObjects\PaymentCapture;
-use Lunar\Base\DataTransferObjects\PaymentRefund;
+use Lunar\Models\Contracts\Transaction as TransactionContract;
 
 beforeEach(function () {
     Config::set('lunar-fortis.policy', 'manual');
@@ -14,7 +12,8 @@ beforeEach(function () {
         'payment-received' => 'payment-received',
     ]);
 
-    $this->paymentType = new FortisPaymentType(app(\Hyrograsper\LunarFortis\LunarFortis::class));
+    $this->mockFortis = Mockery::mock(LunarFortis::class);
+    $this->paymentType = new FortisPaymentType($this->mockFortis);
 });
 
 describe('FortisPaymentType Configuration', function () {
@@ -22,8 +21,9 @@ describe('FortisPaymentType Configuration', function () {
         expect(FortisPaymentType::PAYMENT_TYPE)->toBe('fortis');
     });
 
-    it('sets manual policy by default', function () {
-        $paymentType = new FortisPaymentType(app(\Hyrograsper\LunarFortis\LunarFortis::class));
+    it('uses manual policy by default', function () {
+        Config::set('lunar-fortis.policy', 'manual');
+        $paymentType = new FortisPaymentType($this->mockFortis);
 
         $reflection = new ReflectionClass($paymentType);
         $policyProperty = $reflection->getProperty('policy');
@@ -34,8 +34,8 @@ describe('FortisPaymentType Configuration', function () {
 
     it('uses automatic policy when configured', function () {
         Config::set('lunar-fortis.policy', 'automatic');
+        $paymentType = new FortisPaymentType($this->mockFortis);
 
-        $paymentType = new FortisPaymentType(app(\Hyrograsper\LunarFortis\LunarFortis::class));
         $reflection = new ReflectionClass($paymentType);
         $policyProperty = $reflection->getProperty('policy');
         $policyProperty->setAccessible(true);
@@ -44,92 +44,36 @@ describe('FortisPaymentType Configuration', function () {
     });
 });
 
-describe('PaymentAuthorize Creation', function () {
-    it('creates successful payment authorize', function () {
-        $authorize = new PaymentAuthorize(
-            success: true,
-            message: 'Payment authorized',
-            orderId: 123,
-            paymentType: FortisPaymentType::PAYMENT_TYPE,
-        );
+describe('FortisPaymentType::capture()', function () {
+    it('handles exception during capture', function () {
+        $parentTransaction = Mockery::mock(TransactionContract::class);
 
-        expect($authorize->success)->toBeTrue();
-        expect($authorize->message)->toBe('Payment authorized');
-        expect($authorize->orderId)->toBe(123);
-        expect($authorize->paymentType)->toBe('fortis');
-    });
+        $this->mockFortis->shouldReceive('completeAuthorizedTransaction')
+            ->once()
+            ->andThrow(new Exception('Network error'));
 
-    it('creates failed payment authorize', function () {
-        $authorize = new PaymentAuthorize(
-            success: false,
-            message: 'Payment declined',
-            orderId: null,
-            paymentType: FortisPaymentType::PAYMENT_TYPE,
-        );
+        $result = $this->paymentType->capture($parentTransaction, 500);
 
-        expect($authorize->success)->toBeFalse();
-        expect($authorize->message)->toBe('Payment declined');
-        expect($authorize->orderId)->toBeNull();
+        expect($result->success)->toBeFalse()
+            ->and($result->message)->toBe('Network error');
     });
 });
 
-describe('PaymentCapture Creation', function () {
-    it('creates successful payment capture', function () {
-        $capture = new PaymentCapture(
-            success: true,
-            message: 'Payment captured'
-        );
+describe('FortisPaymentType::refund()', function () {
+    it('handles exception during refund', function () {
+        $parentTransaction = Mockery::mock(TransactionContract::class);
 
-        expect($capture->success)->toBeTrue();
-        expect($capture->message)->toBe('Payment captured');
-    });
+        $this->mockFortis->shouldReceive('refund')
+            ->once()
+            ->andThrow(new Exception('Refund API error'));
 
-    it('creates failed payment capture', function () {
-        $capture = new PaymentCapture(
-            success: false,
-            message: 'Capture failed'
-        );
+        $result = $this->paymentType->refund($parentTransaction, 250);
 
-        expect($capture->success)->toBeFalse();
-        expect($capture->message)->toBe('Capture failed');
+        expect($result->success)->toBeFalse()
+            ->and($result->message)->toBe('Refund API error');
     });
 });
 
-describe('PaymentRefund Creation', function () {
-    it('creates successful payment refund', function () {
-        $refund = new PaymentRefund(success: true);
-
-        expect($refund->success)->toBeTrue();
-    });
-
-    it('creates failed payment refund', function () {
-        $refund = new PaymentRefund(
-            success: false,
-            message: 'Refund failed'
-        );
-
-        expect($refund->success)->toBeFalse();
-        expect($refund->message)->toBe('Refund failed');
-    });
-});
-
-describe('StatusCode Integration', function () {
-    it('works with status code enum', function () {
-        expect(StatusCode::isSuccessful(101))->toBeTrue(); // Approved
-        expect(StatusCode::isSuccessful(102))->toBeTrue(); // Auth Only
-        expect(StatusCode::isSuccessful(301))->toBeFalse(); // Declined
-    });
-
-    it('identifies captured transactions', function () {
-        expect(StatusCode::isCaptured(101))->toBeTrue(); // Approved
-        expect(StatusCode::isCaptured(102))->toBeFalse(); // Auth Only
-    });
-});
-
-describe('LunarFortis Facade Integration', function () {
-    it('can access facade methods', function () {
-        expect(method_exists(\Hyrograsper\LunarFortis\LunarFortis::class, 'getClientTokenForSaleAmount'))->toBeTrue();
-        expect(method_exists(\Hyrograsper\LunarFortis\LunarFortis::class, 'completeAuthorizedTransaction'))->toBeTrue();
-        expect(method_exists(\Hyrograsper\LunarFortis\LunarFortis::class, 'refund'))->toBeTrue();
-    });
+afterEach(function () {
+    Mockery::close();
 });

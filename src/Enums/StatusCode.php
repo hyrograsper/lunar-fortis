@@ -14,12 +14,12 @@ enum StatusCode: int
 
     public static function isCaptured(int $statusCode): bool
     {
-        return $statusCode == StatusCode::Approved->value;
+        return $statusCode === StatusCode::Approved->value;
     }
 
     public static function isRefunded(int $statusCode): bool
     {
-        return $statusCode == StatusCode::Refunded->value;
+        return $statusCode === StatusCode::Refunded->value;
     }
 
     public static function isSuccessful(int $statusCode): bool

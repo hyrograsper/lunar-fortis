@@ -7,6 +7,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use InvalidArgumentException;
 
 class FortisHttpService
 {
@@ -92,7 +93,7 @@ class FortisHttpService
             'PUT' => $httpClient->put($url, $data),
             'PATCH' => $httpClient->patch($url, $data),
             'DELETE' => $httpClient->delete($url),
-            default => throw new \InvalidArgumentException("Unsupported HTTP method: {$method}"),
+            default => throw new InvalidArgumentException("Unsupported HTTP method: {$method}"),
         };
 
         return $response->throw()->json();
@@ -347,8 +348,6 @@ class FortisHttpService
         }
     }
 
-    // Terminal Management Methods
-
     /**
      * Create terminal
      */
@@ -505,8 +504,6 @@ class FortisHttpService
             throw new Exception("Failed to update terminal {$terminalId}: {$exception->getMessage()}");
         }
     }
-
-    // Terminal Transaction Methods
 
     /**
      * Authorize terminal credit card (auth-only)

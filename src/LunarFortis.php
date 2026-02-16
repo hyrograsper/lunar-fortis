@@ -116,8 +116,6 @@ class LunarFortis
         }
     }
 
-    // Terminal Management Methods
-
     /**
      * Create a new terminal device
      *
@@ -174,8 +172,6 @@ class LunarFortis
         }
     }
 
-    // Helper methods for common terminal operations
-
     /**
      * Create a simple terminal with minimal required data
      *
@@ -229,8 +225,6 @@ class LunarFortis
     {
         return $this->updateTerminal($terminalId, ['active' => $active]);
     }
-
-    // Terminal Credit Card Processing Methods
 
     /**
      * Authorize a credit card transaction through a terminal (auth-only)

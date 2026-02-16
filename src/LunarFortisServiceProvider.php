@@ -18,11 +18,6 @@ class LunarFortisServiceProvider extends PackageServiceProvider
 {
     public function configurePackage(Package $package): void
     {
-        /*
-         * This class is a Package Service Provider
-         *
-         * More info: https://github.com/spatie/laravel-package-tools
-         */
         $package
             ->name('lunar-fortis')
             ->hasConfigFile()
@@ -38,7 +33,6 @@ class LunarFortisServiceProvider extends PackageServiceProvider
             return $app->make(PaymentManager::class);
         });
 
-        // Register the payment types with Lunar
         Payments::extend('fortis', function ($app) {
             return $app->make(FortisPaymentType::class);
         });
@@ -50,10 +44,8 @@ class LunarFortisServiceProvider extends PackageServiceProvider
 
     public function packageBooted(): void
     {
-        // Register Livewire components
         Livewire::component('lunar-fortis.payment-form', PaymentForm::class);
 
-        // Register model observers
         Terminal::observe(TerminalObserver::class);
     }
 }

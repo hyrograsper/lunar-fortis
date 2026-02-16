@@ -129,7 +129,7 @@ parameters:
 		-
 			message: '#^Strict comparison using \!\=\= between mixed and null will always evaluate to true\.$#'
 			identifier: notIdentical.alwaysTrue
-			count: 2
+			count: 1
 			path: src/PaymentTypes/FortisPaymentType.php
 
 		-
