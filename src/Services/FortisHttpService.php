@@ -7,6 +7,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use InvalidArgumentException;
 
 class FortisHttpService
 {
@@ -28,14 +29,10 @@ class FortisHttpService
         ];
     }
 
-    /**
-     * Make HTTP request with retry logic
-     */
     protected function makeRequest(string $method, string $endpoint, array $data = [], array $queryParams = []): array
     {
-        $url = $this->baseUrl.$endpoint;
+        $url = "{$this->baseUrl}{$endpoint}";
 
-        // Get HTTP configuration
         $retryAttempts = config('lunar-fortis.http.retry.attempts', 3);
         $retryDelay = config('lunar-fortis.http.retry.delay', 1000);
         $retryOnConnection = config('lunar-fortis.http.retry.on_connection_error', true);
@@ -44,7 +41,6 @@ class FortisHttpService
         $maxDelay = config('lunar-fortis.http.retry.max_delay', 10000);
         $timeout = config('lunar-fortis.http.timeout', 30);
 
-        // Build the retry delay function
         $delayCallback = $exponentialBackoff
             ? function ($attempt) use ($retryDelay, $maxDelay) {
                 $delay = $retryDelay * $attempt;
@@ -54,7 +50,6 @@ class FortisHttpService
         : $retryDelay;
 
         $httpClient = Http::retry($retryAttempts, $delayCallback, function ($exception, $request) use ($retryOnConnection, $retryStatusCodes) {
-            // Retry on connection errors if configured
             if ($retryOnConnection && $exception instanceof ConnectionException) {
                 if (config('lunar-fortis.debug')) {
                     Log::debug('LunarFortis: Retrying due to connection error', [
@@ -65,7 +60,6 @@ class FortisHttpService
                 return true;
             }
 
-            // Retry on specific HTTP status codes if configured
             if (method_exists($exception, 'getResponse')) {
                 $response = $exception->getResponse();
                 if ($response && in_array($response->getStatusCode(), $retryStatusCodes)) {
@@ -92,31 +86,28 @@ class FortisHttpService
             'PUT' => $httpClient->put($url, $data),
             'PATCH' => $httpClient->patch($url, $data),
             'DELETE' => $httpClient->delete($url),
-            default => throw new \InvalidArgumentException("Unsupported HTTP method: {$method}"),
+            default => throw new InvalidArgumentException("Unsupported HTTP method: {$method}"),
         };
 
         return $response->throw()->json();
     }
 
-    /**
-     * Create transaction intention for Elements
-     */
     public function createTransactionIntention(int $amount, string $action = 'sale'): array
     {
-        try {
-            $data = [
-                'action' => $action,
-                'digitalWalletsOnly' => false,
-                'methods' => [
-                    [
-                        'type' => 'cc',
-                        'product_transaction_id' => config('services.fortis.productTransactionId'),
-                    ],
+        $data = [
+            'action' => $action,
+            'digitalWalletsOnly' => false,
+            'methods' => [
+                [
+                    'type' => 'cc',
+                    'product_transaction_id' => config('services.fortis.productTransactionId'),
                 ],
-                'amount' => $amount,
-                'location_id' => config('services.fortis.locationId'),
-            ];
+            ],
+            'amount' => $amount,
+            'location_id' => config('services.fortis.locationId'),
+        ];
 
+        try {
             $response = $this->makeRequest('POST', '/v1/elements/transaction/intention', $data);
 
             if (config('lunar-fortis.debug')) {
@@ -141,8 +132,8 @@ class FortisHttpService
             $errorDetail = '';
             if ($responseBody) {
                 $errorData = json_decode($responseBody, true);
-                if ($errorData && isset($errorData['detail'])) {
-                    $errorDetail = ' - '.$errorData['detail'];
+                if (is_array($errorData) && isset($errorData['detail'])) {
+                    $errorDetail = " - {$errorData['detail']}";
                 }
             }
 
@@ -150,9 +141,6 @@ class FortisHttpService
         }
     }
 
-    /**
-     * Complete authorized transaction
-     */
     public function completeAuthorizedTransaction(string $transactionId, int $amount, array $options = []): array
     {
         try {
@@ -161,58 +149,27 @@ class FortisHttpService
                 'transaction_amount' => $amount,
             ];
 
-            // Add all optional fields supported by the auth-complete endpoint
             $optionalFields = [
-                // Transaction identification
                 'order_number', 'customer_id', 'transaction_api_id', 'po_number', 'clerk_number',
-
-                // Contact and location
                 'contact_api_id', 'contact_id', 'location_api_id', 'product_transaction_id', 'quick_invoice_id',
-
-                // Transaction amounts
                 'secondary_amount', 'subtotal_amount', 'surcharge_amount', 'tax', 'tip_amount',
-
-                // Date fields
                 'checkin_date', 'checkout_date',
-
-                // Account management
                 'save_account', 'save_account_title',
-
-                // Billing information (object)
-                'billing_address',
-
-                // Additional amounts (array)
-                'additional_amounts',
-
-                // Identity verification (object)
-                'identity_verification',
-
-                // Custom data
+                'billing_address', 'additional_amounts', 'identity_verification',
                 'custom_data', 'transaction_c1', 'transaction_c2', 'transaction_c3',
-
-                // Installment and recurring
                 'installment', 'installment_number', 'installment_count', 'installment_counter',
                 'installment_total', 'recurring', 'recurring_flag', 'recurring_number',
                 'subscription', 'standing_order',
-
-                // Lodging/hospitality
                 'room_num', 'room_rate', 'advance_deposit', 'no_show', 'mini_bar',
-
-                // Images
                 'image_front', 'image_back',
-
-                // Override flags
                 'bank_funded_only_override', 'allow_partial_authorization_override',
                 'auto_decline_cvv_override', 'auto_decline_street_override', 'auto_decline_zip_override',
-
-                // Miscellaneous
                 'description', 'notification_email_address', 'tags', 'iias_ind',
                 'ebt_type', 'currency_code', 'deferred_auth',
             ];
 
             foreach ($optionalFields as $field) {
                 if (isset($options[$field])) {
-                    // Ensure customer_id is always a string as required by Fortis API
                     if ($field === 'customer_id') {
                         $data[$field] = (string) $options[$field];
                     } else {
@@ -243,9 +200,6 @@ class FortisHttpService
         }
     }
 
-    /**
-     * Authorize credit card from token
-     */
     public function authorizeCcFromToken(string $tokenId, int $amount, array $options = []): array
     {
         try {
@@ -288,9 +242,6 @@ class FortisHttpService
         }
     }
 
-    /**
-     * Process refund
-     */
     public function refund(string $previousTransactionId, int $amount): array
     {
         try {
@@ -321,9 +272,6 @@ class FortisHttpService
         }
     }
 
-    /**
-     * Get transaction by ID
-     */
     public function getTransaction(string $transactionId): array
     {
         try {
@@ -347,11 +295,6 @@ class FortisHttpService
         }
     }
 
-    // Terminal Management Methods
-
-    /**
-     * Create terminal
-     */
     public function createTerminal(array $terminalData): array
     {
         try {
@@ -363,7 +306,6 @@ class FortisHttpService
                 'serial_number' => $terminalData['serial_number'],
             ];
 
-            // Add optional fields
             if (isset($terminalData['default_product_transaction_id'])) {
                 $data['default_product_transaction_id'] = $terminalData['default_product_transaction_id'];
             }
@@ -392,9 +334,6 @@ class FortisHttpService
         }
     }
 
-    /**
-     * List terminals
-     */
     public function listTerminals(array $options = []): array
     {
         try {
@@ -439,9 +378,6 @@ class FortisHttpService
         }
     }
 
-    /**
-     * Get single terminal
-     */
     public function getTerminal(string $terminalId, ?array $expand = null, ?array $fields = null): array
     {
         try {
@@ -473,9 +409,6 @@ class FortisHttpService
         }
     }
 
-    /**
-     * Update terminal
-     */
     public function updateTerminal(string $terminalId, array $terminalData, ?array $expand = null): array
     {
         try {
@@ -506,11 +439,6 @@ class FortisHttpService
         }
     }
 
-    // Terminal Transaction Methods
-
-    /**
-     * Authorize terminal credit card (auth-only)
-     */
     public function authorizeTerminalCreditCard(string $terminalId, int $amount, array $options = []): array
     {
         try {
@@ -522,17 +450,13 @@ class FortisHttpService
                 'cardholder_present' => true,
             ];
 
-            // Handle product_transaction_id for terminal transactions
-            // Check if a specific terminal product ID is configured, otherwise use the default ecommerce one
             $terminalProductId = config('services.fortis.terminalProductTransactionId');
             if ($terminalProductId) {
                 $data['product_transaction_id'] = $terminalProductId;
             } elseif (! isset($options['product_transaction_id'])) {
-                // Fallback to ecommerce product ID if no terminal-specific ID and none provided in options
                 $data['product_transaction_id'] = config('services.fortis.productTransactionId');
             }
 
-            // Add optional fields
             $optionalFields = [
                 'order_number', 'customer_id', 'contact_id', 'description', 'clerk_number',
                 'tip_amount', 'tax', 'subtotal_amount', 'surcharge_amount', 'transaction_api_id',
@@ -570,9 +494,6 @@ class FortisHttpService
         }
     }
 
-    /**
-     * Check async status
-     */
     public function checkAsyncStatus(string $statusCode): array
     {
         try {

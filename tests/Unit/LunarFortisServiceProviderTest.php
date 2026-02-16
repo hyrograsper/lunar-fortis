@@ -6,9 +6,11 @@ use Hyrograsper\LunarFortis\Models\Terminal;
 use Hyrograsper\LunarFortis\Observers\TerminalObserver;
 use Hyrograsper\LunarFortis\PaymentTypes\FortisPaymentType;
 use Hyrograsper\LunarFortis\PaymentTypes\FortisTerminalPaymentType;
+use Illuminate\Support\ServiceProvider;
 use Lunar\Base\PaymentManagerInterface;
 use Lunar\Managers\PaymentManager;
 use Spatie\LaravelPackageTools\Package;
+use Spatie\LaravelPackageTools\PackageServiceProvider;
 
 beforeEach(function () {
     $this->serviceProvider = new LunarFortisServiceProvider($this->app);
@@ -122,7 +124,7 @@ describe('Service Provider Integration', function () {
     });
 
     it('extends PackageServiceProvider', function () {
-        expect($this->serviceProvider)->toBeInstanceOf(\Spatie\LaravelPackageTools\PackageServiceProvider::class);
+        expect($this->serviceProvider)->toBeInstanceOf(PackageServiceProvider::class);
     });
 
     it('has correct package name', function () {
@@ -177,7 +179,7 @@ describe('Method Availability', function () {
 
 describe('Package Tools Integration', function () {
     it('uses Spatie Laravel Package Tools', function () {
-        expect($this->serviceProvider)->toBeInstanceOf(\Spatie\LaravelPackageTools\PackageServiceProvider::class);
+        expect($this->serviceProvider)->toBeInstanceOf(PackageServiceProvider::class);
     });
 
     it('implements required package service provider methods', function () {
@@ -259,8 +261,8 @@ describe('Reflection Analysis', function () {
     it('has correct class hierarchy', function () {
         $reflection = new ReflectionClass($this->serviceProvider);
 
-        expect($reflection->isSubclassOf(\Spatie\LaravelPackageTools\PackageServiceProvider::class))->toBeTrue();
-        expect($reflection->isSubclassOf(\Illuminate\Support\ServiceProvider::class))->toBeTrue();
+        expect($reflection->isSubclassOf(PackageServiceProvider::class))->toBeTrue();
+        expect($reflection->isSubclassOf(ServiceProvider::class))->toBeTrue();
     });
 
     it('has correct namespace', function () {

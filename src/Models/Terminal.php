@@ -5,6 +5,7 @@ namespace Hyrograsper\LunarFortis\Models;
 use Carbon\Carbon;
 use Exception;
 use Hyrograsper\LunarFortis\Facades\LunarFortis;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
@@ -60,37 +61,28 @@ class Terminal extends Model
         'fortis_data' => 'array',
     ];
 
-    // ========================================
-    // Query Scopes
-    // ========================================
-
-    public function scopeActive($query)
+    /** @param Builder<Terminal> $query */
+    public function scopeActive(Builder $query): Builder
     {
         return $query->where('active', true);
     }
 
-    public function scopeForLocation($query, string $locationId)
+    /** @param Builder<Terminal> $query */
+    public function scopeForLocation(Builder $query, string $locationId): Builder
     {
         return $query->where('location_id', $locationId);
     }
 
-    public function scopeByManufacturer($query, string $manufacturerCode)
+    /** @param Builder<Terminal> $query */
+    public function scopeByManufacturer(Builder $query, string $manufacturerCode): Builder
     {
         return $query->where('terminal_manufacturer_code', $manufacturerCode);
     }
 
-    // ========================================
-    // Accessors & Mutators
-    // ========================================
-
     public function getDisplayNameAttribute(): string
     {
-        return $this->title.' ('.$this->serial_number.')';
+        return "{$this->title} ({$this->serial_number})";
     }
-
-    // ========================================
-    // Terminal Status & Sync Methods
-    // ========================================
 
     public function needsSync(?int $hoursThreshold = 24): bool
     {
@@ -105,7 +97,6 @@ class Terminal extends Model
 
             return $syncedAt->diffInHours(now()) > $hoursThreshold;
         } catch (Exception) {
-            // If we can't parse the timestamp, assume it needs sync
             return true;
         }
     }
@@ -120,15 +111,7 @@ class Terminal extends Model
         return $this->active;
     }
 
-    // ========================================
-    // Fortis API Sync Methods
-    // ========================================
-
-    /**
-     * Sync all terminals from Fortis API
-     *
-     * @throws Exception
-     */
+    /** @throws Exception */
     public static function syncFromFortis(): array
     {
         $stats = [
@@ -138,7 +121,6 @@ class Terminal extends Model
             'total_processed' => 0,
         ];
 
-        // Fetch all terminals from Fortis API (error handling is in LunarFortis)
         $response = LunarFortis::listTerminals();
         $terminals = $response['list'] ?? [];
 
@@ -146,16 +128,13 @@ class Terminal extends Model
             $stats['total_processed']++;
 
             try {
-                // Extract terminal data
                 $terminalAttributes = static::mapFortisDataToAttributes($terminalData);
 
-                // Update or create terminal
                 $terminal = static::updateOrCreate(
                     ['fortis_id' => $terminalAttributes['fortis_id']],
                     $terminalAttributes
                 );
 
-                // Mark as synced
                 $terminal->markSynced();
 
                 if ($terminal->wasRecentlyCreated) {
@@ -177,57 +156,39 @@ class Terminal extends Model
         return $stats;
     }
 
-    /**
-     * Sync a single terminal from Fortis API by ID
-     *
-     * @throws Exception
-     */
+    /** @throws Exception */
     public static function syncSingleFromFortis(string $fortisId): ?static
     {
         try {
-            // Fetch single terminal from Fortis API
             $response = LunarFortis::getTerminal($fortisId);
             $data = $response['data'] ?? [];
 
             if (empty($data)) {
                 return null;
             }
-        } catch (Exception $exception) {
-            // Return null if terminal doesn't exist or there's an API error
+        } catch (Exception) {
             return null;
         }
 
-        // Extract terminal data
         $terminalAttributes = static::mapFortisDataToAttributes($data);
 
-        // Update or create terminal
         $terminal = static::updateOrCreate(
             ['fortis_id' => $terminalAttributes['fortis_id']],
             $terminalAttributes
         );
 
-        // Mark as synced
         $terminal->markSynced();
 
         return $terminal;
     }
 
-    // ========================================
-    // Payment Processing Methods
-    // ========================================
-
-    /**
-     * Process a credit card authorization using this terminal (auth-only flow)
-     *
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function authorizePayment(int $amount, array $options = []): array
     {
         if (! $this->active) {
             throw new Exception("Terminal {$this->fortis_id} is not active");
         }
 
-        // Error handling is now centralized in LunarFortis
         return LunarFortis::processTerminalCreditCardAuth(
             terminalId: $this->fortis_id,
             amount: $amount,
@@ -235,18 +196,13 @@ class Terminal extends Model
         );
     }
 
-    /**
-     * Initiate an authorization and return async status code for manual monitoring
-     *
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function initiateAuthorization(int $amount, array $options = []): string
     {
         if (! $this->active) {
             throw new Exception("Terminal {$this->fortis_id} is not active");
         }
 
-        // Error handling is now centralized in LunarFortis
         $response = LunarFortis::authorizeTerminalCreditCard(
             terminalId: $this->fortis_id,
             amount: $amount,
@@ -263,14 +219,9 @@ class Terminal extends Model
         return $statusCode;
     }
 
-    /**
-     * Check the status of an authorization by async status code
-     *
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function checkAuthorizationStatus(string $statusCode): array
     {
-        // Error handling is now centralized in LunarFortis
         $response = LunarFortis::checkTerminalTransactionStatus($statusCode);
         $statusData = $response['data'] ?? [];
 
@@ -287,17 +238,12 @@ class Terminal extends Model
         ];
     }
 
-    /**
-     * Wait for an authorization to complete
-     *
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function waitForAuthorization(
         string $statusCode,
         int $timeoutSeconds = 300,
         int $pollIntervalSeconds = 2
     ): array {
-        // Error handling is now centralized in LunarFortis
         $response = LunarFortis::waitForTerminalTransaction($statusCode, $timeoutSeconds, $pollIntervalSeconds);
         $statusData = $response['data'] ?? [];
 
@@ -316,31 +262,15 @@ class Terminal extends Model
         ];
     }
 
-    /**
-     * Capture an authorized transaction (complete the payment)
-     *
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function captureTransaction(string $transactionId, int $amount, array $options = []): array
     {
-        // Add terminal context to options
-        $options = array_merge($options, [
-            'order_number' => $options['order_number'] ?? null,
-            'customer_id' => $options['customer_id'] ?? null,
-        ]);
-
-        // Error handling is now centralized in LunarFortis
         return LunarFortis::captureTerminalTransaction($transactionId, $amount, $options);
     }
 
-    /**
-     * Complete auth-only flow: authorize and capture in one call
-     *
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function processCompletePayment(int $amount, array $options = []): array
     {
-        // Step 1: Authorize
         $authResult = $this->authorizePayment($amount, $options);
 
         if (! $authResult['success']) {
@@ -352,7 +282,6 @@ class Terminal extends Model
             throw new Exception('No transaction ID returned from authorization');
         }
 
-        // Step 2: Capture
         $captureResult = $this->captureTransaction($transactionId, $amount, $options);
 
         return array_merge($authResult, [
@@ -361,13 +290,6 @@ class Terminal extends Model
         ]);
     }
 
-    // ========================================
-    // Validation & Configuration Methods
-    // ========================================
-
-    /**
-     * Get validation rules for Terminal fields
-     */
     public static function getValidationRules(?string $scenario = null): array
     {
         $rules = [
@@ -385,7 +307,6 @@ class Terminal extends Model
             'fortis_id' => ['required', 'string', 'max:255'],
         ];
 
-        // Scenario-specific rule modifications
         return match ($scenario) {
             'create' => array_merge($rules, [
                 'fortis_id' => ['required', 'string', 'max:255', 'unique:fortis_terminals,fortis_id'],
@@ -397,9 +318,6 @@ class Terminal extends Model
         };
     }
 
-    /**
-     * Get the allowed values for terminal manufacturer codes
-     */
     public static function getAllowedManufacturerCodes(): array
     {
         return [
@@ -410,22 +328,11 @@ class Terminal extends Model
         ];
     }
 
-    /**
-     * Check if a manufacturer code is valid
-     *
-     * @param  mixed  $code
-     */
-    public static function isValidManufacturerCode($code): bool
+    public static function isValidManufacturerCode(mixed $code): bool
     {
         return in_array($code, static::getAllowedManufacturerCodes(), true);
     }
 
-    /**
-     * Get display names for manufacturer codes
-     *
-     * @param  string|null  $code  Optional specific code to get label for
-     * @return array|string|null
-     */
     public static function getManufacturerCodeLabels($code = null)
     {
         $labels = [
@@ -438,9 +345,6 @@ class Terminal extends Model
         return $code ? ($labels[$code] ?? null) : $labels;
     }
 
-    /**
-     * Get manufacturer code options formatted for select dropdowns
-     */
     public static function getManufacturerCodeOptions(): array
     {
         $options = [];
@@ -453,10 +357,6 @@ class Terminal extends Model
 
         return $options;
     }
-
-    // ========================================
-    // Private Helper Methods
-    // ========================================
 
     protected static function mapFortisDataToAttributes(array $data): array
     {
@@ -473,7 +373,7 @@ class Terminal extends Model
             'fortis_modified_at' => isset($data['modified_ts']) ? Carbon::createFromTimestamp($data['modified_ts']) : null,
             'created_user_id' => $data['created_user_id'] ?? null,
             'modified_user_id' => $data['modified_user_id'] ?? null,
-            'fortis_data' => $data, // Store full response for reference
+            'fortis_data' => $data,
         ];
     }
 }

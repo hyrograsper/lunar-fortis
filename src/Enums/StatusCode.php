@@ -14,17 +14,17 @@ enum StatusCode: int
 
     public static function isCaptured(int $statusCode): bool
     {
-        return $statusCode == StatusCode::Approved->value;
+        return $statusCode == self::Approved->value;
     }
 
     public static function isRefunded(int $statusCode): bool
     {
-        return $statusCode == StatusCode::Refunded->value;
+        return $statusCode == self::Refunded->value;
     }
 
     public static function isSuccessful(int $statusCode): bool
     {
-        return in_array($statusCode, [StatusCode::Approved->value, StatusCode::AuthOnly->value]);
+        return in_array($statusCode, [self::Approved->value, self::AuthOnly->value]);
     }
 
     public static function isUnsuccessful(int $statusCode): bool

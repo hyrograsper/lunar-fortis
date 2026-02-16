@@ -2,15 +2,16 @@
 
 namespace Hyrograsper\LunarFortis\Facades;
 
+use Hyrograsper\LunarFortis\LunarFortis as LunarFortisBase;
 use Illuminate\Support\Facades\Facade;
 
 /**
- * @see \Hyrograsper\LunarFortis\LunarFortis
+ * @see LunarFortisBase
  */
 class LunarFortis extends Facade
 {
     protected static function getFacadeAccessor(): string
     {
-        return \Hyrograsper\LunarFortis\LunarFortis::class;
+        return LunarFortisBase::class;
     }
 }

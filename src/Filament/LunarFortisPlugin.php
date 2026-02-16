@@ -17,10 +17,7 @@ class LunarFortisPlugin implements Plugin
         $panel->discoverResources(in: __DIR__.'/Resources', for: 'Hyrograsper\\LunarFortis\\Filament\\Resources');
     }
 
-    public function boot(Panel $panel): void
-    {
-        //
-    }
+    public function boot(Panel $panel): void {}
 
     public static function make(): static
     {

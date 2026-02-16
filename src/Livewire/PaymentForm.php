@@ -93,7 +93,6 @@ class PaymentForm extends Component
         }
     }
 
-    /** Fortis API requires a minimum amount of 1 cent. */
     public function isZeroDollarCart(): bool
     {
         $this->cart->calculate();

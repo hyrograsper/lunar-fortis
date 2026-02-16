@@ -15,12 +15,10 @@ class TerminalObserver
 
     public function updating(Terminal $terminal): bool
     {
-        // Skip sync if the terminal doesn't have a Fortis ID yet
         if (empty($terminal->fortis_id)) {
             return true;
         }
 
-        // Skip sync if only local tracking fields were updated
         $localOnlyFields = [
             'synced_at',
             'created_at',
@@ -38,7 +36,6 @@ class TerminalObserver
         try {
             $this->syncToFortis($terminal, $significantChanges);
         } catch (Exception $exception) {
-            // Error handling is now centralized in LunarFortis, so we just need to log the sync failure
             Log::error('LunarFortis: Failed to sync terminal to Fortis API during update', [
                 'terminal_id' => $terminal->id,
                 'fortis_id' => $terminal->fortis_id,
@@ -48,7 +45,6 @@ class TerminalObserver
                 'error_message' => $exception->getMessage(),
             ]);
 
-            // Re-throw the exception to prevent database save and let Filament handle the error
             throw new Exception("Failed to sync terminal to Fortis API: {$exception->getMessage()}");
         }
 
@@ -57,12 +53,10 @@ class TerminalObserver
 
     public function created(Terminal $terminal): void
     {
-        // Skip if this terminal was created via sync (has fortis_id)
         if (! empty($terminal->fortis_id)) {
             return;
         }
 
-        // Only sync to Fortis if minimum required fields are present
         if (empty($terminal->title) || empty($terminal->serial_number)) {
             return;
         }
@@ -70,73 +64,43 @@ class TerminalObserver
         try {
             $this->createInFortis($terminal);
         } catch (Exception $exception) {
-            // Error handling is now centralized in LunarFortis, so we just need to log the sync failure
             Log::error('LunarFortis: Failed to create terminal in Fortis API during creation', [
                 'terminal_id' => $terminal->id,
                 'terminal_title' => $terminal->title,
                 'terminal_serial' => $terminal->serial_number,
                 'error_message' => $exception->getMessage(),
             ]);
-
-            // For creation, we might want to allow local save but log the sync failure
-            // Alternatively, throw exception to prevent creation entirely:
-            // throw new Exception("Failed to create terminal in Fortis API: {$exception->getMessage()}");
         }
     }
 
     protected function syncToFortis(Terminal $terminal, array $changedFields): void
     {
-        // Build update data from changed fields
-        $updateData = [];
-
-        $fieldMapping = [
-            'title' => 'title',
-            'serial_number' => 'serial_number',
-            'location_id' => 'location_id',
-            'terminal_application_id' => 'terminal_application_id',
-            'terminal_manufacturer_code' => 'terminal_manufacturer_code',
-            'default_product_transaction_id' => 'default_product_transaction_id',
-            'active' => 'active',
+        $syncableFields = [
+            'title', 'serial_number', 'location_id', 'terminal_application_id',
+            'terminal_manufacturer_code', 'default_product_transaction_id', 'active',
         ];
 
-        foreach ($changedFields as $field) {
-            if (isset($fieldMapping[$field])) {
-                $value = $terminal->getAttribute($field);
-                $updateData[$fieldMapping[$field]] = $value;
-            }
+        $updateData = array_intersect_key(
+            $terminal->getAttributes(),
+            array_flip(array_intersect($changedFields, $syncableFields))
+        );
+
+        if (empty($updateData)) {
+            return;
         }
 
-        if (! empty($updateData)) {
-            Log::info('LunarFortis: Attempting to sync terminal to Fortis API', [
-                'terminal_id' => $terminal->id,
-                'fortis_id' => $terminal->fortis_id,
-                'terminal_title' => $terminal->title,
-                'update_data' => $updateData,
-                'changed_fields' => $changedFields,
-            ]);
+        $this->fortis->updateTerminal($terminal->fortis_id, $updateData);
 
-            $response = $this->fortis->updateTerminal($terminal->fortis_id, $updateData);
+        $terminal->updateQuietly(['synced_at' => now()]);
 
-            // Update the synced_at timestamp
-            $terminal->updateQuietly(['synced_at' => now()]);
-
-            Log::info('LunarFortis: Terminal synced to Fortis API successfully', [
-                'terminal_id' => $terminal->id,
-                'fortis_id' => $terminal->fortis_id,
-                'updated_fields' => array_keys($updateData),
-            ]);
-        } else {
-            Log::info('LunarFortis: No significant data changes to sync for terminal', [
-                'terminal_id' => $terminal->id,
-                'fortis_id' => $terminal->fortis_id,
-                'changed_fields' => $changedFields,
-            ]);
-        }
+        Log::info('LunarFortis: Terminal synced to Fortis API', [
+            'fortis_id' => $terminal->fortis_id,
+            'updated_fields' => array_keys($updateData),
+        ]);
     }
 
     protected function createInFortis(Terminal $terminal): void
     {
-        // Build terminal data for creation
         $terminalData = [
             'title' => $terminal->title,
             'serial_number' => $terminal->serial_number,
@@ -144,7 +108,6 @@ class TerminalObserver
             'active' => $terminal->active ?? true,
         ];
 
-        // Add optional fields if they exist
         $optionalFields = [
             'terminal_application_id',
             'terminal_manufacturer_code',
@@ -160,7 +123,6 @@ class TerminalObserver
         $response = $this->fortis->createTerminal($terminalData);
         $fortisTerminal = $response['data'] ?? [];
 
-        // Update the local terminal with the Fortis ID and sync timestamp
         $terminal->updateQuietly([
             'fortis_id' => $fortisTerminal['id'] ?? null,
             'synced_at' => now(),

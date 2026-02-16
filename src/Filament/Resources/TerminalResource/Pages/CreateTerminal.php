@@ -30,7 +30,6 @@ class CreateTerminal extends CreateRecord
         try {
             return parent::handleRecordCreation($data);
         } catch (Exception $exception) {
-            // Handle Fortis sync failures during creation
             Notification::make()
                 ->title('Terminal creation failed')
                 ->body($exception->getMessage())
@@ -40,7 +39,6 @@ class CreateTerminal extends CreateRecord
 
             $this->halt();
 
-            // This line should never be reached due to halt() above, but PHPStan requires it
             throw $exception;
         }
     }

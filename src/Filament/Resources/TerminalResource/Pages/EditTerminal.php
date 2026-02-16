@@ -39,7 +39,6 @@ class EditTerminal extends EditRecord
         try {
             return parent::handleRecordUpdate($record, $data);
         } catch (Exception $exception) {
-            // Handle Fortis sync failures with appropriate notifications
             Notification::make()
                 ->title('Terminal update failed')
                 ->body($exception->getMessage())
@@ -49,7 +48,6 @@ class EditTerminal extends EditRecord
 
             $this->halt();
 
-            // This line should never be reached due to halt() above, but PHPStan requires it
             throw $exception;
         }
     }

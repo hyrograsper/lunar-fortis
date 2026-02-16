@@ -33,12 +33,6 @@ parameters:
 		-
 			message: '#^Cannot call method processCompletePayment\(\) on Illuminate\\Database\\Eloquent\\Model\|int\|string\.$#'
 			identifier: method.nonObject
-			count: 2
-			path: src/Filament/Resources/TerminalResource/Pages/ViewTerminal.php
-
-		-
-			message: '#^Match expression does not handle remaining value\: string$#'
-			identifier: match.unhandled
 			count: 1
 			path: src/Filament/Resources/TerminalResource/Pages/ViewTerminal.php
 
@@ -105,19 +99,37 @@ parameters:
 		-
 			message: '#^Access to an undefined property Lunar\\Models\\Contracts\\Order\:\:\$id\.$#'
 			identifier: property.notFound
-			count: 2
+			count: 3
+			path: src/PaymentTypes/FortisPaymentType.php
+
+		-
+			message: '#^Access to an undefined property Lunar\\Models\\Contracts\\Order\:\:\$placed_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/PaymentTypes/FortisPaymentType.php
+
+		-
+			message: '#^Access to an undefined property Lunar\\Models\\Contracts\\Order\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/PaymentTypes/FortisPaymentType.php
+
+		-
+			message: '#^Call to an undefined method Lunar\\Models\\Contracts\\Order\:\:save\(\)\.$#'
+			identifier: method.notFound
+			count: 1
 			path: src/PaymentTypes/FortisPaymentType.php
 
 		-
 			message: '#^Access to an undefined property Lunar\\Models\\Contracts\\Transaction\:\:\$id\.$#'
 			identifier: property.notFound
-			count: 4
+			count: 3
 			path: src/PaymentTypes/FortisPaymentType.php
 
 		-
 			message: '#^Access to an undefined property Lunar\\Models\\Contracts\\Transaction\:\:\$order\.$#'
 			identifier: property.notFound
-			count: 4
+			count: 3
 			path: src/PaymentTypes/FortisPaymentType.php
 
 		-
@@ -129,7 +141,7 @@ parameters:
 		-
 			message: '#^Strict comparison using \!\=\= between mixed and null will always evaluate to true\.$#'
 			identifier: notIdentical.alwaysTrue
-			count: 2
+			count: 1
 			path: src/PaymentTypes/FortisPaymentType.php
 
 		-
@@ -153,13 +165,31 @@ parameters:
 		-
 			message: '#^Access to an undefined property Lunar\\Models\\Contracts\\Order\:\:\$id\.$#'
 			identifier: property.notFound
-			count: 5
+			count: 6
+			path: src/PaymentTypes/FortisTerminalPaymentType.php
+
+		-
+			message: '#^Access to an undefined property Lunar\\Models\\Contracts\\Order\:\:\$placed_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/PaymentTypes/FortisTerminalPaymentType.php
+
+		-
+			message: '#^Access to an undefined property Lunar\\Models\\Contracts\\Order\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/PaymentTypes/FortisTerminalPaymentType.php
+
+		-
+			message: '#^Call to an undefined method Lunar\\Models\\Contracts\\Order\:\:save\(\)\.$#'
+			identifier: method.notFound
+			count: 1
 			path: src/PaymentTypes/FortisTerminalPaymentType.php
 
 		-
 			message: '#^Access to an undefined property Lunar\\Models\\Contracts\\Transaction\:\:\$id\.$#'
 			identifier: property.notFound
-			count: 4
+			count: 3
 			path: src/PaymentTypes/FortisTerminalPaymentType.php
 
 		-
@@ -171,7 +201,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property Lunar\\Models\\Contracts\\Transaction\:\:\$order\.$#'
 			identifier: property.notFound
-			count: 4
+			count: 3
 			path: src/PaymentTypes/FortisTerminalPaymentType.php
 
 		-
@@ -180,8 +210,3 @@ parameters:
 			count: 1
 			path: src/PaymentTypes/FortisTerminalPaymentType.php
 
-		-
-			message: '#^Variable \$data might not be defined\.$#'
-			identifier: variable.undefined
-			count: 1
-			path: src/Services/FortisHttpService.php

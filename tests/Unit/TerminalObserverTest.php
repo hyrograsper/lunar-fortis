@@ -11,7 +11,6 @@ describe('TerminalObserver - Basic Functionality', function () {
         $this->mockFortis = Mockery::mock(LunarFortis::class);
         $this->observer = new TerminalObserver($this->mockFortis);
 
-        // Mock Log facade
         Log::shouldReceive('info')->withAnyArgs();
         Log::shouldReceive('error')->withAnyArgs();
     });
@@ -98,7 +97,6 @@ describe('TerminalObserver - Direct Method Testing', function () {
         $this->mockFortis = Mockery::mock(LunarFortis::class);
         $this->observer = new TerminalObserver($this->mockFortis);
 
-        // Mock Log facade
         Log::shouldReceive('info')->withAnyArgs();
         Log::shouldReceive('error')->withAnyArgs();
     });
@@ -252,7 +250,6 @@ describe('TerminalObserver - Field Mapping', function () {
         $this->mockFortis = Mockery::mock(LunarFortis::class);
         $this->observer = new TerminalObserver($this->mockFortis);
 
-        // Mock Log facade
         Log::shouldReceive('info')->withAnyArgs();
         Log::shouldReceive('error')->withAnyArgs();
     });

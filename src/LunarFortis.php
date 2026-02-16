@@ -15,16 +15,10 @@ class LunarFortis
 
     protected function getHttpService(): FortisHttpService
     {
-        if ($this->httpService) {
-            return $this->httpService;
-        }
-
-        return $this->httpService = new FortisHttpService;
+        return $this->httpService ??= new FortisHttpService;
     }
 
-    /**
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function getClientTokenForSaleAmount(int $amount, string $action = 'sale'): ?string
     {
         try {
@@ -36,13 +30,10 @@ class LunarFortis
         }
     }
 
-    /**
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function completeAuthorizedTransaction(TransactionContract $transaction, int $amount = 0, array $options = []): array
     {
         try {
-            // Build options from transaction data and merge with provided options
             $transactionOptions = [];
 
             if ($transaction->order?->reference) {
@@ -53,21 +44,17 @@ class LunarFortis
                 $transactionOptions['customer_id'] = $transaction->order->customer_id;
             }
 
-            $mergedOptions = array_merge($transactionOptions, $options);
-
             return $this->getHttpService()->completeAuthorizedTransaction(
                 $transaction->reference,
                 $amount,
-                $mergedOptions
+                array_merge($transactionOptions, $options)
             );
         } catch (Exception $exception) {
             throw new Exception("Failed to complete authorized transaction: {$exception->getMessage()}");
         }
     }
 
-    /**
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function authorizeCcFromToken(string $tokenId, Order $order): array
     {
         try {
@@ -92,9 +79,7 @@ class LunarFortis
         }
     }
 
-    /**
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function refund(TransactionContract $transaction, int $amount): array
     {
         try {
@@ -104,9 +89,7 @@ class LunarFortis
         }
     }
 
-    /**
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function getTransaction(string $transactionId): array
     {
         try {
@@ -116,13 +99,7 @@ class LunarFortis
         }
     }
 
-    // Terminal Management Methods
-
-    /**
-     * Create a new terminal device
-     *
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function createTerminal(array $terminalData): array
     {
         try {
@@ -132,11 +109,7 @@ class LunarFortis
         }
     }
 
-    /**
-     * Get all terminals for the location
-     *
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function listTerminals(array $options = []): array
     {
         try {
@@ -146,11 +119,7 @@ class LunarFortis
         }
     }
 
-    /**
-     * Get a single terminal by ID
-     *
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function getTerminal(string $terminalId, ?array $expand = null, ?array $fields = null): array
     {
         try {
@@ -160,11 +129,7 @@ class LunarFortis
         }
     }
 
-    /**
-     * Update an existing terminal
-     *
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function updateTerminal(string $terminalId, array $terminalData, ?array $expand = null): array
     {
         try {
@@ -174,34 +139,22 @@ class LunarFortis
         }
     }
 
-    // Helper methods for common terminal operations
-
-    /**
-     * Create a simple terminal with minimal required data
-     *
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function createSimpleTerminal(
         string $title,
         string $serialNumber,
         string $terminalApplicationId,
         array $additionalOptions = []
     ): array {
-        $terminalData = array_merge([
+        return $this->createTerminal(array_merge([
             'title' => $title,
             'serial_number' => $serialNumber,
             'terminal_application_id' => $terminalApplicationId,
             'active' => true,
-        ], $additionalOptions);
-
-        return $this->createTerminal($terminalData);
+        ], $additionalOptions));
     }
 
-    /**
-     * Get all active terminals for current location
-     *
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function getActiveTerminals(): array
     {
         return $this->listTerminals([
@@ -220,23 +173,13 @@ class LunarFortis
         ]);
     }
 
-    /**
-     * Activate/deactivate a terminal
-     *
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function setTerminalStatus(string $terminalId, bool $active): array
     {
         return $this->updateTerminal($terminalId, ['active' => $active]);
     }
 
-    // Terminal Credit Card Processing Methods
-
-    /**
-     * Authorize a credit card transaction through a terminal (auth-only)
-     *
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function authorizeTerminalCreditCard(string $terminalId, int $amount, array $options = []): array
     {
         try {
@@ -246,11 +189,7 @@ class LunarFortis
         }
     }
 
-    /**
-     * Check the status of an async terminal transaction
-     *
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function checkTerminalTransactionStatus(string $statusCode): array
     {
         try {
@@ -260,11 +199,7 @@ class LunarFortis
         }
     }
 
-    /**
-     * Wait for a terminal transaction to complete by polling the status
-     *
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function waitForTerminalTransaction(
         string $statusCode,
         int $timeoutSeconds = 300,
@@ -277,12 +212,10 @@ class LunarFortis
             $status = $this->checkTerminalTransactionStatus($statusCode);
             $statusData = $status['data'] ?? [];
 
-            // Check if transaction is complete
             if (($statusData['progress'] ?? 0) >= 100) {
                 return $status;
             }
 
-            // Check for errors
             if ($statusData['error'] ?? null) {
                 Log::error('LunarFortis: Terminal transaction failed', [
                     'status_code' => $statusCode,
@@ -293,11 +226,9 @@ class LunarFortis
                 return $status;
             }
 
-            // Wait before next poll
             sleep($pollIntervalSeconds);
         }
 
-        // Timeout reached - get final status
         $finalStatus = $this->checkTerminalTransactionStatus($statusCode);
         Log::warning('LunarFortis: Terminal transaction polling timed out', [
             'status_code' => $statusCode,
@@ -308,20 +239,14 @@ class LunarFortis
         return $finalStatus;
     }
 
-    /**
-     * Process a complete terminal credit card authorization with automatic status monitoring
-     *
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function processTerminalCreditCardAuth(string $terminalId, int $amount, array $options = []): array
     {
-        // Extract polling options
         $timeoutSeconds = $options['timeout_seconds'] ?? 300;
         $pollIntervalSeconds = $options['poll_interval_seconds'] ?? 2;
         unset($options['timeout_seconds'], $options['poll_interval_seconds']);
 
         try {
-            // Step 1: Initiate the terminal authorization
             if (config('lunar-fortis.debug')) {
                 Log::debug('LunarFortis: Initiating terminal credit card authorization', [
                     'terminal_id' => $terminalId,
@@ -345,11 +270,9 @@ class LunarFortis
                 ]);
             }
 
-            // Step 2: Wait for completion
             $finalStatus = $this->waitForTerminalTransaction($statusCode, $timeoutSeconds, $pollIntervalSeconds);
             $statusData = $finalStatus['data'] ?? [];
 
-            // Step 3: Build result array
             $result = [
                 'success' => ($statusData['progress'] ?? 0) >= 100 && ! ($statusData['error'] ?? null),
                 'status_code' => $statusCode,
@@ -379,11 +302,7 @@ class LunarFortis
         }
     }
 
-    /**
-     * Capture an authorized terminal transaction (complete the payment)
-     *
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function captureTerminalTransaction(string $transactionId, int $amount, array $options = []): array
     {
         try {
