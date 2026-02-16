@@ -103,11 +103,7 @@ class Terminal extends Model
         return $this->active;
     }
 
-    /**
-     * Sync all terminals from Fortis API
-     *
-     * @throws Exception
-     */
+    /** @throws Exception */
     public static function syncFromFortis(): array
     {
         $stats = [
@@ -117,7 +113,6 @@ class Terminal extends Model
             'total_processed' => 0,
         ];
 
-        // Fetch all terminals from Fortis API (error handling is in LunarFortis)
         $response = LunarFortis::listTerminals();
         $terminals = $response['list'] ?? [];
 
@@ -153,11 +148,7 @@ class Terminal extends Model
         return $stats;
     }
 
-    /**
-     * Sync a single terminal from Fortis API by ID
-     *
-     * @throws Exception
-     */
+    /** @throws Exception */
     public static function syncSingleFromFortis(string $fortisId): ?static
     {
         try {
@@ -183,11 +174,7 @@ class Terminal extends Model
         return $terminal;
     }
 
-    /**
-     * Process a credit card authorization using this terminal (auth-only flow)
-     *
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function authorizePayment(int $amount, array $options = []): array
     {
         if (! $this->active) {
@@ -201,11 +188,7 @@ class Terminal extends Model
         );
     }
 
-    /**
-     * Initiate an authorization and return async status code for manual monitoring
-     *
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function initiateAuthorization(int $amount, array $options = []): string
     {
         if (! $this->active) {
@@ -228,11 +211,7 @@ class Terminal extends Model
         return $statusCode;
     }
 
-    /**
-     * Check the status of an authorization by async status code
-     *
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function checkAuthorizationStatus(string $statusCode): array
     {
         $response = LunarFortis::checkTerminalTransactionStatus($statusCode);
@@ -251,11 +230,7 @@ class Terminal extends Model
         ];
     }
 
-    /**
-     * Wait for an authorization to complete
-     *
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function waitForAuthorization(
         string $statusCode,
         int $timeoutSeconds = 300,
@@ -279,21 +254,13 @@ class Terminal extends Model
         ];
     }
 
-    /**
-     * Capture an authorized transaction (complete the payment)
-     *
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function captureTransaction(string $transactionId, int $amount, array $options = []): array
     {
         return LunarFortis::captureTerminalTransaction($transactionId, $amount, $options);
     }
 
-    /**
-     * Complete auth-only flow: authorize and capture in one call
-     *
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function processCompletePayment(int $amount, array $options = []): array
     {
         $authResult = $this->authorizePayment($amount, $options);
@@ -315,9 +282,6 @@ class Terminal extends Model
         ]);
     }
 
-    /**
-     * Get validation rules for Terminal fields
-     */
     public static function getValidationRules(?string $scenario = null): array
     {
         $rules = [
@@ -346,9 +310,6 @@ class Terminal extends Model
         };
     }
 
-    /**
-     * Get the allowed values for terminal manufacturer codes
-     */
     public static function getAllowedManufacturerCodes(): array
     {
         return [
@@ -377,9 +338,6 @@ class Terminal extends Model
         return $code !== null ? ($labels[$code] ?? null) : $labels;
     }
 
-    /**
-     * Get manufacturer code options formatted for select dropdowns
-     */
     public static function getManufacturerCodeOptions(): array
     {
         $options = [];

@@ -80,37 +80,20 @@ class TerminalObserver
             'terminal_manufacturer_code', 'default_product_transaction_id', 'active',
         ];
 
-        $updateData = [];
-        foreach ($changedFields as $field) {
-            if (in_array($field, $syncableFields)) {
-                $updateData[$field] = $terminal->getAttribute($field);
-            }
-        }
+        $updateData = array_intersect_key(
+            $terminal->getAttributes(),
+            array_flip(array_intersect($changedFields, $syncableFields))
+        );
 
         if (empty($updateData)) {
-            Log::info('LunarFortis: No significant data changes to sync for terminal', [
-                'terminal_id' => $terminal->id,
-                'fortis_id' => $terminal->fortis_id,
-                'changed_fields' => $changedFields,
-            ]);
-
             return;
         }
-
-        Log::info('LunarFortis: Attempting to sync terminal to Fortis API', [
-            'terminal_id' => $terminal->id,
-            'fortis_id' => $terminal->fortis_id,
-            'terminal_title' => $terminal->title,
-            'update_data' => $updateData,
-            'changed_fields' => $changedFields,
-        ]);
 
         $this->fortis->updateTerminal($terminal->fortis_id, $updateData);
 
         $terminal->updateQuietly(['synced_at' => now()]);
 
-        Log::info('LunarFortis: Terminal synced to Fortis API successfully', [
-            'terminal_id' => $terminal->id,
+        Log::info('LunarFortis: Terminal synced to Fortis API', [
             'fortis_id' => $terminal->fortis_id,
             'updated_fields' => array_keys($updateData),
         ]);
