@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Config;
 
 beforeEach(function () {
     // Reset config to default values before each test
-    $config = require config_path('lunar-fortis.php');
+    $config = require __DIR__.'/../../config/lunar-fortis.php';
     Config::set('lunar-fortis', $config);
 });
 
