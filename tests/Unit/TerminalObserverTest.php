@@ -11,9 +11,7 @@ describe('TerminalObserver - Basic Functionality', function () {
         $this->mockFortis = Mockery::mock(LunarFortis::class);
         $this->observer = new TerminalObserver($this->mockFortis);
 
-        // Mock Log facade
-        Log::shouldReceive('info')->withAnyArgs();
-        Log::shouldReceive('error')->withAnyArgs();
+        Log::spy();
     });
 
     it('skips sync when terminal has no fortis_id', function () {
@@ -98,9 +96,7 @@ describe('TerminalObserver - Direct Method Testing', function () {
         $this->mockFortis = Mockery::mock(LunarFortis::class);
         $this->observer = new TerminalObserver($this->mockFortis);
 
-        // Mock Log facade
-        Log::shouldReceive('info')->withAnyArgs();
-        Log::shouldReceive('error')->withAnyArgs();
+        Log::spy();
     });
 
     it('can call syncToFortis method directly', function () {
@@ -252,9 +248,7 @@ describe('TerminalObserver - Field Mapping', function () {
         $this->mockFortis = Mockery::mock(LunarFortis::class);
         $this->observer = new TerminalObserver($this->mockFortis);
 
-        // Mock Log facade
-        Log::shouldReceive('info')->withAnyArgs();
-        Log::shouldReceive('error')->withAnyArgs();
+        Log::spy();
     });
 
     it('maps field names correctly in syncToFortis', function () {
