@@ -16,12 +16,12 @@
 
                 this.loadScript();
 
-                Livewire.on('token-regenerated', (event) => {
+                $wire.on('token-regenerated', (event) => {
                     this.token = event[0];
                     this.initPaymentForm();
                 });
 
-                Livewire.on('payment-error', (event) => {
+                $wire.on('payment-error', (event) => {
                     this.error = event[0] || 'An error occurred while processing your payment. Please try again.';
 
                     Flux.modal('payment-processing').close();
@@ -70,13 +70,13 @@
                 elements.on('submitted', (event) => {
                     setTimeout(() => {
                         Flux.modal('payment-processing').show();
-                    }, 500)
+                    }, 500);
 
                     this.loading = true;
                 });
 
                 elements.on('done', (event) => {
-                    Livewire.dispatch('handle-payment-response', {response: event});
+                    $wire.dispatch('handle-payment-response', {response: event});
                 });
 
                 elements.on('tokenExpired', (event) => {
@@ -86,7 +86,7 @@
                 elements.on('error', (event) => {
                     setTimeout(() => {
                         Flux.modal('payment-processing').close();
-                    }, 500)
+                    }, 500);
 
                     this.$nextTick(() => {
                         this.loading = false;
@@ -95,7 +95,7 @@
             },
 
             removeEventListeners() {
-                if (elements !== undefined) {
+                if (elements) {
                     try {
                         elements.off('validationError');
                         elements.off('ready');
@@ -114,7 +114,7 @@
 
                 this.removeEventListeners();
 
-                Livewire.dispatch('regenerate-client-token');
+                $wire.dispatch('regenerate-client-token');
             },
 
             isDarkMode() {
