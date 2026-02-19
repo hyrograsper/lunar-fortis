@@ -3,22 +3,32 @@
 namespace Hyrograsper\LunarFortis\Filament\Resources;
 
 use Exception;
-use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Actions\Action as TableAction;
+use Filament\Actions\BulkAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Filament\Support\RawJs;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Hyrograsper\LunarFortis\Filament\Resources\TerminalResource\Pages;
 use Hyrograsper\LunarFortis\Models\Terminal;
+use BackedEnum;
 use Illuminate\Database\Eloquent\Builder;
 
 class TerminalResource extends Resource
 {
     protected static ?string $model = Terminal::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-credit-card';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-credit-card';
 
     protected static ?int $navigationSort = 1;
 
@@ -37,22 +47,22 @@ class TerminalResource extends Resource
         return __('Terminals');
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
-                Forms\Components\Section::make('Terminal Information')
+                Section::make('Terminal Information')
                     ->schema([
-                        Forms\Components\TextInput::make('title')
+                        TextInput::make('title')
                             ->required()
                             ->rules(['required', 'string', 'max:255'])
                             ->label('Terminal Name'),
 
-                        Forms\Components\Toggle::make('active')
+                        Toggle::make('active')
                             ->default(true)
                             ->label('Active'),
 
-                        Forms\Components\TextInput::make('serial_number')
+                        TextInput::make('serial_number')
                             ->readOnly()
                             ->disabled()
                             ->required()
@@ -60,7 +70,7 @@ class TerminalResource extends Resource
                             ->rules(['required', 'string', 'max:255'])
                             ->label('Serial Number'),
 
-                        Forms\Components\TextInput::make('fortis_id')
+                        TextInput::make('fortis_id')
                             ->readOnly()
                             ->disabled()
                             ->unique(Terminal::class, 'fortis_id', ignoreRecord: true)
@@ -68,7 +78,7 @@ class TerminalResource extends Resource
                             ->label('Fortis Terminal ID')
                             ->helperText('The terminal ID from Fortis API (auto-filled during sync)'),
 
-                        Forms\Components\Select::make('location_id')
+                        Select::make('location_id')
                             ->required()
                             ->default(config('services.fortis.locationId'))
                             ->options([
@@ -77,16 +87,16 @@ class TerminalResource extends Resource
                             ->rules(['nullable', 'string', 'max:255'])
                             ->label('Location ID'),
 
-                        Forms\Components\TextInput::make('terminal_application_id')
+                        TextInput::make('terminal_application_id')
                             ->rules(['nullable', 'string', 'max:255'])
                             ->label('Application ID'),
 
-                        Forms\Components\Select::make('terminal_manufacturer_code')
+                        Select::make('terminal_manufacturer_code')
                             ->options(Terminal::getManufacturerCodeLabels())
                             ->rules(Terminal::getValidationRules()['terminal_manufacturer_code'])
                             ->label('Manufacturer Code'),
 
-                        Forms\Components\TextInput::make('default_product_transaction_id')
+                        TextInput::make('default_product_transaction_id')
                             ->rules(['nullable', 'string', 'max:255'])
                             ->label('Default Product Transaction ID'),
                     ])
@@ -141,11 +151,11 @@ class TerminalResource extends Resource
                     })
                     ->label('Needs Sync'),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
+            ->recordActions([
+                ViewAction::make(),
+                EditAction::make(),
 
-                Tables\Actions\Action::make('sync')
+                TableAction::make('sync')
                     ->icon('heroicon-o-arrow-path')
                     ->color('info')
                     ->action(function (Terminal $record) {
@@ -173,11 +183,11 @@ class TerminalResource extends Resource
                     ->visible(fn (Terminal $record) => ! empty($record->fortis_id))
                     ->requiresConfirmation(),
 
-                Tables\Actions\Action::make('capture_payment')
+                TableAction::make('capture_payment')
                     ->icon('heroicon-o-credit-card')
                     ->color('warning')
-                    ->form([
-                        Forms\Components\TextInput::make('amount')
+                    ->schema([
+                        TextInput::make('amount')
                             ->required()
                             ->numeric()
                             ->inputMode('decimal')
@@ -185,10 +195,10 @@ class TerminalResource extends Resource
                             ->placeholder('100.00')
                             ->suffix('dollars')
                             ->label('Amount'),
-                        Forms\Components\TextInput::make('description')
+                        TextInput::make('description')
                             ->helperText('To help identify the transaction')
                             ->label('Description'),
-                        Forms\Components\Select::make('flow_type')
+                        Select::make('flow_type')
                             ->options([
                                 'complete' => 'Complete Payment (authorize + capture)',
                                 'authorize' => 'Authorization Only',
@@ -235,11 +245,11 @@ class TerminalResource extends Resource
                     ->requiresConfirmation()
                     ->modalDescription('This will process a real transaction.'),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
 
-                    Tables\Actions\BulkAction::make('sync_selected')
+                    BulkAction::make('sync_selected')
                         ->icon('heroicon-o-arrow-path')
                         ->color('info')
                         ->action(function ($records) {
@@ -269,11 +279,11 @@ class TerminalResource extends Resource
                         ->requiresConfirmation()
                         ->deselectRecordsAfterCompletion(),
 
-                    Tables\Actions\BulkAction::make('toggle_active')
+                    BulkAction::make('toggle_active')
                         ->icon('heroicon-o-power')
                         ->color('warning')
-                        ->form([
-                            Forms\Components\Select::make('active')
+                        ->schema([
+                            Select::make('active')
                                 ->required()
                                 ->options([
                                     true => 'Activate',
@@ -299,7 +309,7 @@ class TerminalResource extends Resource
                 ]),
             ])
             ->headerActions([
-                Tables\Actions\Action::make('sync_all')
+                TableAction::make('sync_all')
                     ->icon('heroicon-o-arrow-path')
                     ->color('info')
                     ->action(function () {

@@ -4,11 +4,15 @@ namespace Hyrograsper\LunarFortis\Filament\Resources\TerminalResource\Pages;
 
 use Exception;
 use Filament\Actions;
-use Filament\Forms;
-use Filament\Infolists;
-use Filament\Infolists\Infolist;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\IconEntry;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Filament\Support\RawJs;
 use Hyrograsper\LunarFortis\Filament\Resources\TerminalResource;
 use Hyrograsper\LunarFortis\Models\Terminal;
@@ -17,32 +21,32 @@ class ViewTerminal extends ViewRecord
 {
     protected static string $resource = TerminalResource::class;
 
-    public function infolist(Infolist $infolist): Infolist
+    public function infolist(Schema $schema): Schema
     {
-        return $infolist
+        return $schema
             ->schema([
-                Infolists\Components\Section::make('Terminal Overview')
+                Section::make('Terminal Overview')
                     ->schema([
-                        Infolists\Components\Grid::make(3)
+                        Grid::make(3)
                             ->schema([
-                                Infolists\Components\TextEntry::make('title')
+                                TextEntry::make('title')
                                     ->label('Terminal Name'),
 
-                                Infolists\Components\TextEntry::make('serial_number')
+                                TextEntry::make('serial_number')
                                     ->label('Serial Number'),
 
-                                Infolists\Components\TextEntry::make('fortis_id')
+                                TextEntry::make('fortis_id')
                                     ->label('Fortis ID')
                                     ->placeholder('Not synced'),
                             ]),
 
-                        Infolists\Components\Grid::make(3)
+                        Grid::make(3)
                             ->schema([
-                                Infolists\Components\IconEntry::make('active')
+                                IconEntry::make('active')
                                     ->boolean()
                                     ->label('Active'),
 
-                                Infolists\Components\TextEntry::make('isReadyForPayments')
+                                TextEntry::make('isReadyForPayments')
                                     ->getStateUsing(fn (Terminal $record) => $record->isReadyForPayments() ? 'Ready' : 'Not Ready')
                                     ->badge()
                                     ->color(fn (string $state): string => match ($state) {
@@ -51,7 +55,7 @@ class ViewTerminal extends ViewRecord
                                     })
                                     ->label('Payment Status'),
 
-                                Infolists\Components\TextEntry::make('synced_at')
+                                TextEntry::make('synced_at')
                                     ->dateTime()
                                     ->since()
                                     ->label('Last Sync')
@@ -59,51 +63,51 @@ class ViewTerminal extends ViewRecord
                             ]),
                     ]),
 
-                Infolists\Components\Section::make('Configuration Details')
+                Section::make('Configuration Details')
                     ->schema([
-                        Infolists\Components\Grid::make(3)
+                        Grid::make(3)
                             ->schema([
-                                Infolists\Components\TextEntry::make('terminal_application_id')
+                                TextEntry::make('terminal_application_id')
                                     ->label('Application ID')
                                     ->placeholder('Not configured'),
 
-                                Infolists\Components\TextEntry::make('terminal_manufacturer_code')
+                                TextEntry::make('terminal_manufacturer_code')
                                     ->label('Manufacturer Code')
                                     ->placeholder('Not configured'),
 
-                                Infolists\Components\TextEntry::make('default_product_transaction_id')
+                                TextEntry::make('default_product_transaction_id')
                                     ->label('Default Product Transaction ID')
                                     ->placeholder('Not configured'),
                             ]),
                     ]),
 
-                Infolists\Components\Section::make('System Information')
+                Section::make('System Information')
                     ->schema([
-                        Infolists\Components\Grid::make(3)
+                        Grid::make(3)
                             ->schema([
-                                Infolists\Components\TextEntry::make('fortis_created_at')
+                                TextEntry::make('fortis_created_at')
                                     ->dateTime()
                                     ->label('Created in Fortis')
                                     ->placeholder('Not available'),
 
-                                Infolists\Components\TextEntry::make('fortis_modified_at')
+                                TextEntry::make('fortis_modified_at')
                                     ->dateTime()
                                     ->label('Modified in Fortis')
                                     ->placeholder('Not available'),
 
-                                Infolists\Components\TextEntry::make('last_registration_ts')
+                                TextEntry::make('last_registration_ts')
                                     ->dateTime()
                                     ->label('Last Registration')
                                     ->placeholder('Not available'),
                             ]),
 
-                        Infolists\Components\Grid::make(2)
+                        Grid::make(2)
                             ->schema([
-                                Infolists\Components\TextEntry::make('created_at')
+                                TextEntry::make('created_at')
                                     ->dateTime()
                                     ->label('Created Locally'),
 
-                                Infolists\Components\TextEntry::make('updated_at')
+                                TextEntry::make('updated_at')
                                     ->dateTime()
                                     ->label('Last Updated'),
                             ]),
@@ -150,8 +154,8 @@ class ViewTerminal extends ViewRecord
             Actions\Action::make('test_payment')
                 ->icon('heroicon-o-credit-card')
                 ->color('warning')
-                ->form([
-                    Forms\Components\TextInput::make('amount')
+                ->schema([
+                    TextInput::make('amount')
                         ->required()
                         ->numeric()
                         ->inputMode('decimal')
@@ -159,10 +163,10 @@ class ViewTerminal extends ViewRecord
                         ->default(100)
                         ->suffix('dollars')
                         ->label('Test Amount'),
-                    Forms\Components\TextInput::make('description')
+                    TextInput::make('description')
                         ->helperText('To help identify the transaction')
                         ->label('Description'),
-                    Forms\Components\Select::make('flow_type')
+                    Select::make('flow_type')
                         ->options([
                             'complete' => 'Complete Payment (authorize + capture)',
                             'authorize' => 'Authorization Only',
