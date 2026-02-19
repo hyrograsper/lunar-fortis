@@ -7,12 +7,16 @@ use Illuminate\Support\Facades\Log;
 
 describe('TerminalObserver - Basic Functionality', function () {
     beforeEach(function () {
-        // Create a fresh mock for each test
+        // Pre-configure the mock before swapping to avoid race conditions where
+        // PHP 8.4 deprecations fire during mock setup on prefer-lowest
+        $logMock = Mockery::mock(\Illuminate\Log\LogManager::class);
+        $logMock->shouldReceive('channel')->withAnyArgs()->andReturnSelf();
+        $logMock->shouldReceive('info')->withAnyArgs();
+        $logMock->shouldReceive('error')->withAnyArgs();
+        Log::swap($logMock);
+
         $this->mockFortis = Mockery::mock(LunarFortis::class);
         $this->observer = new TerminalObserver($this->mockFortis);
-
-        Log::shouldReceive('info')->withAnyArgs();
-        Log::shouldReceive('error')->withAnyArgs();
     });
 
     it('skips sync when terminal has no fortis_id', function () {
@@ -93,12 +97,14 @@ describe('TerminalObserver - Basic Functionality', function () {
 
 describe('TerminalObserver - Direct Method Testing', function () {
     beforeEach(function () {
-        // Create a fresh mock for each test
+        $logMock = Mockery::mock(\Illuminate\Log\LogManager::class);
+        $logMock->shouldReceive('channel')->withAnyArgs()->andReturnSelf();
+        $logMock->shouldReceive('info')->withAnyArgs();
+        $logMock->shouldReceive('error')->withAnyArgs();
+        Log::swap($logMock);
+
         $this->mockFortis = Mockery::mock(LunarFortis::class);
         $this->observer = new TerminalObserver($this->mockFortis);
-
-        Log::shouldReceive('info')->withAnyArgs();
-        Log::shouldReceive('error')->withAnyArgs();
     });
 
     it('can call syncToFortis method directly', function () {
@@ -246,12 +252,14 @@ describe('TerminalObserver - Direct Method Testing', function () {
 
 describe('TerminalObserver - Field Mapping', function () {
     beforeEach(function () {
-        // Create a fresh mock for each test
+        $logMock = Mockery::mock(\Illuminate\Log\LogManager::class);
+        $logMock->shouldReceive('channel')->withAnyArgs()->andReturnSelf();
+        $logMock->shouldReceive('info')->withAnyArgs();
+        $logMock->shouldReceive('error')->withAnyArgs();
+        Log::swap($logMock);
+
         $this->mockFortis = Mockery::mock(LunarFortis::class);
         $this->observer = new TerminalObserver($this->mockFortis);
-
-        Log::shouldReceive('info')->withAnyArgs();
-        Log::shouldReceive('error')->withAnyArgs();
     });
 
     it('maps field names correctly in syncToFortis', function () {

@@ -18,12 +18,15 @@ beforeEach(function () {
         'terminalProductTransactionId' => 'test-terminal-product-id',
     ]);
 
-    // Mock Log facade to handle all log methods that may happen in Laravel 11+
-    Log::shouldReceive('channel')->withAnyArgs()->andReturnSelf();
-    Log::shouldReceive('debug')->withAnyArgs();
-    Log::shouldReceive('info')->withAnyArgs();
-    Log::shouldReceive('warning')->withAnyArgs();
-    Log::shouldReceive('error')->withAnyArgs();
+    // Pre-configure the mock before swapping to avoid race conditions where
+    // PHP 8.4 deprecations fire during mock setup on prefer-lowest
+    $logMock = Mockery::mock(\Illuminate\Log\LogManager::class);
+    $logMock->shouldReceive('channel')->withAnyArgs()->andReturnSelf();
+    $logMock->shouldReceive('debug')->withAnyArgs();
+    $logMock->shouldReceive('info')->withAnyArgs();
+    $logMock->shouldReceive('warning')->withAnyArgs();
+    $logMock->shouldReceive('error')->withAnyArgs();
+    Log::swap($logMock);
 
     $this->service = new FortisHttpService;
 });
