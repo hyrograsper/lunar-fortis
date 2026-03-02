@@ -2,6 +2,7 @@
 
 namespace Hyrograsper\LunarFortis\Filament\Resources;
 
+use BackedEnum;
 use Exception;
 use Filament\Actions\Action as TableAction;
 use Filament\Actions\BulkAction;
@@ -21,7 +22,6 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Hyrograsper\LunarFortis\Filament\Resources\TerminalResource\Pages;
 use Hyrograsper\LunarFortis\Models\Terminal;
-use BackedEnum;
 use Illuminate\Database\Eloquent\Builder;
 
 class TerminalResource extends Resource
