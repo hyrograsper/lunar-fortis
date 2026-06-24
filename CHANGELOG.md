@@ -2,6 +2,17 @@
 
 All notable changes to `lunar-fortis` will be documented in this file.
 
+## v2.3.0 - 2026-02-18
+
+### What's Changed
+
+#### Improvements
+
+- Switched from `lunarphp/lunar` to `lunarphp/core` package
+- Added Livewire v4 support
+
+**Full Changelog**: https://github.com/hyrograsper/lunar-fortis/compare/v2.2.0...v2.3.0
+
 ## v2.2.0 - 2026-02-16
 
 ### What's Changed
