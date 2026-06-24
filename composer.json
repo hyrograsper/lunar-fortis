@@ -2,9 +2,12 @@
     "name": "hyrograsper/lunar-fortis",
     "description": "Fortis payment gateway integration for Lunar.",
     "keywords": [
-        "Hyrograsper",
         "laravel",
-        "lunar-fortis"
+        "lunar",
+        "fortis",
+        "payment",
+        "payment-gateway",
+        "ecommerce"
     ],
     "homepage": "https://github.com/hyrograsper/lunar-fortis",
     "license": "MIT",
