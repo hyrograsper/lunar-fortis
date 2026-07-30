@@ -1,6 +1,7 @@
 <?php
 
 use Hyrograsper\LunarFortis\Services\FortisHttpService;
+use Illuminate\Log\LogManager;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -20,7 +21,7 @@ beforeEach(function () {
 
     // Pre-configure the mock before swapping to avoid race conditions where
     // PHP 8.4 deprecations fire during mock setup on prefer-lowest
-    $logMock = Mockery::mock(\Illuminate\Log\LogManager::class);
+    $logMock = Mockery::mock(LogManager::class);
     $logMock->shouldReceive('channel')->withAnyArgs()->andReturnSelf();
     $logMock->shouldReceive('debug')->withAnyArgs();
     $logMock->shouldReceive('info')->withAnyArgs();
