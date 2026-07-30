@@ -153,7 +153,7 @@ describe('Advanced Terminal Payment Integration', function () {
 
         // Test 3: Zero amount (should fail validation)
         expect(fn () => $terminal->initiateAuthorization(0))
-            ->toThrow(\Exception::class);
+            ->toThrow(Exception::class);
 
     })->group('integration', 'slow', 'terminal', 'error-handling');
 

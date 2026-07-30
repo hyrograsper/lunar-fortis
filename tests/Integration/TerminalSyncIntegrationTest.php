@@ -1,5 +1,7 @@
 <?php
 
+use Carbon\Carbon;
+use Hyrograsper\LunarFortis\LunarFortis;
 use Hyrograsper\LunarFortis\Models\Terminal;
 
 require_once __DIR__.'/helpers.php';
@@ -43,7 +45,7 @@ describe('Terminal Sync Integration Tests', function () {
 
     it('can sync a single terminal from Fortis API', function () {
         // First get the list of available terminals
-        $lunarFortis = app(\Hyrograsper\LunarFortis\LunarFortis::class);
+        $lunarFortis = app(LunarFortis::class);
         $terminalsList = $lunarFortis->listTerminals();
 
         if (empty($terminalsList['list'])) {
@@ -94,7 +96,7 @@ describe('Terminal Sync Integration Tests', function () {
         expect($terminal->needsSync())->toBeFalse();
 
         // Manually set sync time to old date using Carbon explicitly
-        $terminal->synced_at = \Carbon\Carbon::now()->subHours(25);
+        $terminal->synced_at = Carbon::now()->subHours(25);
         $terminal->save();
         $terminal->refresh(); // Refresh to get the updated model with proper casting
 

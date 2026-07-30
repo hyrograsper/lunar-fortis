@@ -3,13 +3,14 @@
 use Hyrograsper\LunarFortis\LunarFortis;
 use Hyrograsper\LunarFortis\Models\Terminal;
 use Hyrograsper\LunarFortis\Observers\TerminalObserver;
+use Illuminate\Log\LogManager;
 use Illuminate\Support\Facades\Log;
 
 describe('TerminalObserver - Basic Functionality', function () {
     beforeEach(function () {
         // Pre-configure the mock before swapping to avoid race conditions where
         // PHP 8.4 deprecations fire during mock setup on prefer-lowest
-        $logMock = Mockery::mock(\Illuminate\Log\LogManager::class);
+        $logMock = Mockery::mock(LogManager::class);
         $logMock->shouldReceive('channel')->withAnyArgs()->andReturnSelf();
         $logMock->shouldReceive('info')->withAnyArgs();
         $logMock->shouldReceive('error')->withAnyArgs();
@@ -97,7 +98,7 @@ describe('TerminalObserver - Basic Functionality', function () {
 
 describe('TerminalObserver - Direct Method Testing', function () {
     beforeEach(function () {
-        $logMock = Mockery::mock(\Illuminate\Log\LogManager::class);
+        $logMock = Mockery::mock(LogManager::class);
         $logMock->shouldReceive('channel')->withAnyArgs()->andReturnSelf();
         $logMock->shouldReceive('info')->withAnyArgs();
         $logMock->shouldReceive('error')->withAnyArgs();
@@ -252,7 +253,7 @@ describe('TerminalObserver - Direct Method Testing', function () {
 
 describe('TerminalObserver - Field Mapping', function () {
     beforeEach(function () {
-        $logMock = Mockery::mock(\Illuminate\Log\LogManager::class);
+        $logMock = Mockery::mock(LogManager::class);
         $logMock->shouldReceive('channel')->withAnyArgs()->andReturnSelf();
         $logMock->shouldReceive('info')->withAnyArgs();
         $logMock->shouldReceive('error')->withAnyArgs();

@@ -8,6 +8,7 @@ use Hyrograsper\LunarFortis\PaymentTypes\FortisPaymentType;
 use Hyrograsper\LunarFortis\PaymentTypes\FortisTerminalPaymentType;
 use Illuminate\Support\ServiceProvider;
 use Lunar\Base\PaymentManagerInterface;
+use Lunar\Facades\Payments;
 use Lunar\Managers\PaymentManager;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
@@ -275,6 +276,29 @@ describe('Reflection Analysis', function () {
         $reflection = new ReflectionClass($this->serviceProvider);
 
         expect($reflection->getShortName())->toBe('LunarFortisServiceProvider');
+    });
+});
+
+describe('Boot-Phase Driver Registration', function () {
+    it('resolves both payment drivers in a booted application', function () {
+        expect(Payments::driver('fortis'))->toBeInstanceOf(FortisPaymentType::class)
+            ->and(Payments::driver('fortis-terminal'))->toBeInstanceOf(FortisTerminalPaymentType::class);
+    });
+
+    it('keeps drivers available when the manager binding is rebound after register', function () {
+        // Another provider (e.g. Lunar's own) may rebind the manager singleton
+        // after this package's register phase, discarding any drivers extended
+        // onto the earlier instance. Boot-phase registration must survive that.
+        $this->app->singleton(PaymentManagerInterface::class, function ($app) {
+            return $app->make(PaymentManager::class);
+        });
+        $this->app->forgetInstance(PaymentManagerInterface::class);
+        Payments::clearResolvedInstances();
+
+        $this->serviceProvider->packageBooted();
+
+        expect(Payments::driver('fortis'))->toBeInstanceOf(FortisPaymentType::class)
+            ->and(Payments::driver('fortis-terminal'))->toBeInstanceOf(FortisTerminalPaymentType::class);
     });
 });
 
