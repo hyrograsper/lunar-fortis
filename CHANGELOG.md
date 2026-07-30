@@ -2,6 +2,17 @@
 
 All notable changes to `lunar-fortis` will be documented in this file.
 
+## v2.3.1 - 2026-07-30
+
+### What's Changed
+
+#### Fixed
+
+- Payment drivers (`fortis`, `fortis-terminal`) are now registered in the boot phase instead of the register phase, so they survive the payment manager singleton being rebound by other providers. Fixes "Driver [card-terminal] not supported" in queue workers.
+- `Log::swap()` for PHP 8.4 compatibility; Filament 3 added to require-dev.
+
+**Full Changelog**: https://github.com/hyrograsper/lunar-fortis/compare/v2.3.0...v2.3.1
+
 ## v2.3.0 - 2026-02-18
 
 ### What's Changed
@@ -148,6 +159,7 @@ Added missing configuration keys:
 
 
 
+
 ```
 ##### **Environment Variables**
 
@@ -162,6 +174,7 @@ FORTIS_LOCATION_ID=your_fortis_location_id
 FORTIS_PRODUCT_TRANSACTION_ID=your_product_transaction_id                     # ✅ Added
 FORTIS_TERMINAL_PRODUCT_TRANSACTION_ID=your_terminal_product_transaction_id   # ✅ Added
 FORTIS_ENVIRONMENT=sandbox  # or 'production'
+
 
 
 
@@ -184,12 +197,14 @@ composer update hyrograsper/lunar-fortis
 
 
 
+
 ```
 Then add the missing environment variables to your `.env` file:
 
 ```env
 FORTIS_PRODUCT_TRANSACTION_ID=your_product_transaction_id
 FORTIS_TERMINAL_PRODUCT_TRANSACTION_ID=your_terminal_product_transaction_id
+
 
 
 
@@ -754,6 +769,7 @@ Co-Authored-By: Claude [noreply@anthropic.com](mailto:noreply@anthropic.com)
 FORTIS_HTTP_RETRY_STATUS_CODES="429,502,503,504"
 FORTIS_HTTP_RETRY_EXPONENTIAL=false
 FORTIS_HTTP_RETRY_MAX_DELAY=10000
+
 
 
 
