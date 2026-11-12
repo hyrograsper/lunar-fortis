@@ -2,6 +2,7 @@
 
 namespace Hyrograsper\LunarFortis\Tests\Concerns;
 
+use Cartalyst\Converter\Laravel\ConverterServiceProvider;
 use Lunar\LunarServiceProvider;
 use Lunar\Models\Cart;
 use Lunar\Models\CartAddress;
@@ -14,7 +15,7 @@ use Lunar\Models\Price;
 use Lunar\Models\ProductVariant;
 use Lunar\Models\TaxClass;
 use Lunar\Models\TaxZone;
-use Lunar\Nestedset\NestedSetServiceProvider;
+use RuntimeException;
 use Spatie\Activitylog\ActivitylogServiceProvider;
 use Spatie\LaravelBlink\BlinkServiceProvider;
 use Spatie\MediaLibrary\MediaLibraryServiceProvider;
@@ -26,7 +27,12 @@ trait InteractsWithLunarCarts
         config()->set('activitylog.enabled', false);
         config()->set('lunar-fortis.http.retry.attempts', 1);
 
-        $this->app->register(NestedSetServiceProvider::class);
+        $this->app->register($this->nestedSetProvider());
+
+        if (class_exists(ConverterServiceProvider::class)) {
+            $this->app->register(ConverterServiceProvider::class);
+        }
+
         $this->app->register(BlinkServiceProvider::class);
         $this->app->register(ActivitylogServiceProvider::class);
         $this->app->register(MediaLibraryServiceProvider::class);
@@ -46,6 +52,23 @@ trait InteractsWithLunarCarts
         CustomerGroup::factory()->create(['default' => true]);
         TaxClass::factory()->create(['default' => true]);
         TaxZone::factory()->create(['default' => true]);
+    }
+
+    /** @return class-string */
+    protected function nestedSetProvider(): string
+    {
+        $candidates = [
+            'Lunar\\Nestedset\\NestedSetServiceProvider',
+            'Kalnoy\\Nestedset\\NestedSetServiceProvider',
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (class_exists($candidate)) {
+                return $candidate;
+            }
+        }
+
+        throw new RuntimeException('No nested set service provider found.');
     }
 
     protected function makeCart(int $amount): Cart

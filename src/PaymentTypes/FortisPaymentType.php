@@ -24,11 +24,13 @@ use Lunar\PaymentTypes\AbstractPayment;
 
 class FortisPaymentType extends AbstractPayment
 {
+    use ResetsAllowPartialPayment;
+
     protected string $policy;
 
     public const string PAYMENT_TYPE = 'fortis';
 
-    private const string TRANSACTION_ID_PATTERN = '/^[A-Za-z0-9-]{1,64}$/';
+    public const string TRANSACTION_ID_PATTERN = '/^[A-Za-z0-9-]{1,64}$/';
 
     private const int ELEMENTS_LOCK_SECONDS = 60;
 
@@ -256,7 +258,7 @@ class FortisPaymentType extends AbstractPayment
         $this->cart = null;
         $this->order = null;
         $this->data = [];
-        $this->allowPartialPayment = false;
+        $this->resetAllowPartialPayment();
     }
 
     private function transactionAlreadyRecorded(string $transactionId): bool

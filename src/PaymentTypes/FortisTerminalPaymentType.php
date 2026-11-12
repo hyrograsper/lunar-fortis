@@ -20,6 +20,8 @@ use Lunar\PaymentTypes\AbstractPayment;
 
 class FortisTerminalPaymentType extends AbstractPayment
 {
+    use ResetsAllowPartialPayment;
+
     protected string $policy;
 
     public const string PAYMENT_TYPE = 'fortis-terminal';
@@ -48,6 +50,10 @@ class FortisTerminalPaymentType extends AbstractPayment
 
         if (! is_string($transactionId) || $transactionId === '') {
             return $this->dispatchAndReturn(false, 'Missing Fortis transaction id.');
+        }
+
+        if (! preg_match(FortisPaymentType::TRANSACTION_ID_PATTERN, $transactionId)) {
+            return $this->dispatchAndReturn(false, 'Invalid Fortis transaction id.');
         }
 
         $this->order = $this->order ?: ($this->cart->draftOrder ?: $this->cart->completedOrder);
@@ -187,7 +193,7 @@ class FortisTerminalPaymentType extends AbstractPayment
         $this->cart = null;
         $this->order = null;
         $this->data = [];
-        $this->allowPartialPayment = false;
+        $this->resetAllowPartialPayment();
     }
 
     private function storeTerminalTransaction(array $response): Transaction
