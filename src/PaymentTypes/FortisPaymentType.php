@@ -8,6 +8,7 @@ use Hyrograsper\LunarFortis\Enums\CvvResponseCode;
 use Hyrograsper\LunarFortis\Enums\ReasonCode;
 use Hyrograsper\LunarFortis\Enums\StatusCode;
 use Hyrograsper\LunarFortis\LunarFortis;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Lunar\Base\DataTransferObjects\PaymentAuthorize;
 use Lunar\Base\DataTransferObjects\PaymentCapture;
@@ -15,7 +16,9 @@ use Lunar\Base\DataTransferObjects\PaymentRefund;
 use Lunar\Events\PaymentAttemptEvent;
 use Lunar\Exceptions\Carts\CartException;
 use Lunar\Exceptions\DisallowMultipleCartOrdersException;
+use Lunar\Models\Cart;
 use Lunar\Models\Contracts\Transaction as TransactionContract;
+use Lunar\Models\Order;
 use Lunar\Models\Transaction;
 use Lunar\PaymentTypes\AbstractPayment;
 
@@ -24,6 +27,10 @@ class FortisPaymentType extends AbstractPayment
     protected string $policy;
 
     public const string PAYMENT_TYPE = 'fortis';
+
+    private const string TRANSACTION_ID_PATTERN = '/^[A-Za-z0-9-]{1,64}$/';
+
+    private const int ELEMENTS_LOCK_SECONDS = 60;
 
     public function __construct(protected LunarFortis $fortis)
     {
@@ -48,20 +55,66 @@ class FortisPaymentType extends AbstractPayment
             return $this->dispatchAndReturn(false, 'This order has already been placed');
         }
 
-        $transaction = $this->storeElementsTransaction($this->data);
+        $transactionId = $this->elementsTransactionId();
+
+        if ($transactionId === null) {
+            return $this->dispatchAndReturn(false, 'Invalid payment response.');
+        }
+
+        $lock = Cache::lock("lunar-fortis:elements-transaction:{$transactionId}", self::ELEMENTS_LOCK_SECONDS);
+
+        if (! $lock->get()) {
+            return $this->dispatchAndReturn(false, 'This payment is already being processed.');
+        }
+
+        try {
+            return $this->authorizeElementsTransaction($this->order, $transactionId);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    private function authorizeElementsTransaction(Order $order, string $transactionId): PaymentAuthorize
+    {
+        if ($this->transactionAlreadyRecorded($transactionId)) {
+            Log::warning('LunarFortis: Rejected an Elements transaction that is already recorded', [
+                'transaction_id' => $transactionId,
+                'order_id' => $order->id,
+            ]);
+
+            return $this->dispatchAndReturn(false, 'This payment has already been used.');
+        }
+
+        try {
+            $data = $this->fortis->getTransaction($transactionId)['data'] ?? [];
+        } catch (Exception $exception) {
+            Log::error("LunarFortis: Unable to verify Elements transaction: {$exception->getMessage()}", [
+                'transaction_id' => $transactionId,
+                'order_id' => $order->id,
+            ]);
+
+            return $this->dispatchAndReturn(false, 'Unable to verify the payment.');
+        }
+
+        $rejection = $this->elementsTransactionRejection($transactionId, $data);
+
+        if ($rejection !== null) {
+            Log::warning("LunarFortis: Rejected Elements transaction: {$rejection}", [
+                'transaction_id' => $transactionId,
+                'order_id' => $order->id,
+            ]);
+
+            return $this->dispatchAndReturn(false, $rejection);
+        }
+
+        $transaction = $this->storeElementsTransaction($data);
 
         if (! $transaction->success) {
             return $this->dispatchAndReturn(false, $transaction->meta['errors'] ?? 'Unknown Error.');
         }
 
-        if ($transaction->type === 'capture') {
-            $this->markOrderPlaced();
-
-            return $this->dispatchAndReturn(true, 'Payment Captured');
-        }
-
-        $this->order->status = config('lunar-fortis.status_mapping.payment-authorized', 'payment-authorized');
-        $this->order->save();
+        $order->status = config('lunar-fortis.status_mapping.payment-authorized', 'payment-authorized');
+        $order->save();
 
         if ($this->policy === 'automatic') {
             $captureResponse = $this->capture($transaction, $transaction->amount->value);
@@ -136,6 +189,66 @@ class FortisPaymentType extends AbstractPayment
         return new PaymentRefund(success: true);
     }
 
+    private function elementsTransactionId(): ?string
+    {
+        $transactionId = $this->data['id'] ?? null;
+
+        if (! is_string($transactionId)) {
+            return null;
+        }
+
+        if (! preg_match(self::TRANSACTION_ID_PATTERN, $transactionId)) {
+            return null;
+        }
+
+        return $transactionId;
+    }
+
+    private function transactionAlreadyRecorded(string $transactionId): bool
+    {
+        return Transaction::query()
+            ->whereIn('driver', [self::PAYMENT_TYPE, FortisTerminalPaymentType::PAYMENT_TYPE])
+            ->where('reference', $transactionId)
+            ->exists();
+    }
+
+    private function elementsTransactionRejection(string $transactionId, array $data): ?string
+    {
+        if (($data['id'] ?? null) !== $transactionId) {
+            return 'The payment could not be verified.';
+        }
+
+        $statusCode = $data['status_code'] ?? null;
+
+        if (! is_int($statusCode)) {
+            return 'The payment could not be verified.';
+        }
+
+        if (StatusCode::isUnsuccessful($statusCode)) {
+            return null;
+        }
+
+        if ($statusCode !== StatusCode::AuthOnly->value) {
+            return 'The payment was not an authorization.';
+        }
+
+        $amount = $data['transaction_amount'] ?? null;
+
+        if (! is_int($amount)) {
+            return 'The payment amount could not be verified.';
+        }
+
+        if (! $this->cart instanceof Cart) {
+            return 'The payment amount could not be verified.';
+        }
+
+        if ($amount !== $this->cart->total->value) {
+            return 'The payment amount does not match the order total.';
+        }
+
+        return null;
+    }
+
     private function storeElementsTransaction(array $data): Transaction
     {
         $success = StatusCode::isSuccessful($data['status_code']);
@@ -144,7 +257,7 @@ class FortisPaymentType extends AbstractPayment
         return Transaction::create([
             'order_id' => $this->order->id,
             'success' => $success,
-            'type' => $data['@action'] === 'sale' ? 'capture' : 'intent',
+            'type' => 'intent',
             'driver' => self::PAYMENT_TYPE,
             'amount' => $data['transaction_amount'] ?? $this->cart->total->value,
             'reference' => $data['id'] ?? now()->timestamp,

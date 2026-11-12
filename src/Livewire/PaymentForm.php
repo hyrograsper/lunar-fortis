@@ -19,6 +19,8 @@ use Lunar\Models\OrderAddress;
 
 class PaymentForm extends Component
 {
+    private const string CLIENT_TOKEN_ACTION = 'auth-only';
+
     public Cart $cart;
 
     public string $policy;
@@ -31,7 +33,7 @@ class PaymentForm extends Component
     #[On('handle-payment-response')]
     public function handlePaymentResponse(array $response): void
     {
-        if (! isset($response['data'])) {
+        if (! is_array($response['data'] ?? null)) {
             Log::error('LunarFortis: Fortis Payment response missing "data" key.', $response);
             $this->dispatch('payment-error', 'Invalid payment response from gateway.');
 
@@ -41,7 +43,7 @@ class PaymentForm extends Component
         /** @var PaymentAuthorize $paymentAuthorize */
         $paymentAuthorize = Payments::driver(FortisPaymentType::PAYMENT_TYPE)
             ->cart($this->cart)
-            ->withData($response['data'])
+            ->withData(['id' => $response['data']['id'] ?? null])
             ->authorize();
 
         if (! $paymentAuthorize->success) {
@@ -56,7 +58,7 @@ class PaymentForm extends Component
         $order = Order::find($paymentAuthorize->orderId);
 
         if ($order) {
-            if (class_exists($successEventClass)) {
+            if (is_string($successEventClass) && class_exists($successEventClass)) {
                 try {
                     $successEventClass::dispatch($order);
                 } catch (Exception $exception) {
@@ -107,7 +109,7 @@ class PaymentForm extends Component
         }
 
         return Cache::remember($this->clientTokenCacheKey(), 5, function () {
-            return LunarFortis::getClientTokenForSaleAmount($this->cart->total->value, 'auth-only');
+            return LunarFortis::getClientTokenForSaleAmount($this->cart->total->value, self::CLIENT_TOKEN_ACTION);
         });
     }
 
@@ -121,9 +123,17 @@ class PaymentForm extends Component
 
     public function clientTokenCacheKey(): string
     {
-        $identifier = $this->cart->user_id ?: $this->cart->id;
+        $this->cart->calculate();
 
-        return "fortis_client_token:{$identifier}";
+        $fingerprint = hash('sha256', implode('|', [
+            $this->cart->total->value,
+            $this->cart->currency_id,
+            self::CLIENT_TOKEN_ACTION,
+            $this->getFortisEnvironmentProperty(),
+            config('services.fortis.locationId'),
+        ]));
+
+        return "fortis_client_token:cart:{$this->cart->id}:{$fingerprint}";
     }
 
     public function getBillingProperty(): ?OrderAddress
