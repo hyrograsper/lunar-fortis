@@ -32,11 +32,10 @@ testbench.yaml
 /coverage
 
 .env
-<<<<<<< HEAD
 .env.testing
 
 # Postman collections (may contain sensitive API information)
 *.postman_collection.json
 *.postman_environment.json
-=======
->>>>>>> origin/main
+
+.envrc

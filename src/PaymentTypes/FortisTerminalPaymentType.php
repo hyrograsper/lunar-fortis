@@ -197,11 +197,11 @@ class FortisTerminalPaymentType extends AbstractPayment
                 'driver' => self::PAYMENT_TYPE,
                 'amount' => $data['transaction_amount'] ?? $this->cart->total->value,
                 'reference' => $data['id'] ?? now()->timestamp,
-                'status' => $this->resolveTransactionStatus($success, $data['status_code']),
+                'status' => $this->resolveTransactionStatus($success, $statusCode),
                 'notes' => $success ? null : ($data['verbiage'] ?? $data['reason_code'] ?? null),
                 'card_type' => $data['account_type'] ?? 'credit',
                 'last_four' => $data['last_four'] ?? '',
-                'captured_at' => StatusCode::isCaptured($data['status_code']) ? now() : null,
+                'captured_at' => StatusCode::isCaptured($statusCode) ? now() : null,
                 'meta' => $meta,
             ]);
 

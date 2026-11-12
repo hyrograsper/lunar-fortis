@@ -12,22 +12,26 @@ enum StatusCode: int
     case Declined = 301;
     case ChargeBack = 331;
 
-    public static function isCaptured(int $statusCode): bool
+    public static function isCaptured(?int $statusCode): bool
     {
-        return $statusCode == self::Approved->value;
+        return in_array($statusCode, [self::Approved->value, self::Settled->value], true);
     }
 
-    public static function isRefunded(int $statusCode): bool
+    public static function isRefunded(?int $statusCode): bool
     {
-        return $statusCode == self::Refunded->value;
+        return $statusCode === self::Refunded->value;
     }
 
-    public static function isSuccessful(int $statusCode): bool
+    public static function isSuccessful(?int $statusCode): bool
     {
-        return in_array($statusCode, [self::Approved->value, self::AuthOnly->value]);
+        return in_array($statusCode, [
+            self::Approved->value,
+            self::AuthOnly->value,
+            self::Settled->value,
+        ], true);
     }
 
-    public static function isUnsuccessful(int $statusCode): bool
+    public static function isUnsuccessful(?int $statusCode): bool
     {
         return ! self::isSuccessful($statusCode);
     }
