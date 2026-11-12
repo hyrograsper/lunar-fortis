@@ -39,6 +39,25 @@ class FortisPaymentType extends AbstractPayment
 
     public function authorize(): ?PaymentAuthorize
     {
+        try {
+            return $this->authorizeCart();
+        } finally {
+            $this->resetPaymentState();
+        }
+    }
+
+    private function authorizeCart(): PaymentAuthorize
+    {
+        if (! $this->cart) {
+            return $this->dispatchAndReturn(false, 'No cart to authorize.');
+        }
+
+        $transactionId = $this->elementsTransactionId();
+
+        if ($transactionId === null) {
+            return $this->dispatchAndReturn(false, 'Invalid payment response.');
+        }
+
         $this->order = $this->order ?: ($this->cart->draftOrder ?: $this->cart->completedOrder);
 
         if (! $this->order) {
@@ -53,12 +72,6 @@ class FortisPaymentType extends AbstractPayment
 
         if ($this->order->placed_at) {
             return $this->dispatchAndReturn(false, 'This order has already been placed');
-        }
-
-        $transactionId = $this->elementsTransactionId();
-
-        if ($transactionId === null) {
-            return $this->dispatchAndReturn(false, 'Invalid payment response.');
         }
 
         $lock = Cache::lock("lunar-fortis:elements-transaction:{$transactionId}", self::ELEMENTS_LOCK_SECONDS);
@@ -86,7 +99,10 @@ class FortisPaymentType extends AbstractPayment
         }
 
         try {
-            $data = $this->fortis->getTransaction($transactionId)['data'] ?? [];
+            $data = $this->normalizeIntegerFields(
+                $this->fortis->getTransaction($transactionId)['data'] ?? [],
+                ['status_code', 'transaction_amount'],
+            );
         } catch (Exception $exception) {
             Log::error("LunarFortis: Unable to verify Elements transaction: {$exception->getMessage()}", [
                 'transaction_id' => $transactionId,
@@ -202,6 +218,45 @@ class FortisPaymentType extends AbstractPayment
         }
 
         return $transactionId;
+    }
+
+    /**
+     * @param  array<string>  $fields
+     */
+    private function normalizeIntegerFields(array $data, array $fields): array
+    {
+        foreach ($fields as $field) {
+            if (array_key_exists($field, $data)) {
+                $data[$field] = $this->wholeNumberOrNull($data[$field]);
+            }
+        }
+
+        return $data;
+    }
+
+    private function wholeNumberOrNull(mixed $value): ?int
+    {
+        if (is_int($value)) {
+            return $value >= 0 ? $value : null;
+        }
+
+        if (! is_string($value)) {
+            return null;
+        }
+
+        if (! preg_match('/^\d+$/', $value)) {
+            return null;
+        }
+
+        return (int) $value;
+    }
+
+    private function resetPaymentState(): void
+    {
+        $this->cart = null;
+        $this->order = null;
+        $this->data = [];
+        $this->allowPartialPayment = false;
     }
 
     private function transactionAlreadyRecorded(string $transactionId): bool

@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Lunar\Base\DataTransferObjects\PaymentAuthorize;
+use Lunar\Facades\Payments;
 use Lunar\Models\Cart;
 use Lunar\Models\Order;
 use Lunar\Models\Transaction;
@@ -292,4 +293,114 @@ describe('genuine Elements payments', function () {
 
         expect(orderFor($this->cart)->placed_at)->not->toBeNull();
     });
+});
+
+describe('driver state across requests', function () {
+    it('does not reuse the previous buyers transaction id when the next request omits data', function () {
+        Config::set('lunar-fortis.policy', 'manual');
+        fakeFortisLookup(fortisRecord());
+
+        $firstBuyerCart = $this->makeCart(2000);
+
+        Payments::driver(FortisPaymentType::PAYMENT_TYPE)
+            ->cart($firstBuyerCart)
+            ->withData(elementsPayload())
+            ->authorize();
+
+        $result = Payments::driver(FortisPaymentType::PAYMENT_TYPE)
+            ->cart($this->cart)
+            ->authorize();
+
+        expect($result->success)->toBeFalse()
+            ->and(orderFor($this->cart))->toBeNull()
+            ->and(Http::recorded()->count())->toBe(1);
+    });
+
+    it('does not reuse the previous buyers cart when the next request omits the cart', function () {
+        Config::set('lunar-fortis.policy', 'manual');
+        fakeFortisLookup(fortisRecord());
+        fakeFortisLookup(fortisRecord(['id' => 'txn0000000000000000000002']));
+
+        Payments::driver(FortisPaymentType::PAYMENT_TYPE)
+            ->cart($this->cart)
+            ->withData(elementsPayload())
+            ->authorize();
+
+        $result = Payments::driver(FortisPaymentType::PAYMENT_TYPE)
+            ->withData(elementsPayload(['id' => 'txn0000000000000000000002']))
+            ->authorize();
+
+        expect($result->success)->toBeFalse()
+            ->and(Transaction::where('order_id', orderFor($this->cart)->id)->count())->toBe(1);
+
+        Http::assertNotSent(fn (Request $request) => str_contains($request->url(), 'txn0000000000000000000002'));
+    });
+});
+
+describe('numeric fields returned by Fortis', function () {
+    it('accepts a status code and amount returned as integer strings', function () {
+        fakeFortisLookup(fortisRecord(['status_code' => '102', 'transaction_amount' => '1000']));
+
+        $result = authorizeElementsPayment($this->cart, elementsPayload(), 'manual');
+
+        $intent = Transaction::where('order_id', orderFor($this->cart)->id)->sole();
+
+        expect($result->success)->toBeTrue()
+            ->and($intent->amount->value)->toBe(1000)
+            ->and($intent->status)->toBe('authorized');
+    });
+
+    it('rejects an amount that is not a whole number of minor units', function (mixed $amount) {
+        fakeFortisLookup(fortisRecord(['transaction_amount' => $amount]));
+
+        $result = authorizeElementsPayment($this->cart, elementsPayload(), 'manual');
+
+        expect($result->success)->toBeFalse()
+            ->and(orderFor($this->cart)->status)->not->toBe('payment-authorized')
+            ->and(successfulTransactionsFor($this->cart))->toBe(0);
+    })->with([
+        'decimal string' => ['10.50'],
+        'decimal string of the total' => ['1000.00'],
+        'negative int' => [-1000],
+        'negative string' => ['-1000'],
+        'thousands separator' => ['1,000'],
+        'padded string' => [' 1000'],
+        'non-numeric' => ['abc'],
+        'empty string' => [''],
+        'null' => [null],
+        'bool' => [true],
+    ]);
+
+    it('rejects numbers that Fortis returns as JSON floats', function (string $json) {
+        Http::fake([
+            FORTIS_API.'/txn0000000000000000000001' => Http::response($json, 200, ['Content-Type' => 'application/json']),
+        ]);
+
+        $result = authorizeElementsPayment($this->cart, elementsPayload(), 'manual');
+
+        expect($result->success)->toBeFalse()
+            ->and(orderFor($this->cart)->status)->not->toBe('payment-authorized')
+            ->and(Transaction::count())->toBe(0);
+    })->with([
+        'amount' => ['{"data":{"id":"txn0000000000000000000001","status_code":102,"transaction_amount":1000.0}}'],
+        'fractional amount' => ['{"data":{"id":"txn0000000000000000000001","status_code":102,"transaction_amount":1000.5}}'],
+        'status code' => ['{"data":{"id":"txn0000000000000000000001","status_code":102.0,"transaction_amount":1000}}'],
+    ]);
+
+    it('rejects a status code that is not a whole number', function (mixed $statusCode) {
+        fakeFortisLookup(fortisRecord(['status_code' => $statusCode]));
+
+        $result = authorizeElementsPayment($this->cart, elementsPayload(), 'manual');
+
+        expect($result->success)->toBeFalse()
+            ->and(orderFor($this->cart)->status)->not->toBe('payment-authorized')
+            ->and(Transaction::count())->toBe(0);
+    })->with([
+        'decimal string' => ['102.0'],
+        'negative string' => ['-102'],
+        'negative int' => [-102],
+        'non-numeric' => ['abc'],
+        'empty string' => [''],
+        'null' => [null],
+    ]);
 });

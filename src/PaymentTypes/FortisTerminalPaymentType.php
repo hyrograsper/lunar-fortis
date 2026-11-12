@@ -31,6 +31,25 @@ class FortisTerminalPaymentType extends AbstractPayment
 
     public function authorize(): ?PaymentAuthorize
     {
+        try {
+            return $this->authorizeCart();
+        } finally {
+            $this->resetPaymentState();
+        }
+    }
+
+    private function authorizeCart(): PaymentAuthorize
+    {
+        if (! $this->cart) {
+            return $this->dispatchAndReturn(false, 'No cart to authorize.');
+        }
+
+        $transactionId = $this->data['fortis_transaction_id'] ?? null;
+
+        if (! is_string($transactionId) || $transactionId === '') {
+            return $this->dispatchAndReturn(false, 'Missing Fortis transaction id.');
+        }
+
         $this->order = $this->order ?: ($this->cart->draftOrder ?: $this->cart->completedOrder);
 
         if (! $this->order) {
@@ -49,12 +68,12 @@ class FortisTerminalPaymentType extends AbstractPayment
 
         try {
             $transaction = $this->storeTerminalTransaction(
-                LunarFortis::getTransaction($this->data['fortis_transaction_id'])
+                LunarFortis::getTransaction($transactionId)
             );
         } catch (Exception $exception) {
             Log::error("LunarFortis: Failed to fetch fortis transaction and store data: {$exception->getMessage()}", [
                 'error' => $exception->getMessage(),
-                'transaction_id' => $this->data['fortis_transaction_id'] ?? null,
+                'transaction_id' => $transactionId,
                 'order_id' => $this->order->id ?? null,
                 'error_trace' => $exception->getTraceAsString(),
             ]);
@@ -115,7 +134,7 @@ class FortisTerminalPaymentType extends AbstractPayment
             Log::error('LunarFortis: Terminal capture failed', [
                 'error' => $exception->getMessage(),
                 'transaction_id' => $transaction->id ?? null,
-                'order_id' => $this->order->id ?? null,
+                'order_id' => $transaction->order_id ?? null,
                 'amount' => $amount,
                 'error_trace' => $exception->getTraceAsString(),
             ]);
@@ -135,7 +154,7 @@ class FortisTerminalPaymentType extends AbstractPayment
             Log::error("LunarFortis: Unable to process terminal refund: {$exception->getMessage()}", [
                 'error' => $exception->getMessage(),
                 'transaction_id' => $transaction->id ?? null,
-                'order_id' => $this->order->id ?? null,
+                'order_id' => $transaction->order_id ?? null,
                 'amount' => $amount,
                 'error_trace' => $exception->getTraceAsString(),
             ]);
@@ -161,6 +180,14 @@ class FortisTerminalPaymentType extends AbstractPayment
         }
 
         return new PaymentRefund(success: true);
+    }
+
+    private function resetPaymentState(): void
+    {
+        $this->cart = null;
+        $this->order = null;
+        $this->data = [];
+        $this->allowPartialPayment = false;
     }
 
     private function storeTerminalTransaction(array $response): Transaction
