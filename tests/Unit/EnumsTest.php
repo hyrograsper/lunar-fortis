@@ -47,6 +47,20 @@ describe('StatusCode Enum', function () {
         expect(StatusCode::isUnsuccessful(101))->toBeFalse(); // Approved
         expect(StatusCode::isUnsuccessful(102))->toBeFalse(); // Auth Only
     });
+
+    it('treats a missing status code as unsuccessful, not captured and not refunded', function () {
+        expect(StatusCode::isSuccessful(null))->toBeFalse();
+        expect(StatusCode::isUnsuccessful(null))->toBeTrue();
+        expect(StatusCode::isCaptured(null))->toBeFalse();
+        expect(StatusCode::isRefunded(null))->toBeFalse();
+    });
+
+    it('tolerates the deprecated Settled status on historical records', function () {
+        expect(StatusCode::isSuccessful(191))->toBeTrue();
+        expect(StatusCode::isUnsuccessful(191))->toBeFalse();
+        expect(StatusCode::isCaptured(191))->toBeTrue();
+        expect(StatusCode::isRefunded(191))->toBeFalse();
+    });
 });
 
 describe('ReasonCode Enum', function () {

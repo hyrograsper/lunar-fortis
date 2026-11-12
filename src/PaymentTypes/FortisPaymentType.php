@@ -251,7 +251,8 @@ class FortisPaymentType extends AbstractPayment
 
     private function storeElementsTransaction(array $data): Transaction
     {
-        $success = StatusCode::isSuccessful($data['status_code']);
+        $statusCode = $data['status_code'] ?? null;
+        $success = StatusCode::isSuccessful($statusCode);
         $meta = $this->buildElementsMetaArray($data);
 
         return Transaction::create([
@@ -261,11 +262,11 @@ class FortisPaymentType extends AbstractPayment
             'driver' => self::PAYMENT_TYPE,
             'amount' => $data['transaction_amount'] ?? $this->cart->total->value,
             'reference' => $data['id'] ?? now()->timestamp,
-            'status' => $this->resolveTransactionStatus($success, $data['status_code']),
+            'status' => $this->resolveTransactionStatus($success, $statusCode),
             'notes' => $success ? null : ($meta['errors'] ?? null),
             'card_type' => $data['account_type'] ?? 'N/A',
             'last_four' => $data['last_four'] ?? '',
-            'captured_at' => StatusCode::isCaptured($data['status_code']) ? now() : null,
+            'captured_at' => StatusCode::isCaptured($statusCode) ? now() : null,
             'meta' => $meta,
         ]);
     }
