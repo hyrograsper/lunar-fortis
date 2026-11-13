@@ -4,6 +4,7 @@ use Hyrograsper\LunarFortis\Livewire\PaymentForm;
 use Hyrograsper\LunarFortis\PaymentTypes\FortisPaymentType;
 use Hyrograsper\LunarFortis\Services\ElementsTransactionBinding;
 use Hyrograsper\LunarFortis\Tests\Concerns\InteractsWithLunarCarts;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
@@ -224,13 +225,82 @@ describe('issuing transaction api ids', function () {
             ->and($binding->isIssued($this->cart, $secondTransactionApiId))->toBeTrue();
     });
 
-    it('keeps only the ten most recent ids for a cart', function () {
+    it('keeps only the fifty most recent ids for a cart', function () {
         $binding = app(ElementsTransactionBinding::class);
 
-        $issued = collect(range(1, 11))->map(fn () => $binding->issue($this->cart));
+        $issued = collect(range(1, 51))->map(fn () => $binding->issue($this->cart));
 
         expect($binding->isIssued($this->cart, $issued->first()))->toBeFalse()
             ->and($issued->skip(1)->every(fn (string $id) => $binding->isIssued($this->cart, $id)))->toBeTrue();
+    });
+
+    it('reuses the token and id when the form re-renders within ten minutes', function () {
+        fakeClientTokens();
+
+        $first = Livewire::test(PaymentForm::class, ['cart' => $this->cart])->instance()->issuedClientToken();
+
+        $this->travel(9)->minutes();
+
+        $second = Livewire::test(PaymentForm::class, ['cart' => $this->cart])->instance()->issuedClientToken();
+
+        expect($second)->toBe($first);
+        Http::assertSentCount(1);
+    });
+
+    it('issues a new token and id once the cached token is ten minutes old', function () {
+        fakeClientTokens();
+
+        $first = Livewire::test(PaymentForm::class, ['cart' => $this->cart])->instance()->issuedClientToken();
+
+        $this->travel(11)->minutes();
+
+        $second = Livewire::test(PaymentForm::class, ['cart' => $this->cart])->instance()->issuedClientToken();
+
+        expect($second['token'])->toBe('second-client-token')
+            ->and($second['transaction_api_id'])->not->toBe($first['transaction_api_id']);
+    });
+
+    it('issues a new token and id after a declined attempt, even when the page is reloaded', function () {
+        fakeClientTokens();
+        fakeBoundFortisRecord(['status_code' => 301]);
+
+        $component = Livewire::test(PaymentForm::class, ['cart' => $this->cart]);
+        $usedUp = $component->instance()->issuedClientToken();
+
+        $component->instance()->handlePaymentResponse(['data' => ['id' => BINDING_TRANSACTION_ID]]);
+
+        $afterReload = Livewire::test(PaymentForm::class, ['cart' => $this->cart])->instance()->issuedClientToken();
+
+        expect($afterReload['token'])->toBe('second-client-token')
+            ->and($afterReload['transaction_api_id'])->not->toBe($usedUp['transaction_api_id']);
+    });
+
+    it('waits for another request issuing an id for the same cart', function () {
+        $binding = new ElementsTransactionBinding(lockWaitSeconds: 2);
+        $heldByAnotherRequest = Cache::lock($binding->cacheKey($this->cart).':lock', 10);
+        $heldByAnotherRequest->get();
+
+        $startedAt = microtime(true);
+        $transactionApiId = $binding->issue($this->cart);
+        $waited = microtime(true) - $startedAt;
+
+        $heldByAnotherRequest->release();
+
+        expect($waited)->toBeGreaterThanOrEqual(1.0)
+            ->and($binding->isIssued($this->cart, $transactionApiId))->toBeTrue();
+    });
+
+    it('does not leave the cart lock held after issuing or releasing an id', function () {
+        $binding = app(ElementsTransactionBinding::class);
+
+        $transactionApiId = $binding->issue($this->cart);
+        $binding->release($this->cart, $transactionApiId);
+
+        $lock = Cache::lock($binding->cacheKey($this->cart).':lock', 10);
+
+        expect($lock->get())->toBeTrue();
+
+        $lock->release();
     });
 
     it('does not issue an id for a zero dollar cart', function () {

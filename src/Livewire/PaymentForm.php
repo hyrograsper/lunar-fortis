@@ -22,6 +22,8 @@ class PaymentForm extends Component
 {
     private const string CLIENT_TOKEN_ACTION = 'auth-only';
 
+    private const int CLIENT_TOKEN_CACHE_SECONDS = 600;
+
     public Cart $cart;
 
     public string $policy;
@@ -40,6 +42,8 @@ class PaymentForm extends Component
 
             return;
         }
+
+        Cache::forget($this->clientTokenCacheKey());
 
         /** @var PaymentAuthorize $paymentAuthorize */
         $paymentAuthorize = Payments::driver(FortisPaymentType::PAYMENT_TYPE)
@@ -147,7 +151,7 @@ class PaymentForm extends Component
             return null;
         }
 
-        return Cache::remember($this->clientTokenCacheKey(), 5, fn () => $this->issueClientToken());
+        return Cache::remember($this->clientTokenCacheKey(), self::CLIENT_TOKEN_CACHE_SECONDS, fn () => $this->issueClientToken());
     }
 
     /** @return array{
