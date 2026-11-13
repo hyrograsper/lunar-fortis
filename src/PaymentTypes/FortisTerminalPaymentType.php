@@ -7,6 +7,7 @@ use Hyrograsper\LunarFortis\Enums\ReasonCode;
 use Hyrograsper\LunarFortis\Enums\StatusCode;
 use Hyrograsper\LunarFortis\Facades\LunarFortis;
 use Hyrograsper\LunarFortis\Models\Terminal;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Lunar\Base\DataTransferObjects\PaymentAuthorize;
 use Lunar\Base\DataTransferObjects\PaymentCapture;
@@ -14,17 +15,22 @@ use Lunar\Base\DataTransferObjects\PaymentRefund;
 use Lunar\Events\PaymentAttemptEvent;
 use Lunar\Exceptions\Carts\CartException;
 use Lunar\Exceptions\DisallowMultipleCartOrdersException;
+use Lunar\Models\Cart;
 use Lunar\Models\Contracts\Transaction as TransactionContract;
+use Lunar\Models\Order;
 use Lunar\Models\Transaction;
 use Lunar\PaymentTypes\AbstractPayment;
 
 class FortisTerminalPaymentType extends AbstractPayment
 {
+    use NormalizesIntegerFields;
     use ResetsAllowPartialPayment;
 
     protected string $policy;
 
     public const string PAYMENT_TYPE = 'fortis-terminal';
+
+    private const int TERMINAL_LOCK_SECONDS = 60;
 
     public function __construct()
     {
@@ -72,22 +78,60 @@ class FortisTerminalPaymentType extends AbstractPayment
             return $this->dispatchAndReturn(false, 'This order has already been placed');
         }
 
+        $lock = Cache::lock("lunar-fortis:terminal-transaction:{$transactionId}", self::TERMINAL_LOCK_SECONDS);
+
+        if (! $lock->get()) {
+            return $this->dispatchAndReturn(false, 'This payment is already being processed.');
+        }
+
         try {
-            $transaction = $this->storeTerminalTransaction(
-                LunarFortis::getTransaction($transactionId)
-            );
-        } catch (Exception $exception) {
-            Log::error("LunarFortis: Failed to fetch fortis transaction and store data: {$exception->getMessage()}", [
-                'error' => $exception->getMessage(),
+            return $this->authorizeTerminalTransaction($this->order, $transactionId);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    private function authorizeTerminalTransaction(Order $order, string $transactionId): PaymentAuthorize
+    {
+        if ($this->recordedAgainstAnotherOrder($order, $transactionId)) {
+            Log::warning('LunarFortis: Rejected a terminal transaction already recorded against another order', [
                 'transaction_id' => $transactionId,
-                'order_id' => $this->order->id ?? null,
-                'error_trace' => $exception->getTraceAsString(),
+                'order_id' => $order->id,
             ]);
 
-            return $this->dispatchAndReturn(
-                false,
-                "Failed to fetch fortis transaction and store data: {$exception->getMessage()}"
-            );
+            return $this->dispatchAndReturn(false, 'This payment has already been used.');
+        }
+
+        $transaction = $this->recordedTransaction($order, $transactionId);
+
+        if (! $transaction) {
+            try {
+                $data = $this->normalizeIntegerFields(
+                    $this->withoutBlankTip(LunarFortis::getTransaction($transactionId)['data'] ?? []),
+                    ['status_code', 'transaction_amount', 'tip_amount'],
+                );
+            } catch (Exception $exception) {
+                Log::error("LunarFortis: Failed to fetch fortis transaction: {$exception->getMessage()}", [
+                    'error' => $exception->getMessage(),
+                    'transaction_id' => $transactionId,
+                    'order_id' => $order->id,
+                ]);
+
+                return $this->dispatchAndReturn(false, 'Unable to verify the payment.');
+            }
+
+            $rejection = $this->terminalTransactionRejection($transactionId, $data);
+
+            if ($rejection !== null) {
+                Log::warning("LunarFortis: Rejected terminal transaction: {$rejection}", [
+                    'transaction_id' => $transactionId,
+                    'order_id' => $order->id,
+                ]);
+
+                return $this->dispatchAndReturn(false, $rejection);
+            }
+
+            $transaction = $this->storeTerminalTransaction($data);
         }
 
         if (! $transaction->success) {
@@ -100,14 +144,16 @@ class FortisTerminalPaymentType extends AbstractPayment
             return $this->dispatchAndReturn(true, 'Terminal payment completed successfully');
         }
 
-        $this->order->status = config('lunar-fortis.status_mapping.payment-authorized', 'payment-authorized');
-        $this->order->save();
+        $order->status = config('lunar-fortis.status_mapping.payment-authorized', 'payment-authorized');
+        $order->save();
 
         if ($this->policy === 'automatic') {
-            $captureResponse = $this->capture($transaction, $transaction->amount->value);
+            if (! $this->hasSuccessfulCapture($transaction)) {
+                $captureResponse = $this->capture($transaction, $transaction->amount->value);
 
-            if (! $captureResponse->success) {
-                return $this->dispatchAndReturn(false, $captureResponse->message);
+                if (! $captureResponse->success) {
+                    return $this->dispatchAndReturn(false, $captureResponse->message);
+                }
             }
 
             $this->markOrderPlaced();
@@ -116,6 +162,87 @@ class FortisTerminalPaymentType extends AbstractPayment
         }
 
         return $this->dispatchAndReturn(true, 'Terminal payment authorized');
+    }
+
+    private function recordedAgainstAnotherOrder(Order $order, string $transactionId): bool
+    {
+        return Transaction::query()
+            ->whereIn('driver', [FortisPaymentType::PAYMENT_TYPE, self::PAYMENT_TYPE])
+            ->where('reference', $transactionId)
+            ->where('order_id', '!=', $order->id)
+            ->exists();
+    }
+
+    private function recordedTransaction(Order $order, string $transactionId): ?Transaction
+    {
+        return Transaction::query()
+            ->whereIn('driver', [FortisPaymentType::PAYMENT_TYPE, self::PAYMENT_TYPE])
+            ->where('reference', $transactionId)
+            ->where('order_id', $order->id)
+            ->whereNull('parent_transaction_id')
+            ->oldest('id')
+            ->first();
+    }
+
+    private function hasSuccessfulCapture(Transaction $transaction): bool
+    {
+        return Transaction::query()
+            ->where('parent_transaction_id', $transaction->id)
+            ->where('type', 'capture')
+            ->where('success', true)
+            ->exists();
+    }
+
+    private function withoutBlankTip(array $data): array
+    {
+        if (($data['tip_amount'] ?? null) === null || $data['tip_amount'] === '') {
+            unset($data['tip_amount']);
+        }
+
+        return $data;
+    }
+
+    private function terminalTransactionRejection(string $transactionId, array $data): ?string
+    {
+        if (($data['id'] ?? null) !== $transactionId) {
+            return 'The payment could not be verified.';
+        }
+
+        $statusCode = $data['status_code'] ?? null;
+
+        if (! is_int($statusCode)) {
+            return 'The payment could not be verified.';
+        }
+
+        if (StatusCode::isUnsuccessful($statusCode)) {
+            return null;
+        }
+
+        if ($statusCode !== StatusCode::AuthOnly->value && ! StatusCode::isCaptured($statusCode)) {
+            return 'The payment is not in a state that can be accepted.';
+        }
+
+        $amount = $data['transaction_amount'] ?? null;
+
+        if (! is_int($amount)) {
+            return 'The payment amount could not be verified.';
+        }
+
+        if (! $this->cart instanceof Cart) {
+            return 'The payment amount could not be verified.';
+        }
+
+        $tip = array_key_exists('tip_amount', $data) ? $data['tip_amount'] : 0;
+
+        if (! is_int($tip)) {
+            return 'The payment amount could not be verified.';
+        }
+
+        if ($amount !== $this->cart->total->value && $amount !== $this->cart->total->value + $tip) {
+            return 'The payment amount does not match the order total.';
+        }
+
+        return null;
     }
 
     public function capture(TransactionContract $transaction, $amount = 0): PaymentCapture
@@ -196,26 +323,8 @@ class FortisTerminalPaymentType extends AbstractPayment
         $this->resetAllowPartialPayment();
     }
 
-    private function storeTerminalTransaction(array $response): Transaction
+    private function storeTerminalTransaction(array $data): Transaction
     {
-        $data = $response['data'] ?? [];
-
-        if (empty($data)) {
-            return Transaction::create([
-                'order_id' => $this->order->id,
-                'success' => false,
-                'type' => 'capture',
-                'driver' => self::PAYMENT_TYPE,
-                'amount' => $this->cart->total->value,
-                'reference' => now()->timestamp,
-                'status' => 'failed',
-                'notes' => 'No response data received',
-                'card_type' => 'unknown',
-                'last_four' => '',
-                'meta' => [],
-            ]);
-        }
-
         try {
             $statusCode = $data['status_code'] ?? null;
             $success = StatusCode::isSuccessful($statusCode);

@@ -24,6 +24,7 @@ use Lunar\PaymentTypes\AbstractPayment;
 
 class FortisPaymentType extends AbstractPayment
 {
+    use NormalizesIntegerFields;
     use ResetsAllowPartialPayment;
 
     protected string $policy;
@@ -226,37 +227,6 @@ class FortisPaymentType extends AbstractPayment
         }
 
         return $transactionId;
-    }
-
-    /**
-     * @param  array<string>  $fields
-     */
-    private function normalizeIntegerFields(array $data, array $fields): array
-    {
-        foreach ($fields as $field) {
-            if (array_key_exists($field, $data)) {
-                $data[$field] = $this->wholeNumberOrNull($data[$field]);
-            }
-        }
-
-        return $data;
-    }
-
-    private function wholeNumberOrNull(mixed $value): ?int
-    {
-        if (is_int($value)) {
-            return $value >= 0 ? $value : null;
-        }
-
-        if (! is_string($value)) {
-            return null;
-        }
-
-        if (! preg_match('/^\d+$/', $value)) {
-            return null;
-        }
-
-        return (int) $value;
     }
 
     private function resetPaymentState(): void

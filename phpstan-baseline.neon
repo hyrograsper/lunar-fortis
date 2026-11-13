@@ -159,13 +159,13 @@ parameters:
 		-
 			message: '#^Access to an undefined property Lunar\\Models\\Contracts\\Cart\:\:\$total\.$#'
 			identifier: property.notFound
-			count: 4
+			count: 3
 			path: src/PaymentTypes/FortisTerminalPaymentType.php
 
 		-
 			message: '#^Access to an undefined property Lunar\\Models\\Contracts\\Order\:\:\$id\.$#'
 			identifier: property.notFound
-			count: 6
+			count: 5
 			path: src/PaymentTypes/FortisTerminalPaymentType.php
 
 		-

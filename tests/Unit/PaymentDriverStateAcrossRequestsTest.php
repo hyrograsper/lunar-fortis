@@ -1,11 +1,14 @@
 <?php
 
 use Hyrograsper\LunarFortis\PaymentTypes\FortisTerminalPaymentType;
+use Hyrograsper\LunarFortis\Tests\Concerns\InteractsWithLunarCarts;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Lunar\Facades\Payments;
 use Lunar\Models\Contracts\Cart as CartContract;
 use Lunar\Models\Order;
+
+uses(InteractsWithLunarCarts::class);
 
 function cartThatCreatesOrder(int $orderId): CartContract
 {
@@ -32,6 +35,8 @@ function requestedTransactionIds(): array
 }
 
 beforeEach(function () {
+    $this->setUpLunar();
+
     Http::fake(['*' => Http::response(['data' => []], 200)]);
     config()->set('lunar.payments.types.fortis-terminal', ['driver' => 'fortis-terminal']);
 });
