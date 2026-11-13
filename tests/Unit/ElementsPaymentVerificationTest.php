@@ -134,13 +134,25 @@ describe('forged Elements payloads', function () {
             ->and(successfulTransactionsFor($this->cart))->toBe(0);
     });
 
-    it('rejects a sale transaction because the intention only requests auth-only', function () {
-        fakeFortisLookup(fortisRecord(['status_code' => 101]));
+    it('rejects a transaction in a status that is neither a sale nor an authorization', function (int $statusCode) {
+        fakeFortisLookup(fortisRecord(['status_code' => $statusCode]));
 
-        $result = authorizeElementsPayment($this->cart, elementsPayload([
-            '@action' => 'sale',
-            'status_code' => 101,
-        ]));
+        $result = authorizeElementsPayment($this->cart, elementsPayload());
+
+        expect($result->success)->toBeFalse()
+            ->and(orderFor($this->cart)?->placed_at)->toBeNull()
+            ->and(successfulTransactionsFor($this->cart))->toBe(0);
+    })->with([
+        'voided' => [201],
+        'refunded' => [111],
+        'charged back' => [331],
+        'unknown' => [999],
+    ]);
+
+    it('rejects a sale for less than the cart total', function () {
+        fakeFortisLookup(fortisRecord(['status_code' => 101, 'transaction_amount' => 1]));
+
+        $result = authorizeElementsPayment($this->cart, elementsPayload());
 
         expect($result->success)->toBeFalse()
             ->and(orderFor($this->cart)?->placed_at)->toBeNull()
@@ -249,6 +261,31 @@ describe('genuine Elements payments', function () {
 
         assertTransactionLookedUp('txn0000000000000000000001');
     });
+
+    it('places the order for a verified sale without capturing again', function (int $statusCode, string $policy) {
+        fakeFortisLookup(fortisRecord(['status_code' => $statusCode]));
+
+        $result = authorizeElementsPayment($this->cart, elementsPayload(['@action' => 'sale']), $policy);
+
+        $order = orderFor($this->cart);
+        $sale = Transaction::where('order_id', $order->id)->sole();
+
+        expect($result->success)->toBeTrue()
+            ->and($order->placed_at)->not->toBeNull()
+            ->and($order->status)->toBe('payment-received')
+            ->and($sale->type)->toBe('capture')
+            ->and((bool) $sale->success)->toBeTrue()
+            ->and($sale->captured_at)->not->toBeNull()
+            ->and($sale->reference)->toBe('txn0000000000000000000001')
+            ->and($sale->amount->value)->toBe(1000);
+
+        assertTransactionLookedUp('txn0000000000000000000001');
+        Http::assertNotSent(fn (Request $request) => str_ends_with($request->url(), '/auth-complete'));
+    })->with([
+        'approved, automatic' => [101, 'automatic'],
+        'approved, manual' => [101, 'manual'],
+        'settled, automatic' => [191, 'automatic'],
+    ]);
 
     it('verifies the transaction with Fortis and records an intent under the manual policy', function () {
         fakeFortisLookup(fortisRecord());

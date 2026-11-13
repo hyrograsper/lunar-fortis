@@ -131,6 +131,12 @@ class FortisPaymentType extends AbstractPayment
             return $this->dispatchAndReturn(false, $transaction->meta['errors'] ?? 'Unknown Error.');
         }
 
+        if ($transaction->captured_at !== null) {
+            $this->markOrderPlaced();
+
+            return $this->dispatchAndReturn(true, 'Payment Captured');
+        }
+
         $order->status = config('lunar-fortis.status_mapping.payment-authorized', 'payment-authorized');
         $order->save();
 
@@ -285,8 +291,8 @@ class FortisPaymentType extends AbstractPayment
             return null;
         }
 
-        if ($statusCode !== StatusCode::AuthOnly->value) {
-            return 'The payment was not an authorization.';
+        if ($statusCode !== StatusCode::AuthOnly->value && ! StatusCode::isCaptured($statusCode)) {
+            return 'The payment is not in a state that can be accepted.';
         }
 
         $amount = $data['transaction_amount'] ?? null;
@@ -315,7 +321,7 @@ class FortisPaymentType extends AbstractPayment
         return Transaction::create([
             'order_id' => $this->order->id,
             'success' => $success,
-            'type' => 'intent',
+            'type' => StatusCode::isCaptured($statusCode) ? 'capture' : 'intent',
             'driver' => self::PAYMENT_TYPE,
             'amount' => $data['transaction_amount'] ?? $this->cart->total->value,
             'reference' => $data['id'] ?? now()->timestamp,
