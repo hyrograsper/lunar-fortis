@@ -131,7 +131,7 @@ class FortisPaymentType extends AbstractPayment
             return $this->dispatchAndReturn(false, $transaction->meta['errors'] ?? 'Unknown Error.');
         }
 
-        if ($transaction->captured_at !== null) {
+        if ($transaction->type === 'capture') {
             $this->markOrderPlaced();
 
             return $this->dispatchAndReturn(true, 'Payment Captured');
