@@ -1,3 +1,4 @@
+@php($issuedClientToken = $this->issuedClientToken())
 <script>
     let elements;
 </script>
@@ -5,7 +6,8 @@
             loading: true,
             error: null,
             environment: @js($this->fortisEnvironment),
-            token: @js($this->clientToken()),
+            token: @js($issuedClientToken['token'] ?? null),
+            transactionApiId: @js($issuedClientToken['transaction_api_id'] ?? null),
             sourceUrl: @js($this->fortisJSUrl),
 
             init() {
@@ -18,6 +20,7 @@
 
                 $wire.on('token-regenerated', (event) => {
                     this.token = event[0];
+                    this.transactionApiId = event[1] ?? null;
                     this.initPaymentForm();
                 });
 
@@ -186,7 +189,8 @@
                                 value: '{{ $this->cart->billingAddress?->postcode }}',
                                 hidden: true,
                             },
-                        ]
+                        ],
+                        additional: [{name: 'transaction_api_id', value: this.transactionApiId, hidden: true}],
                     },
                     sectionHeaderLabels: {
                         main: ' ',

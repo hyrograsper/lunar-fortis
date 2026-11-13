@@ -8,6 +8,7 @@ use Hyrograsper\LunarFortis\Enums\CvvResponseCode;
 use Hyrograsper\LunarFortis\Enums\ReasonCode;
 use Hyrograsper\LunarFortis\Enums\StatusCode;
 use Hyrograsper\LunarFortis\LunarFortis;
+use Hyrograsper\LunarFortis\Services\ElementsTransactionBinding;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Lunar\Base\DataTransferObjects\PaymentAuthorize;
@@ -35,8 +36,10 @@ class FortisPaymentType extends AbstractPayment
 
     private const int ELEMENTS_LOCK_SECONDS = 60;
 
-    public function __construct(protected LunarFortis $fortis)
-    {
+    public function __construct(
+        protected LunarFortis $fortis,
+        protected ElementsTransactionBinding $transactionBinding = new ElementsTransactionBinding,
+    ) {
         $this->policy = config('lunar-fortis.policy', 'automatic');
     }
 
@@ -126,6 +129,15 @@ class FortisPaymentType extends AbstractPayment
             return $this->dispatchAndReturn(false, $rejection);
         }
 
+        if (! $this->isBoundToCart($data)) {
+            Log::warning('LunarFortis: Rejected an Elements transaction that was not issued for this cart', [
+                'transaction_id' => $transactionId,
+                'order_id' => $order->id,
+            ]);
+
+            return $this->dispatchAndReturn(false, 'The payment could not be verified.');
+        }
+
         $transaction = $this->storeElementsTransaction($data);
 
         if (! $transaction->success) {
@@ -135,7 +147,7 @@ class FortisPaymentType extends AbstractPayment
         if ($transaction->type === 'capture') {
             $this->markOrderPlaced();
 
-            return $this->dispatchAndReturn(true, 'Payment Captured');
+            return $this->acceptElementsTransaction($data, 'Payment Captured');
         }
 
         $order->status = config('lunar-fortis.status_mapping.payment-authorized', 'payment-authorized');
@@ -150,10 +162,45 @@ class FortisPaymentType extends AbstractPayment
 
             $this->markOrderPlaced();
 
-            return $this->dispatchAndReturn(true, 'Payment Captured');
+            return $this->acceptElementsTransaction($data, 'Payment Captured');
         }
 
-        return $this->dispatchAndReturn(true, 'Payment Authorized');
+        return $this->acceptElementsTransaction($data, 'Payment Authorized');
+    }
+
+    private function isBoundToCart(array $data): bool
+    {
+        if (! config('lunar-fortis.elements.require_transaction_binding', false)) {
+            return true;
+        }
+
+        if (! $this->cart instanceof Cart) {
+            return false;
+        }
+
+        return $this->transactionBinding->isIssued($this->cart, $data['transaction_api_id'] ?? null);
+    }
+
+    private function acceptElementsTransaction(array $data, string $message): PaymentAuthorize
+    {
+        $this->releaseTransactionApiId($data);
+
+        return $this->dispatchAndReturn(true, $message);
+    }
+
+    private function releaseTransactionApiId(array $data): void
+    {
+        $transactionApiId = $data['transaction_api_id'] ?? null;
+
+        if (! is_string($transactionApiId)) {
+            return;
+        }
+
+        if (! $this->cart instanceof Cart) {
+            return;
+        }
+
+        $this->transactionBinding->release($this->cart, $transactionApiId);
     }
 
     public function capture(TransactionContract $transaction, $amount = 0): PaymentCapture

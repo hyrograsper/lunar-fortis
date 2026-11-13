@@ -257,6 +257,50 @@ Configure the payment types in your `config/services.php`:
 ],
 ```
 
+### Binding Elements payments to the cart (opt-in)
+
+Each time the payment form gets a client token, it also gets a random `transaction_api_id` (`lf-` followed by 32 hex characters). The package remembers the ids issued for each cart in the cache for an hour, and the payment form sends the current id to Fortis as a hidden Elements field. A new token always comes with a new id, because Fortis uses up the id on a declined attempt.
+
+When binding is turned on, the package only accepts an Elements payment if the Fortis transaction record carries an id that was issued for the same cart. Any other payment is rejected with "The payment could not be verified." This stops a transaction made for one checkout from paying for another. Binding is off by default, so nothing changes until you turn it on:
+
+```env
+LUNAR_FORTIS_REQUIRE_TRANSACTION_BINDING=true
+```
+
+If you published the payment-form view, add the hidden field before you turn binding on, or every payment will be rejected. Read the token and id once at the top of the view:
+
+```blade
+@php($issuedClientToken = $this->issuedClientToken())
+```
+
+Use them in the Alpine data instead of `$this->clientToken()`:
+
+```js
+token: @js($issuedClientToken['token'] ?? null),
+transactionApiId: @js($issuedClientToken['transaction_api_id'] ?? null),
+```
+
+Take the new id from the `token-regenerated` event:
+
+```js
+$wire.on('token-regenerated', (event) => {
+    this.token = event[0];
+    this.transactionApiId = event[1] ?? null;
+    this.initPaymentForm();
+});
+```
+
+Then add the field inside `fields` in `elements.create()`:
+
+```js
+fields: {
+    billing: [ /* ... */ ],
+    additional: [{name: 'transaction_api_id', value: this.transactionApiId, hidden: true}],
+},
+```
+
+Binding needs a cache store that all your web servers share (for example Redis or the database).
+
 ## Admin Panel Integration
 
 ### Register the Filament Plugin

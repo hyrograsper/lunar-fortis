@@ -49,6 +49,13 @@ return [
             'light' => [],
             'dark' => [],
         ],
+
+        /*
+         * Only accept Elements payments whose transaction_api_id was issued for the cart.
+         * If you published the payment-form view, add the hidden transaction_api_id field
+         * (see the README) before turning this on, or every payment will be rejected.
+         */
+        'require_transaction_binding' => (bool) env('LUNAR_FORTIS_REQUIRE_TRANSACTION_BINDING', false),
     ],
 
     /*

@@ -5,6 +5,7 @@ namespace Hyrograsper\LunarFortis\Livewire;
 use Exception;
 use Hyrograsper\LunarFortis\Facades\LunarFortis;
 use Hyrograsper\LunarFortis\PaymentTypes\FortisPaymentType;
+use Hyrograsper\LunarFortis\Services\ElementsTransactionBinding;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Uri;
@@ -104,13 +105,7 @@ class PaymentForm extends Component
 
     public function clientToken(): ?string
     {
-        if ($this->isZeroDollarCart()) {
-            return null;
-        }
-
-        return Cache::remember($this->clientTokenCacheKey(), 5, function () {
-            return LunarFortis::getClientTokenForSaleAmount($this->cart->total->value, self::CLIENT_TOKEN_ACTION);
-        });
+        return $this->issuedClientToken()['token'] ?? null;
     }
 
     #[On('regenerate-client-token')]
@@ -118,7 +113,13 @@ class PaymentForm extends Component
     {
         Cache::forget($this->clientTokenCacheKey());
 
-        $this->dispatch('token-regenerated', $this->clientToken());
+        $issuedClientToken = $this->issuedClientToken();
+
+        $this->dispatch(
+            'token-regenerated',
+            $issuedClientToken['token'] ?? null,
+            $issuedClientToken['transaction_api_id'] ?? null,
+        );
     }
 
     public function clientTokenCacheKey(): string
@@ -133,7 +134,38 @@ class PaymentForm extends Component
             config('services.fortis.locationId'),
         ]));
 
-        return "fortis_client_token:cart:{$this->cart->id}:{$fingerprint}";
+        return "fortis_client_token:v2:cart:{$this->cart->id}:{$fingerprint}";
+    }
+
+    /** @return array{
+        token: string,
+        transaction_api_id: string
+    }|null */
+    public function issuedClientToken(): ?array
+    {
+        if ($this->isZeroDollarCart()) {
+            return null;
+        }
+
+        return Cache::remember($this->clientTokenCacheKey(), 5, fn () => $this->issueClientToken());
+    }
+
+    /** @return array{
+        token: string,
+        transaction_api_id: string
+    }|null */
+    private function issueClientToken(): ?array
+    {
+        $token = LunarFortis::getClientTokenForSaleAmount($this->cart->total->value, self::CLIENT_TOKEN_ACTION);
+
+        if (! is_string($token)) {
+            return null;
+        }
+
+        return [
+            'token' => $token,
+            'transaction_api_id' => app(ElementsTransactionBinding::class)->issue($this->cart),
+        ];
     }
 
     public function getBillingProperty(): ?OrderAddress
