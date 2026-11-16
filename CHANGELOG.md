@@ -2,6 +2,49 @@
 
 All notable changes to `lunar-fortis` will be documented in this file.
 
+## v2.4.0 - 2026-11-16
+
+### What's Changed
+
+**Security 🔒**
+
+Upgrading is recommended for every 2.x install.
+
+- Elements payments are now verified server-side. The driver reads only the transaction id sent by the browser and loads the transaction from Fortis. The status, amount and card details all come from that record. The amount must match the cart total. A transaction id already recorded for an order is refused, and so is a sale that has been refunded, fully or in part.
+- Terminal payments are verified the same way. The transaction must come from a terminal, must not be refunded, and its amount minus any tip must equal the cart total. An id already recorded for a different order is refused, while retries for the same order are safe.
+- An order that already has an authorized or captured payment is never authorized again by either driver, so a repeat submission can't put a second hold on the card or reset the order's status.
+- Payment drivers reset their per-call state (cart, order, data, partial-payment flag) after every call. This matters for long-running workers such as Octane, where Lunar reuses driver instances.
+
+**Added ✨**
+
+- An opt-in setting that binds Elements payments to the cart: `lunar-fortis.elements.require_transaction_binding` (env `LUNAR_FORTIS_REQUIRE_TRANSACTION_BINDING`, default `false`). Each client token now carries a server-issued `transaction_api_id`. When the setting is on, a payment is accepted only if Fortis recorded an id issued for that cart. **If you published the payment-form view, add the hidden field shown in the README before you turn the setting on.**
+- Elements `sale` transactions are accepted once verified, and recorded as captures. No second capture call is made.
+- The payment form reuses its Fortis client token for up to 10 minutes (per cart total, currency and action), instead of requesting a new one on every re-render. After each payment attempt it gets a fresh token.
+- An opt-in live test suite against the Fortis sandbox (`FORTIS_LIVE=1 vendor/bin/pest --group=live`). It is skipped by default.
+
+**Bug Fixes 🐛**
+
+- The payment-form view now has a single root element. Before, Livewire treated the view's leading `<script>` as the component root, and on a page where the form was not nested inside another Livewire component the payment result never reached the server (the form stayed on "Processing").
+- `processTerminalCreditCardAuth()` and `Terminal::waitForAuthorization()` no longer report a declined terminal transaction as successful: `success` now comes from the transaction record. New result keys: `transaction_status_code` and `reason_code_id`. A processor timeout now returns `timed_out: true` instead of throwing.
+- Declines show the Fortis reason and message instead of "Unknown Error.".
+- Terminal refund transactions keep their terminal id.
+- A missing `status_code` no longer throws a `TypeError`; it is treated as unsuccessful.
+- Settled transactions (status 191) are treated as successful and captured.
+- The client-token cache key now includes the cart, amount, currency, action, environment and location.
+- A `null` success event class no longer triggers `class_exists(null)`.
+- The Lunar 1.3.0 partial-payment reset no longer creates a dynamic property (which is deprecated on PHP 8.4+).
+- Resolved leftover merge-conflict markers in `.gitignore`.
+
+**Upgrade Notes 📝**
+
+- This is a minor release because payments that 2.3 accepted are now refused (refunded, keyed-on-terminal, second payments and mis-tipped terminal amounts), and `processTerminalCreditCardAuth()` returns different results for declines and timeouts. Review the notes above if you call the terminal API directly.
+- If you published the payment-form view, compare it with the new one: wrap it in a single root element (see the bug fix above). The `token-regenerated` Livewire event now has a second argument (the new `transaction_api_id`). Older views ignore it.
+- Payment verification now makes its Fortis lookup with `expand=transaction_references`, and terminal authorizations make one extra lookup of the transaction record.
+- HTTP retries: 2.x retries every Fortis request, including capture and refund, on connection errors and on 429/502/503/504. Fortis refuses a second capture and a second full refund, but repeated *partial* refunds can both succeed. If you issue partial refunds, consider setting `FORTIS_HTTP_RETRY_ATTEMPTS=1`.
+- CI now tests against Lunar 1.3 and the latest 1.x, and keeps Laravel 11 tested.
+
+**Full Changelog**: https://github.com/hyrograsper/lunar-fortis/compare/v2.3.1...v2.4.0
+
 ## v2.3.1 - 2026-07-30
 
 ### What's Changed
@@ -160,6 +203,7 @@ Added missing configuration keys:
 
 
 
+
 ```
 ##### **Environment Variables**
 
@@ -174,6 +218,7 @@ FORTIS_LOCATION_ID=your_fortis_location_id
 FORTIS_PRODUCT_TRANSACTION_ID=your_product_transaction_id                     # ✅ Added
 FORTIS_TERMINAL_PRODUCT_TRANSACTION_ID=your_terminal_product_transaction_id   # ✅ Added
 FORTIS_ENVIRONMENT=sandbox  # or 'production'
+
 
 
 
@@ -198,12 +243,14 @@ composer update hyrograsper/lunar-fortis
 
 
 
+
 ```
 Then add the missing environment variables to your `.env` file:
 
 ```env
 FORTIS_PRODUCT_TRANSACTION_ID=your_product_transaction_id
 FORTIS_TERMINAL_PRODUCT_TRANSACTION_ID=your_terminal_product_transaction_id
+
 
 
 
@@ -769,6 +816,7 @@ Co-Authored-By: Claude [noreply@anthropic.com](mailto:noreply@anthropic.com)
 FORTIS_HTTP_RETRY_STATUS_CODES="429,502,503,504"
 FORTIS_HTTP_RETRY_EXPONENTIAL=false
 FORTIS_HTTP_RETRY_MAX_DELAY=10000
+
 
 
 
