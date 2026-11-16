@@ -2,6 +2,7 @@
 
 use Hyrograsper\LunarFortis\PaymentTypes\FortisTerminalPaymentType;
 use Hyrograsper\LunarFortis\Tests\Concerns\InteractsWithLunarCarts;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Lunar\Facades\Payments;
@@ -19,6 +20,9 @@ function cartThatCreatesOrder(int $orderId): CartContract
     $cart = Mockery::mock(CartContract::class);
     $cart->draftOrder = null;
     $cart->completedOrder = null;
+    $noOrder = Mockery::mock(HasOne::class);
+    $noOrder->shouldReceive('first')->andReturnNull();
+    $cart->shouldReceive('draftOrder', 'completedOrder')->andReturn($noOrder);
     $cart->shouldReceive('createOrder')->andReturn($order);
 
     return $cart;

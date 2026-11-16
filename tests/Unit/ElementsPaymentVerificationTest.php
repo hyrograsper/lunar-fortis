@@ -66,7 +66,7 @@ function fakeFortisLookup(array $record, ?array $captureRecord = null): void
         FORTIS_API."/{$id}/auth-complete" => Http::response([
             'data' => $captureRecord ?? array_merge($record, ['status_code' => 101]),
         ]),
-        FORTIS_API."/{$id}" => Http::response(['data' => $record]),
+        FORTIS_API."/{$id}*" => Http::response(['data' => $record]),
     ]);
 }
 
@@ -96,7 +96,7 @@ function successfulTransactionsFor(Cart $cart): int
 function assertTransactionLookedUp(string $id): void
 {
     Http::assertSent(fn (Request $request) => $request->method() === 'GET'
-        && str_ends_with($request->url(), "/v1/transactions/{$id}"));
+        && str_ends_with((string) parse_url($request->url(), PHP_URL_PATH), "/v1/transactions/{$id}"));
 }
 
 describe('forged Elements payloads', function () {
@@ -270,7 +270,7 @@ describe('an order that already has an authorized payment', function () {
             ->and($order->status)->toBe('payment-authorized')
             ->and(Transaction::where('order_id', $order->id)->pluck('reference')->all())->toBe(['txn0000000000000000000001']);
 
-        Http::assertNotSent(fn (Request $request) => str_ends_with($request->url(), '/v1/transactions/txn0000000000000000000002'));
+        Http::assertNotSent(fn (Request $request) => str_ends_with((string) parse_url($request->url(), PHP_URL_PATH), '/v1/transactions/txn0000000000000000000002'));
     });
 
     it('accepts a new payment after a declined attempt on the same order', function () {
@@ -283,6 +283,53 @@ describe('an order that already has an authorized payment', function () {
         expect($result->success)->toBeTrue()
             ->and(orderFor($this->cart)->status)->toBe('payment-authorized');
     });
+});
+
+describe('a refunded Elements transaction', function () {
+    it('is rejected when Fortis reports a refund against it', function (int $refunded) {
+        $record = fortisRecord(['status_code' => 101, 'reason_code_id' => 1001]);
+
+        Http::fake([
+            FORTIS_API."/{$record['id']}*" => function (Request $request) use ($record, $refunded) {
+                parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+
+                if (! in_array('transaction_references', explode(',', (string) ($query['expand'] ?? '')), true)) {
+                    return Http::response(['data' => $record]);
+                }
+
+                return Http::response(['data' => array_merge($record, ['transaction_references' => [[
+                    'transaction_id' => 'refund0000000000000000001',
+                    'previous_transaction_id' => $record['id'],
+                    'transaction_amount' => $refunded,
+                    'previous_transaction_amount' => 1000,
+                    'reference_type' => 'refund',
+                ]]])]);
+            },
+        ]);
+
+        $result = authorizeElementsPayment($this->cart, elementsPayload(['@action' => 'sale', 'status_code' => 101]));
+
+        expect($result->success)->toBeFalse()
+            ->and($result->message)->toBe('This payment has been refunded.')
+            ->and(Transaction::where('success', true)->count())->toBe(0);
+
+        Http::assertSent(fn (Request $request) => str_contains($request->url(), "{$record['id']}?expand=transaction_references"));
+    })->with([
+        'fully' => [1000],
+        'partially' => [700],
+    ]);
+});
+
+describe('a declined Elements transaction', function () {
+    it('reports the Fortis reason instead of an unknown error', function (array $record, string $message) {
+        fakeFortisLookup(fortisRecord(array_merge(['status_code' => 301], $record)));
+
+        expect(authorizeElementsPayment($this->cart, elementsPayload())->message)->toBe($message);
+    })->with([
+        'mapped reason and verbiage' => [['reason_code_id' => 1500, 'verbiage' => 'Test 1540'], 'Generic Decline. Test 1540'],
+        'unmapped reason with verbiage' => [['reason_code_id' => 1999, 'verbiage' => 'Do not honor'], 'Do not honor'],
+        'no reason and no verbiage' => [[], 'The payment was declined.'],
+    ]);
 });
 
 describe('genuine Elements payments', function () {

@@ -44,7 +44,7 @@ function fakeClientTokens(): void
 function fakeBoundFortisRecord(array $overrides = []): void
 {
     Http::fake([
-        BINDING_TRANSACTIONS_API.'/'.BINDING_TRANSACTION_ID => Http::response(['data' => array_merge([
+        BINDING_TRANSACTIONS_API.'/'.BINDING_TRANSACTION_ID.'*' => Http::response(['data' => array_merge([
             'id' => BINDING_TRANSACTION_ID,
             'status_code' => 102,
             'transaction_amount' => 1000,

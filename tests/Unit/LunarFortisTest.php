@@ -243,7 +243,7 @@ describe('LunarFortis Transaction Retrieval', function () {
         $mockHttpService = Mockery::mock(FortisHttpService::class);
         $mockHttpService->shouldReceive('getTransaction')
             ->once()
-            ->with('trans-123')
+            ->with('trans-123', null)
             ->andReturn([
                 'data' => [
                     'id' => 'trans-123',
@@ -464,6 +464,17 @@ describe('LunarFortis Terminal Credit Card Processing', function () {
                 'data' => [
                     'progress' => 100,
                     'id' => 'completed-trans-789',
+                ],
+            ]);
+
+        $mockHttpService->shouldReceive('getTransaction')
+            ->once()
+            ->with('completed-trans-789', null)
+            ->andReturn([
+                'data' => [
+                    'id' => 'completed-trans-789',
+                    'status_code' => 102,
+                    'reason_code_id' => 1000,
                 ],
             ]);
 

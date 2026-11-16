@@ -42,6 +42,7 @@ function terminalRecord(array $overrides = []): array
         'id' => TERMINAL_TXN,
         'status_code' => 102,
         'transaction_amount' => 1000,
+        'terminal_id' => 'term0000000000000000000100',
         'account_type' => 'visa',
         'last_four' => '4242',
     ], $overrides);
@@ -55,7 +56,7 @@ function fakeTerminalLookup(array $record): void
         TERMINAL_FORTIS_API."/{$id}/auth-complete" => Http::response([
             'data' => array_merge($record, ['status_code' => 101]),
         ]),
-        TERMINAL_FORTIS_API."/{$id}" => Http::response(['data' => $record]),
+        TERMINAL_FORTIS_API."/{$id}*" => Http::response(['data' => $record]),
     ]);
 }
 
@@ -209,7 +210,7 @@ describe('terminal amount verification', function () {
 
     it('rejects a lookup that returns a different transaction than the one requested', function () {
         Http::fake([
-            TERMINAL_FORTIS_API.'/'.TERMINAL_TXN => Http::response([
+            TERMINAL_FORTIS_API.'/'.TERMINAL_TXN.'*' => Http::response([
                 'data' => terminalRecord(['id' => 'term0000000000000000000999']),
             ]),
         ]);
@@ -313,7 +314,7 @@ describe('terminal retries for the same order', function () {
             TERMINAL_FORTIS_API.'/'.TERMINAL_TXN.'/auth-complete' => Http::sequence()
                 ->push(['detail' => 'Gateway down'], 500)
                 ->push(['data' => terminalRecord(['status_code' => 101])]),
-            TERMINAL_FORTIS_API.'/'.TERMINAL_TXN => Http::response(['data' => terminalRecord()]),
+            TERMINAL_FORTIS_API.'/'.TERMINAL_TXN.'*' => Http::response(['data' => terminalRecord()]),
         ]);
 
         $first = authorizeTerminalPayment($this->cart);

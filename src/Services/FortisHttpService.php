@@ -3,6 +3,7 @@
 namespace Hyrograsper\LunarFortis\Services;
 
 use Exception;
+use Hyrograsper\LunarFortis\Exceptions\TerminalTimedOutException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
@@ -272,10 +273,17 @@ class FortisHttpService
         }
     }
 
-    public function getTransaction(string $transactionId): array
+    /** @param array<int, string>|null $expand */
+    public function getTransaction(string $transactionId, ?array $expand = null): array
     {
         try {
-            $response = $this->makeRequest('GET', "/v1/transactions/{$transactionId}");
+            $queryParams = [];
+
+            if ($expand) {
+                $queryParams['expand'] = implode(',', $expand);
+            }
+
+            $response = $this->makeRequest('GET', "/v1/transactions/{$transactionId}", [], $queryParams);
 
             if (config('lunar-fortis.debug')) {
                 Log::debug('LunarFortis: Transaction retrieved successfully', [
@@ -483,6 +491,15 @@ class FortisHttpService
 
             return $response;
         } catch (RequestException $exception) {
+            if ($this->terminalTimedOut($exception)) {
+                Log::warning('LunarFortis: Terminal timed out waiting for the processor', [
+                    'terminal_id' => $terminalId,
+                    'amount' => $amount,
+                ]);
+
+                throw new TerminalTimedOutException(TerminalTimedOutException::PROCESSOR_TIMEOUT, previous: $exception);
+            }
+
             Log::error('LunarFortis: Failed to authorize terminal credit card', [
                 'terminal_id' => $terminalId,
                 'amount' => $amount,
@@ -492,6 +509,21 @@ class FortisHttpService
 
             throw new Exception("Failed to authorize terminal credit card: {$exception->getMessage()}");
         }
+    }
+
+    private function terminalTimedOut(RequestException $exception): bool
+    {
+        if ($exception->response->status() !== 422) {
+            return false;
+        }
+
+        $terminalErrors = $exception->response->json('meta.errors.terminal_id');
+
+        if (! is_array($terminalErrors)) {
+            return false;
+        }
+
+        return in_array(TerminalTimedOutException::PROCESSOR_TIMEOUT, $terminalErrors, true);
     }
 
     public function checkAsyncStatus(string $statusCode): array

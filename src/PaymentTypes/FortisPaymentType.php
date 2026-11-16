@@ -25,7 +25,9 @@ use Lunar\PaymentTypes\AbstractPayment;
 
 class FortisPaymentType extends AbstractPayment
 {
+    use DescribesDeclines;
     use NormalizesIntegerFields;
+    use RejectsRefundedTransactions;
     use ResetsAllowPartialPayment;
 
     protected string $policy;
@@ -110,7 +112,7 @@ class FortisPaymentType extends AbstractPayment
 
         try {
             $data = $this->normalizeIntegerFields(
-                $this->fortis->getTransaction($transactionId)['data'] ?? [],
+                $this->fortis->getTransaction($transactionId, $this->verificationExpand())['data'] ?? [],
                 ['status_code', 'transaction_amount'],
             );
         } catch (Exception $exception) {
@@ -145,7 +147,7 @@ class FortisPaymentType extends AbstractPayment
         $transaction = $this->storeElementsTransaction($data);
 
         if (! $transaction->success) {
-            return $this->dispatchAndReturn(false, $transaction->meta['errors'] ?? 'Unknown Error.');
+            return $this->dispatchAndReturn(false, $transaction->meta['errors'] ?? 'The payment was declined.');
         }
 
         if ($transaction->type === 'capture') {
@@ -325,6 +327,10 @@ class FortisPaymentType extends AbstractPayment
             return 'The payment is not in a state that can be accepted.';
         }
 
+        if ($this->hasRefund($data)) {
+            return 'This payment has been refunded.';
+        }
+
         $amount = $data['transaction_amount'] ?? null;
 
         if (! is_int($amount)) {
@@ -441,11 +447,7 @@ class FortisPaymentType extends AbstractPayment
         $errors = $this->buildVerificationErrors($data);
 
         if (! $errors && StatusCode::isUnsuccessful($data['status_code'] ?? null)) {
-            $errors = ReasonCode::fromCode((int) ($data['reason_code_id'] ?? 0));
-
-            if (isset($data['verbiage'])) {
-                $errors .= ". {$data['verbiage']}";
-            }
+            $errors = $this->declineMessage($data);
         }
 
         $meta = [];

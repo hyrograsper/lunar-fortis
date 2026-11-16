@@ -121,18 +121,6 @@ parameters:
 			path: src/PaymentTypes/FortisPaymentType.php
 
 		-
-			message: '#^Access to an undefined property Lunar\\Models\\Contracts\\Cart\:\:\$completedOrder\.$#'
-			identifier: property.notFound
-			count: 1
-			path: src/PaymentTypes/FortisTerminalPaymentType.php
-
-		-
-			message: '#^Access to an undefined property Lunar\\Models\\Contracts\\Cart\:\:\$draftOrder\.$#'
-			identifier: property.notFound
-			count: 1
-			path: src/PaymentTypes/FortisTerminalPaymentType.php
-
-		-
 			message: '#^Access to an undefined property Lunar\\Models\\Contracts\\Cart\:\:\$total\.$#'
 			identifier: property.notFound
 			count: 3
@@ -166,12 +154,6 @@ parameters:
 			message: '#^Access to an undefined property Lunar\\Models\\Contracts\\Transaction\:\:\$id\.$#'
 			identifier: property.notFound
 			count: 3
-			path: src/PaymentTypes/FortisTerminalPaymentType.php
-
-		-
-			message: '#^Access to an undefined property Lunar\\Models\\Contracts\\Transaction\:\:\$meta\.$#'
-			identifier: property.notFound
-			count: 1
 			path: src/PaymentTypes/FortisTerminalPaymentType.php
 
 		-

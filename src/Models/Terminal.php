@@ -249,11 +249,14 @@ class Terminal extends Model
 
         $progress = $statusData['progress'] ?? 0;
         $error = $statusData['error'] ?? null;
+        $outcome = LunarFortis::terminalTransactionOutcome($statusData);
 
         return [
             'progress' => $progress,
             'completed' => $progress >= 100,
-            'success' => $progress >= 100 && ! $error,
+            'success' => $outcome['success'],
+            'transaction_status_code' => $outcome['transaction_status_code'],
+            'reason_code_id' => $outcome['reason_code_id'],
             'error' => $error,
             'transaction_id' => $statusData['id'] ?? null,
             'type' => $statusData['type'] ?? null,

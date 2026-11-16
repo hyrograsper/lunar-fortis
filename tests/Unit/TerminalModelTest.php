@@ -283,6 +283,10 @@ describe('Terminal Payment Processing', function () {
                 ],
             ]);
 
+        LunarFortis::shouldReceive('terminalTransactionOutcome')
+            ->once()
+            ->andReturn(['success' => true, 'transaction_status_code' => 102, 'reason_code_id' => 1000]);
+
         $result = $this->terminal->waitForAuthorization('status-456');
 
         expect($result['progress'])->toBe(100);

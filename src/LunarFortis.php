@@ -3,6 +3,9 @@
 namespace Hyrograsper\LunarFortis;
 
 use Exception;
+use Hyrograsper\LunarFortis\Enums\StatusCode;
+use Hyrograsper\LunarFortis\Exceptions\TerminalTimedOutException;
+use Hyrograsper\LunarFortis\PaymentTypes\NormalizesIntegerFields;
 use Hyrograsper\LunarFortis\Services\FortisHttpService;
 use Illuminate\Support\Facades\Log;
 use Lunar\Models\Contracts\Transaction as TransactionContract;
@@ -11,6 +14,8 @@ use Lunar\Models\OrderAddress;
 
 class LunarFortis
 {
+    use NormalizesIntegerFields;
+
     protected ?FortisHttpService $httpService = null;
 
     protected function getHttpService(): FortisHttpService
@@ -89,11 +94,15 @@ class LunarFortis
         }
     }
 
-    /** @throws Exception */
-    public function getTransaction(string $transactionId): array
+    /**
+     * @param  array<int, string>|null  $expand
+     *
+     * @throws Exception
+     */
+    public function getTransaction(string $transactionId, ?array $expand = null): array
     {
         try {
-            return $this->getHttpService()->getTransaction($transactionId);
+            return $this->getHttpService()->getTransaction($transactionId, $expand);
         } catch (Exception $exception) {
             throw new Exception("Failed to retrieve transaction: {$exception->getMessage()}");
         }
@@ -184,6 +193,8 @@ class LunarFortis
     {
         try {
             return $this->getHttpService()->authorizeTerminalCreditCard($terminalId, $amount, $options);
+        } catch (TerminalTimedOutException $exception) {
+            throw $exception;
         } catch (Exception $exception) {
             throw new Exception("Failed to authorize terminal credit card: {$exception->getMessage()}");
         }
@@ -255,7 +266,12 @@ class LunarFortis
                 ]);
             }
 
-            $processingResponse = $this->authorizeTerminalCreditCard($terminalId, $amount, $options);
+            try {
+                $processingResponse = $this->authorizeTerminalCreditCard($terminalId, $amount, $options);
+            } catch (TerminalTimedOutException $exception) {
+                return $this->timedOutTerminalResult($exception->getMessage());
+            }
+
             $asyncData = $processingResponse['data']['async'] ?? [];
             $statusCode = $asyncData['code'] ?? null;
 
@@ -272,9 +288,12 @@ class LunarFortis
 
             $finalStatus = $this->waitForTerminalTransaction($statusCode, $timeoutSeconds, $pollIntervalSeconds);
             $statusData = $finalStatus['data'] ?? [];
+            $outcome = $this->terminalTransactionOutcome($statusData);
 
             $result = [
-                'success' => ($statusData['progress'] ?? 0) >= 100 && ! ($statusData['error'] ?? null),
+                'success' => $outcome['success'],
+                'transaction_status_code' => $outcome['transaction_status_code'],
+                'reason_code_id' => $outcome['reason_code_id'],
                 'status_code' => $statusCode,
                 'progress' => $statusData['progress'] ?? 0,
                 'transaction_id' => $statusData['id'] ?? null,
@@ -300,6 +319,75 @@ class LunarFortis
             ]);
             throw new Exception("Terminal credit card authorization failed: {$exception->getMessage()}");
         }
+    }
+
+    /**
+     * @return array{
+     *     success: bool,
+     *     transaction_status_code: ?int,
+     *     reason_code_id: ?int
+     * }
+     */
+    public function terminalTransactionOutcome(array $statusData): array
+    {
+        $outcome = [
+            'success' => false,
+            'transaction_status_code' => null,
+            'reason_code_id' => null,
+        ];
+
+        $transactionId = $statusData['id'] ?? null;
+
+        if (($statusData['progress'] ?? 0) < 100) {
+            return $outcome;
+        }
+
+        if ($statusData['error'] ?? null) {
+            return $outcome;
+        }
+
+        if (! is_string($transactionId) || $transactionId === '') {
+            return $outcome;
+        }
+
+        try {
+            $record = $this->normalizeIntegerFields(
+                $this->getTransaction($transactionId)['data'] ?? [],
+                ['status_code', 'reason_code_id'],
+            );
+        } catch (Exception $exception) {
+            Log::error('LunarFortis: Unable to verify the terminal transaction outcome', [
+                'transaction_id' => $transactionId,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return $outcome;
+        }
+
+        $transactionStatusCode = $record['status_code'] ?? null;
+
+        return [
+            'success' => StatusCode::isSuccessful($transactionStatusCode),
+            'transaction_status_code' => $transactionStatusCode,
+            'reason_code_id' => $record['reason_code_id'] ?? null,
+        ];
+    }
+
+    private function timedOutTerminalResult(string $error): array
+    {
+        return [
+            'success' => false,
+            'transaction_status_code' => null,
+            'reason_code_id' => null,
+            'status_code' => null,
+            'progress' => 0,
+            'transaction_id' => null,
+            'error' => $error,
+            'ttl' => null,
+            'type' => null,
+            'completed' => false,
+            'timed_out' => true,
+        ];
     }
 
     /** @throws Exception */

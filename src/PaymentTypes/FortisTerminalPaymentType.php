@@ -23,7 +23,9 @@ use Lunar\PaymentTypes\AbstractPayment;
 
 class FortisTerminalPaymentType extends AbstractPayment
 {
+    use DescribesDeclines;
     use NormalizesIntegerFields;
+    use RejectsRefundedTransactions;
     use ResetsAllowPartialPayment;
 
     protected string $policy;
@@ -62,7 +64,15 @@ class FortisTerminalPaymentType extends AbstractPayment
             return $this->dispatchAndReturn(false, 'Invalid Fortis transaction id.');
         }
 
-        $this->order = $this->order ?: ($this->cart->draftOrder ?: $this->cart->completedOrder);
+        $this->order = $this->order ?: ($this->cart->draftOrder()->first() ?: $this->cart->completedOrder()->first());
+
+        if ($this->order instanceof Order && $this->hasAnotherAuthorizedPayment($this->order, $transactionId)) {
+            return $this->dispatchAndReturn(false, 'This order already has an authorized payment.', $this->order->id);
+        }
+
+        if ($this->order instanceof Order && $this->order->placed_at) {
+            return $this->dispatchAndReturn(false, 'This order has already been placed', $this->order->id);
+        }
 
         if (! $this->order) {
             try {
@@ -72,10 +82,6 @@ class FortisTerminalPaymentType extends AbstractPayment
             }
         } else {
             $this->order = $this->cart->createOrder(orderIdToUpdate: $this->order->id);
-        }
-
-        if ($this->order->placed_at) {
-            return $this->dispatchAndReturn(false, 'This order has already been placed');
         }
 
         $lock = Cache::lock("lunar-fortis:terminal-transaction:{$transactionId}", self::TERMINAL_LOCK_SECONDS);
@@ -107,8 +113,8 @@ class FortisTerminalPaymentType extends AbstractPayment
         if (! $transaction) {
             try {
                 $data = $this->normalizeIntegerFields(
-                    $this->withoutBlankTip(LunarFortis::getTransaction($transactionId)['data'] ?? []),
-                    ['status_code', 'transaction_amount', 'tip_amount'],
+                    $this->withoutBlankTip(LunarFortis::getTransaction($transactionId, $this->verificationExpand())['data'] ?? []),
+                    ['status_code', 'reason_code_id', 'transaction_amount', 'tip_amount'],
                 );
             } catch (Exception $exception) {
                 Log::error("LunarFortis: Failed to fetch fortis transaction: {$exception->getMessage()}", [
@@ -135,7 +141,7 @@ class FortisTerminalPaymentType extends AbstractPayment
         }
 
         if (! $transaction->success) {
-            return $this->dispatchAndReturn(false, $transaction->meta['errors'] ?? 'Unknown Error.');
+            return $this->dispatchAndReturn(false, $transaction->meta['errors'] ?? 'The payment was declined.');
         }
 
         if ($transaction->type === 'capture') {
@@ -162,6 +168,16 @@ class FortisTerminalPaymentType extends AbstractPayment
         }
 
         return $this->dispatchAndReturn(true, 'Terminal payment authorized');
+    }
+
+    private function hasAnotherAuthorizedPayment(Order $order, string $transactionId): bool
+    {
+        return Transaction::query()
+            ->where('order_id', $order->id)
+            ->whereIn('type', ['intent', 'capture'])
+            ->where('success', true)
+            ->where('reference', '!=', $transactionId)
+            ->exists();
     }
 
     private function recordedAgainstAnotherOrder(Order $order, string $transactionId): bool
@@ -208,6 +224,12 @@ class FortisTerminalPaymentType extends AbstractPayment
             return 'The payment could not be verified.';
         }
 
+        $terminalId = $data['terminal_id'] ?? null;
+
+        if (! is_string($terminalId) || $terminalId === '') {
+            return 'The payment was not taken on a terminal.';
+        }
+
         $statusCode = $data['status_code'] ?? null;
 
         if (! is_int($statusCode)) {
@@ -220,6 +242,10 @@ class FortisTerminalPaymentType extends AbstractPayment
 
         if ($statusCode !== StatusCode::AuthOnly->value && ! StatusCode::isCaptured($statusCode)) {
             return 'The payment is not in a state that can be accepted.';
+        }
+
+        if ($this->hasRefund($data)) {
+            return 'This payment has been refunded.';
         }
 
         $amount = $data['transaction_amount'] ?? null;
@@ -340,7 +366,7 @@ class FortisTerminalPaymentType extends AbstractPayment
                 'amount' => $data['transaction_amount'] ?? $this->cart->total->value,
                 'reference' => $data['id'] ?? now()->timestamp,
                 'status' => $this->resolveTransactionStatus($success, $statusCode),
-                'notes' => $success ? null : ($data['verbiage'] ?? $data['reason_code'] ?? null),
+                'notes' => $success ? null : $meta['errors'],
                 'card_type' => $data['account_type'] ?? 'credit',
                 'last_four' => $data['last_four'] ?? '',
                 'captured_at' => StatusCode::isCaptured($statusCode) ? now() : null,
@@ -379,10 +405,15 @@ class FortisTerminalPaymentType extends AbstractPayment
         $meta = [
             'status_code' => $data['status_code'] ?? null,
             'reason_code' => $data['reason_code'] ?? null,
+            'reason_code_id' => $data['reason_code_id'] ?? null,
             'fortis_transaction_id' => $data['id'] ?? null,
             'description' => $data['description'] ?? null,
             'verbiage' => $data['verbiage'] ?? null,
         ];
+
+        if (StatusCode::isUnsuccessful($data['status_code'] ?? null)) {
+            $meta['errors'] = $this->declineMessage($data);
+        }
 
         if (isset($data['terminal_id'])) {
             $meta['terminal_id'] = $data['terminal_id'];
@@ -406,9 +437,9 @@ class FortisTerminalPaymentType extends AbstractPayment
 
     private function getTerminalIdFromMeta(TransactionContract $transaction): ?string
     {
-        $meta = is_array($transaction->meta) ? $transaction->meta : [];
+        $terminalId = $transaction->meta['terminal_id'] ?? null;
 
-        return $meta['terminal_id'] ?? null;
+        return is_string($terminalId) ? $terminalId : null;
     }
 
     private function determineTransactionType(array $data): string
