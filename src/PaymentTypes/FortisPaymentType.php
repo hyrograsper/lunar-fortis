@@ -64,7 +64,11 @@ class FortisPaymentType extends AbstractPayment
             return $this->dispatchAndReturn(false, 'Invalid payment response.');
         }
 
-        $this->order = $this->order ?: ($this->cart->draftOrder ?: $this->cart->completedOrder);
+        $this->order = $this->order ?: ($this->cart->draftOrder()->first() ?: $this->cart->completedOrder()->first());
+
+        if ($this->order instanceof Order && $this->hasAuthorizedPayment($this->order)) {
+            return $this->dispatchAndReturn(false, 'This order already has an authorized payment.', $this->order->id);
+        }
 
         if (! $this->order) {
             try {
@@ -282,6 +286,15 @@ class FortisPaymentType extends AbstractPayment
         $this->order = null;
         $this->data = [];
         $this->resetAllowPartialPayment();
+    }
+
+    private function hasAuthorizedPayment(Order $order): bool
+    {
+        return Transaction::query()
+            ->where('order_id', $order->id)
+            ->whereIn('type', ['intent', 'capture'])
+            ->where('success', true)
+            ->exists();
     }
 
     private function transactionAlreadyRecorded(string $transactionId): bool

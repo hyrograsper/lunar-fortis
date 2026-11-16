@@ -242,6 +242,49 @@ describe('forged Elements payloads', function () {
     });
 });
 
+describe('an order that already has an authorized payment', function () {
+    it('keeps the order authorized when the same payment is submitted again', function () {
+        fakeFortisLookup(fortisRecord());
+        authorizeElementsPayment($this->cart, elementsPayload(), 'manual');
+
+        $result = authorizeElementsPayment($this->cart, elementsPayload(), 'manual');
+
+        $order = orderFor($this->cart);
+
+        expect($result->success)->toBeFalse()
+            ->and($order->status)->toBe('payment-authorized')
+            ->and(Transaction::where('order_id', $order->id)->count())->toBe(1);
+    });
+
+    it('refuses a second genuine payment for the same order', function () {
+        fakeFortisLookup(fortisRecord());
+        fakeFortisLookup(fortisRecord(['id' => 'txn0000000000000000000002']));
+        authorizeElementsPayment($this->cart, elementsPayload(), 'manual');
+
+        $result = authorizeElementsPayment($this->cart, elementsPayload(['id' => 'txn0000000000000000000002']), 'manual');
+
+        $order = orderFor($this->cart);
+
+        expect($result->success)->toBeFalse()
+            ->and($result->message)->toBe('This order already has an authorized payment.')
+            ->and($order->status)->toBe('payment-authorized')
+            ->and(Transaction::where('order_id', $order->id)->pluck('reference')->all())->toBe(['txn0000000000000000000001']);
+
+        Http::assertNotSent(fn (Request $request) => str_ends_with($request->url(), '/v1/transactions/txn0000000000000000000002'));
+    });
+
+    it('accepts a new payment after a declined attempt on the same order', function () {
+        fakeFortisLookup(fortisRecord(['status_code' => 301, 'reason_code_id' => 1500]));
+        fakeFortisLookup(fortisRecord(['id' => 'txn0000000000000000000002']));
+        authorizeElementsPayment($this->cart, elementsPayload(), 'manual');
+
+        $result = authorizeElementsPayment($this->cart, elementsPayload(['id' => 'txn0000000000000000000002']), 'manual');
+
+        expect($result->success)->toBeTrue()
+            ->and(orderFor($this->cart)->status)->toBe('payment-authorized');
+    });
+});
+
 describe('genuine Elements payments', function () {
     it('verifies the transaction with Fortis and captures it under the automatic policy', function () {
         fakeFortisLookup(fortisRecord());
