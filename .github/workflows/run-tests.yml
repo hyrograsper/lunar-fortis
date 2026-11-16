@@ -50,6 +50,8 @@ jobs:
           echo "::add-matcher::${{ runner.tool_cache }}/phpunit.json"
 
       - name: Install dependencies
+        env:
+          COMPOSER_NO_SECURITY_BLOCKING: ${{ matrix.laravel == '11.*' && '1' || '0' }}
         run: |
           composer require "lunarphp/core:${{ matrix.lunar }}" "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
           composer update --${{ matrix.stability }} --prefer-dist --no-interaction -W

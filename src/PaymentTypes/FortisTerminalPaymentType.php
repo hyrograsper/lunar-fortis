@@ -68,7 +68,7 @@ class FortisTerminalPaymentType extends AbstractPayment
             try {
                 $this->order = $this->cart->createOrder();
             } catch (DisallowMultipleCartOrdersException|CartException $exception) {
-                return $this->dispatchAndReturn(false, $exception->getMessage(), $this->order?->id);
+                return $this->dispatchAndReturn(false, $exception->getMessage());
             }
         } else {
             $this->order = $this->cart->createOrder(orderIdToUpdate: $this->order->id);
