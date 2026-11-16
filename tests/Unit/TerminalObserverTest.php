@@ -14,6 +14,7 @@ describe('TerminalObserver - Basic Functionality', function () {
         $logMock->shouldReceive('channel')->withAnyArgs()->andReturnSelf();
         $logMock->shouldReceive('info')->withAnyArgs();
         $logMock->shouldReceive('error')->withAnyArgs();
+        $logMock->shouldReceive('warning')->withAnyArgs();
         Log::swap($logMock);
 
         $this->mockFortis = Mockery::mock(LunarFortis::class);
@@ -102,6 +103,7 @@ describe('TerminalObserver - Direct Method Testing', function () {
         $logMock->shouldReceive('channel')->withAnyArgs()->andReturnSelf();
         $logMock->shouldReceive('info')->withAnyArgs();
         $logMock->shouldReceive('error')->withAnyArgs();
+        $logMock->shouldReceive('warning')->withAnyArgs();
         Log::swap($logMock);
 
         $this->mockFortis = Mockery::mock(LunarFortis::class);
@@ -257,6 +259,7 @@ describe('TerminalObserver - Field Mapping', function () {
         $logMock->shouldReceive('channel')->withAnyArgs()->andReturnSelf();
         $logMock->shouldReceive('info')->withAnyArgs();
         $logMock->shouldReceive('error')->withAnyArgs();
+        $logMock->shouldReceive('warning')->withAnyArgs();
         Log::swap($logMock);
 
         $this->mockFortis = Mockery::mock(LunarFortis::class);
