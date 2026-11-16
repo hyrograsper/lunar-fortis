@@ -153,6 +153,7 @@ describe('terminal amount verification', function () {
     })->with([
         'tip swallowed into a short payment' => [1100],
         'tip added twice' => [1400],
+        'cart total with part of it booked as tip' => [1000],
     ]);
 
     it('rejects a tip that is not a whole number', function (mixed $tip) {

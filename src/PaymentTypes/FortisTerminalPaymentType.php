@@ -264,7 +264,11 @@ class FortisTerminalPaymentType extends AbstractPayment
             return 'The payment amount could not be verified.';
         }
 
-        if ($amount !== $this->cart->total->value && $amount !== $this->cart->total->value + $tip) {
+        if ($tip < 0) {
+            return 'The payment amount could not be verified.';
+        }
+
+        if ($amount - $tip !== $this->cart->total->value) {
             return 'The payment amount does not match the order total.';
         }
 
