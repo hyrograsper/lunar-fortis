@@ -1,6 +1,7 @@
 @php($issuedClientToken = $this->issuedClientToken())
+<div>
 <script>
-    let elements;
+    window.elements ??= null;
 </script>
 <div x-data="{
             loading: true,
@@ -257,4 +258,5 @@
             </flux:modal.close>
         </div>
     </flux:modal>
+</div>
 </div>
