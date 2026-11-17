@@ -12,6 +12,7 @@ use Illuminate\Support\Uri;
 use Illuminate\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Livewire\Livewire;
 use Lunar\Base\DataTransferObjects\PaymentAuthorize;
 use Lunar\Facades\Payments;
 use Lunar\Models\Cart;
@@ -31,6 +32,16 @@ class PaymentForm extends Component
     public function mount(): void
     {
         $this->policy = config('lunar-fortis.policy') ?? 'automatic';
+
+        if (! isset($this->cart)) {
+            return;
+        }
+
+        if (Livewire::isLivewireRequest()) {
+            return;
+        }
+
+        Cache::forget($this->clientTokenCacheKey());
     }
 
     #[On('handle-payment-response')]

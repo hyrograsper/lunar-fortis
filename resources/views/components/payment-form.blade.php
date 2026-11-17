@@ -5,33 +5,41 @@
 </script>
 <div x-data="{
             loading: true,
+            submitting: false,
             error: null,
             environment: @js($this->fortisEnvironment),
-            token: @js($issuedClientToken['token'] ?? null),
-            transactionApiId: @js($issuedClientToken['transaction_api_id'] ?? null),
+            token: null,
+            transactionApiId: null,
             sourceUrl: @js($this->fortisJSUrl),
 
             init() {
+                this.token = this.$el.dataset.token || null;
+                this.transactionApiId = this.$el.dataset.transactionApiId || null;
+
                 if (this.token === null) {
                     this.loading = false;
                     return;
                 }
 
                 this.loadScript();
+            },
 
-                $wire.on('token-regenerated', (event) => {
-                    this.token = event[0];
-                    this.transactionApiId = event[1] ?? null;
-                    this.initPaymentForm();
-                });
+            tokenRegenerated(event) {
+                if (event[0] === this.token) {
+                    return;
+                }
 
-                $wire.on('payment-error', (event) => {
-                    this.error = event[0] || 'An error occurred while processing your payment. Please try again.';
+                this.token = event[0];
+                this.transactionApiId = event[1] ?? null;
+                this.initPaymentForm();
+            },
 
-                    Flux.modal('payment-processing').close();
+            showPaymentError(event) {
+                this.error = event[0] || 'An error occurred while processing your payment. Please try again.';
 
-                    Flux.modal('payment-error').show();
-                });
+                Flux.modal('payment-processing').close();
+
+                Flux.modal('payment-error').show();
             },
 
             loadScript() {
@@ -72,6 +80,8 @@
                 });
 
                 elements.on('submitted', (event) => {
+                    this.submitting = true;
+
                     setTimeout(() => {
                         Flux.modal('payment-processing').show();
                     }, 500);
@@ -80,6 +90,8 @@
                 });
 
                 elements.on('done', (event) => {
+                    this.submitting = false;
+
                     $wire.dispatch('handle-payment-response', {response: event});
                 });
 
@@ -88,14 +100,40 @@
                 });
 
                 elements.on('error', (event) => {
-                    setTimeout(() => {
-                        Flux.modal('payment-processing').close();
-                    }, 500);
+                    const failedSubmission = this.submitting;
+
+                    this.submitting = false;
 
                     this.$nextTick(() => {
                         this.loading = false;
                     });
+
+                    setTimeout(() => {
+                        Flux.modal('payment-processing').close();
+                    }, 500);
+
+                    if (! failedSubmission) {
+                        return;
+                    }
+
+                    this.error = this.elementsErrorMessage(event);
+
+                    setTimeout(() => {
+                        Flux.modal('payment-error').show();
+                    }, 500);
                 });
+            },
+
+            elementsErrorMessage(event) {
+                const fieldMessages = Object.values(event?.data?.meta ?? {})
+                    .map((field) => field?.message)
+                    .filter(Boolean);
+
+                if (fieldMessages.length > 0) {
+                    return fieldMessages.join(' ');
+                }
+
+                return event?.data?.detail || 'Your payment could not be processed. Please try again.';
             },
 
             removeEventListeners() {
@@ -114,8 +152,6 @@
             },
 
             reset() {
-                Flux.modal('payment-error').close();
-
                 this.removeEventListeners();
 
                 $wire.dispatch('regenerate-client-token');
@@ -199,7 +235,11 @@
                     appearance: this.getAppearanceSettings()
                 });
             }
-    }">
+    }"
+    data-token="{{ $issuedClientToken['token'] ?? '' }}"
+    data-transaction-api-id="{{ $issuedClientToken['transaction_api_id'] ?? '' }}"
+    x-on:token-regenerated.window="tokenRegenerated($event.detail)"
+    x-on:payment-error.window="showPaymentError($event.detail)">
     @if($this->isZeroDollarCart())
         <div class="rounded-md bg-yellow-50 dark:bg-yellow-900/20 p-4">
             <div class="flex">
@@ -239,7 +279,7 @@
         </div>
     </flux:modal>
 
-    <flux:modal name="payment-error" class="min-w-[22rem] space-y-6" :dismissible="false">
+    <flux:modal name="payment-error" class="min-w-[22rem] space-y-6" :dismissible="false" x-on:close="reset()">
         <div>
             <div class="flex items-center gap-2">
                 <flux:icon.circle-alert class="text-red-500" />
@@ -254,7 +294,7 @@
             <flux:spacer />
 
             <flux:modal.close>
-                <flux:button x-on:click="reset()" kbd="Enter" wire:keydown.enter>Ok</flux:button>
+                <flux:button kbd="Enter" wire:keydown.enter>Ok</flux:button>
             </flux:modal.close>
         </div>
     </flux:modal>
