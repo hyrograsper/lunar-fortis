@@ -2,6 +2,23 @@
 
 All notable changes to `lunar-fortis` will be documented in this file.
 
+## v2.4.1 - 2026-11-17
+
+### What's Changed
+
+**Bug Fixes 🐛**
+
+- Fixed a 2.4.0 regression where the card form rendered empty for up to ten minutes after Fortis rejected a payment inside the Elements form (for example a mismatched `transaction_api_id`). Elements reports such a rejection as an `error`, not `done`, so the used-up client token stayed cached and every reload served it again. A full page load now always issues a fresh client token. Livewire re-renders still reuse the cached token, and `transaction_api_id`s issued earlier stay valid.
+- The bundled payment form shows an Elements error that follows a submit in the payment-error modal, with Fortis's message.
+- Closing the payment-error modal in any way (Ok, the close button or Enter) now requests a new token. Before, only Ok did, so closing a decline with the close button left the form hidden until a reload.
+- A new token no longer restarts the form's Alpine component. The token and `transaction_api_id` are now passed as `data-` attributes, and the `token-regenerated` and `payment-error` listeners use `x-on:*.window`. Before, stale `$wire.on` listeners stayed attached, so a retry rebuilt the form several times and the form could stay hidden.
+
+**Upgrade Notes 📝**
+
+- **If you published the payment-form view, update it again**, even if you already updated it for 2.4.0. The server-side fix works without view changes, but retrying without a reload needs the view changes. See "Recovering after an Elements error" in the README.
+
+**Full Changelog**: https://github.com/hyrograsper/lunar-fortis/compare/v2.4.0...v2.4.1
+
 ## v2.4.0 - 2026-11-16
 
 ### What's Changed
@@ -204,6 +221,7 @@ Added missing configuration keys:
 
 
 
+
 ```
 ##### **Environment Variables**
 
@@ -218,6 +236,7 @@ FORTIS_LOCATION_ID=your_fortis_location_id
 FORTIS_PRODUCT_TRANSACTION_ID=your_product_transaction_id                     # ✅ Added
 FORTIS_TERMINAL_PRODUCT_TRANSACTION_ID=your_terminal_product_transaction_id   # ✅ Added
 FORTIS_ENVIRONMENT=sandbox  # or 'production'
+
 
 
 
@@ -244,12 +263,14 @@ composer update hyrograsper/lunar-fortis
 
 
 
+
 ```
 Then add the missing environment variables to your `.env` file:
 
 ```env
 FORTIS_PRODUCT_TRANSACTION_ID=your_product_transaction_id
 FORTIS_TERMINAL_PRODUCT_TRANSACTION_ID=your_terminal_product_transaction_id
+
 
 
 
@@ -816,6 +837,7 @@ Co-Authored-By: Claude [noreply@anthropic.com](mailto:noreply@anthropic.com)
 FORTIS_HTTP_RETRY_STATUS_CODES="429,502,503,504"
 FORTIS_HTTP_RETRY_EXPONENTIAL=false
 FORTIS_HTTP_RETRY_MAX_DELAY=10000
+
 
 
 
