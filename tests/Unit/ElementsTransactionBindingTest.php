@@ -41,6 +41,14 @@ function fakeClientTokens(): void
     ]);
 }
 
+function mountDuringLivewireUpdate(Cart $cart): ?array
+{
+    return Livewire::withHeaders(['X-Livewire' => 'true'])
+        ->test(PaymentForm::class, ['cart' => $cart])
+        ->instance()
+        ->issuedClientToken();
+}
+
 function fakeBoundFortisRecord(array $overrides = []): void
 {
     Http::fake([
@@ -201,10 +209,31 @@ describe('issuing transaction api ids', function () {
         fakeClientTokens();
 
         $first = Livewire::test(PaymentForm::class, ['cart' => $this->cart])->instance()->issuedClientToken();
-        $second = Livewire::test(PaymentForm::class, ['cart' => $this->cart])->instance()->issuedClientToken();
+
+        $second = mountDuringLivewireUpdate($this->cart);
 
         expect($second)->toBe($first)
             ->and($first['token'])->toBe('first-client-token');
+    });
+
+    it('issues a new token and id on every full page load, so a used-up token is never served again', function () {
+        fakeClientTokens();
+
+        $firstPageLoad = Livewire::test(PaymentForm::class, ['cart' => $this->cart])->instance()->issuedClientToken();
+        $secondPageLoad = Livewire::test(PaymentForm::class, ['cart' => $this->cart])->instance()->issuedClientToken();
+
+        expect($secondPageLoad['token'])->toBe('second-client-token')
+            ->and($secondPageLoad['transaction_api_id'])->not->toBe($firstPageLoad['transaction_api_id']);
+    });
+
+    it('keeps the id from an earlier page load valid after a reload issues a new one', function () {
+        fakeClientTokens();
+        $binding = app(ElementsTransactionBinding::class);
+
+        $earlierTab = Livewire::test(PaymentForm::class, ['cart' => $this->cart])->instance()->issuedClientToken();
+        Livewire::test(PaymentForm::class, ['cart' => $this->cart])->instance()->issuedClientToken();
+
+        expect($binding->isIssued($this->cart, $earlierTab['transaction_api_id']))->toBeTrue();
     });
 
     it('gives a regenerated token a new id and keeps both ids valid for the cart', function () {
@@ -241,7 +270,7 @@ describe('issuing transaction api ids', function () {
 
         $this->travel(9)->minutes();
 
-        $second = Livewire::test(PaymentForm::class, ['cart' => $this->cart])->instance()->issuedClientToken();
+        $second = mountDuringLivewireUpdate($this->cart);
 
         expect($second)->toBe($first);
         Http::assertSentCount(1);
@@ -308,8 +337,8 @@ describe('issuing transaction api ids', function () {
         $freeCart = $this->makeCart(0);
 
         Livewire::test(PaymentForm::class, ['cart' => $freeCart])
-            ->assertSeeHtml('transactionApiId: null')
-            ->assertDontSeeHtml("transactionApiId: 'lf-");
+            ->assertSeeHtml('data-transaction-api-id=""')
+            ->assertDontSeeHtml('data-transaction-api-id="lf-');
 
         Http::assertNothingSent();
     });
@@ -323,7 +352,7 @@ describe('the payment form view', function () {
         $component = Livewire::test(PaymentForm::class, ['cart' => $this->cart]);
         $transactionApiId = $component->instance()->issuedClientToken()['transaction_api_id'];
 
-        $component->assertSeeHtml("transactionApiId: '{$transactionApiId}'")
+        $component->assertSeeHtml("data-transaction-api-id=\"{$transactionApiId}\"")
             ->assertSeeHtml("additional: [{name: 'transaction_api_id', value: this.transactionApiId, hidden: true}]");
     })->with([
         'binding on' => [true],

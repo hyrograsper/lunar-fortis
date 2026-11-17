@@ -273,21 +273,38 @@ If you published the payment-form view, add the hidden field before you turn bin
 @php($issuedClientToken = $this->issuedClientToken())
 ```
 
-Use them in the Alpine data instead of `$this->clientToken()`:
+Pass them to the Alpine component as data attributes, not inside `x-data`. If the token sat inside `x-data`, every new token would change the attribute, and Livewire's re-render would start a second Alpine component while the first one still held the form:
 
-```js
-token: @js($issuedClientToken['token'] ?? null),
-transactionApiId: @js($issuedClientToken['transaction_api_id'] ?? null),
+```blade
+<div x-data="{
+        token: null,
+        transactionApiId: null,
+        /* ... */
+    }"
+    data-token="{{ $issuedClientToken['token'] ?? '' }}"
+    data-transaction-api-id="{{ $issuedClientToken['transaction_api_id'] ?? '' }}"
+    x-on:token-regenerated.window="tokenRegenerated($event.detail)"
+    x-on:payment-error.window="showPaymentError($event.detail)">
 ```
 
-Take the new id from the `token-regenerated` event:
+Read them in `init()`, and take a new token and id from the `token-regenerated` event. Register the listeners with `x-on` as above, not `$wire.on` or `Livewire.on`, so Alpine removes them with the component:
 
 ```js
-$wire.on('token-regenerated', (event) => {
+init() {
+    this.token = this.$el.dataset.token || null;
+    this.transactionApiId = this.$el.dataset.transactionApiId || null;
+    // ...
+},
+
+tokenRegenerated(event) {
+    if (event[0] === this.token) {
+        return;
+    }
+
     this.token = event[0];
     this.transactionApiId = event[1] ?? null;
     this.initPaymentForm();
-});
+},
 ```
 
 Then add the field inside `fields` in `elements.create()`:
@@ -300,6 +317,63 @@ fields: {
 ```
 
 Binding needs a cache store that all your web servers share (for example Redis or the database).
+
+### Recovering after an Elements error
+
+A client token can only be used once. If Fortis rejects a payment inside the Elements form, for example because of a validation error, Elements emits `error` and never emits `done`.
+
+Since 2.4.1, two things protect against this:
+- every full page load issues a fresh token, so a reload always brings back a working form;
+- the bundled view shows the error in the payment-error modal, and its Ok button asks for a new token.
+
+If you published the payment-form view, compare it with `resources/views/components/payment-form.blade.php` and bring over:
+
+- the data attributes, `init()` and `tokenRegenerated()` shown above;
+- `submitting: false` in the Alpine data, set to `true` in the `submitted` listener and back to `false` in `done`;
+- `x-on:close="reset()"` on the `payment-error` modal, and remove `x-on:click="reset()"` from its Ok button. The form then gets a new token however the modal is closed (Ok, the close button or Enter). `reset()` no longer closes the modal itself;
+- this `error` listener and its helper:
+
+```js
+elements.on('error', (event) => {
+    const failedSubmission = this.submitting;
+
+    this.submitting = false;
+
+    this.$nextTick(() => {
+        this.loading = false;
+    });
+
+    setTimeout(() => {
+        Flux.modal('payment-processing').close();
+    }, 500);
+
+    if (! failedSubmission) {
+        return;
+    }
+
+    this.error = this.elementsErrorMessage(event);
+
+    setTimeout(() => {
+        Flux.modal('payment-error').show();
+    }, 500);
+});
+```
+
+```js
+elementsErrorMessage(event) {
+    const fieldMessages = Object.values(event?.data?.meta ?? {})
+        .map((field) => field?.message)
+        .filter(Boolean);
+
+    if (fieldMessages.length > 0) {
+        return fieldMessages.join(' ');
+    }
+
+    return event?.data?.detail || 'Your payment could not be processed. Please try again.';
+},
+```
+
+The modal only opens for an error after a submit. An error at any other time is left to Elements, as before.
 
 ## Admin Panel Integration
 

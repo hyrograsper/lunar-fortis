@@ -50,3 +50,14 @@ it('declares the shared Elements handle without a top-level let that fails when 
     expect($html)->not->toContain('let elements')
         ->and($html)->toContain('window.elements ??= null');
 });
+
+it('passes the client token as a data attribute so a new token does not restart the Alpine component', function () {
+    $html = Livewire::test(PaymentForm::class, ['cart' => $this->makeCart(1500)])->html();
+
+    $root = paymentFormRootElements($html)[0];
+    $component = (new DOMXPath($root->ownerDocument))->query('.//*[@x-data]', $root)->item(0);
+
+    expect($component->getAttribute('x-data'))->not->toContain('view-client-token')
+        ->and($component->getAttribute('data-token'))->toBe('view-client-token')
+        ->and($component->getAttribute('data-transaction-api-id'))->toStartWith('lf-');
+});
