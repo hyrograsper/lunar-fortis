@@ -32,7 +32,13 @@ class LunarFortisServiceProvider extends PackageServiceProvider
         $this->app->singleton(PaymentManagerInterface::class, function ($app) {
             return $app->make(PaymentManager::class);
         });
+    }
 
+    public function packageBooted(): void
+    {
+        // Drivers are registered in boot (per the Lunar docs): extending during
+        // the register phase resolves the manager before other providers can
+        // rebind it, silently losing the drivers in some contexts (queue workers).
         Payments::extend('fortis', function ($app) {
             return $app->make(FortisPaymentType::class);
         });
@@ -40,10 +46,7 @@ class LunarFortisServiceProvider extends PackageServiceProvider
         Payments::extend('fortis-terminal', function ($app) {
             return $app->make(FortisTerminalPaymentType::class);
         });
-    }
 
-    public function packageBooted(): void
-    {
         Livewire::component('lunar-fortis.payment-form', PaymentForm::class);
 
         Terminal::observe(TerminalObserver::class);

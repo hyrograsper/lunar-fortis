@@ -1,5 +1,7 @@
 <?php
 
+use Hyrograsper\LunarFortis\Enums\AvsResponseCode;
+use Hyrograsper\LunarFortis\Enums\CvvResponseCode;
 use Hyrograsper\LunarFortis\LunarFortis;
 use Hyrograsper\LunarFortis\Models\Terminal;
 use Hyrograsper\LunarFortis\Services\FortisHttpService;
@@ -262,7 +264,7 @@ describe('Payment Processing Integration Tests', function () {
 
         // Test invalid amount (should throw exception)
         expect(fn () => $terminal->initiateAuthorization(0))
-            ->toThrow(\Exception::class);
+            ->toThrow(Exception::class);
 
     })->group('integration', 'slow', 'payment', 'validation');
 
@@ -442,13 +444,13 @@ describe('Payment Processing Integration Tests', function () {
         $avsTestCodes = ['GOOD', 'BAD', 'STREET', 'ZIP'];
 
         foreach ($avsTestCodes as $code) {
-            $avsCode = \Hyrograsper\LunarFortis\Enums\AvsResponseCode::fromCode($code);
+            $avsCode = AvsResponseCode::fromCode($code);
 
             if ($code === 'GOOD') {
-                expect($avsCode)->toBe(\Hyrograsper\LunarFortis\Enums\AvsResponseCode::GOOD);
+                expect($avsCode)->toBe(AvsResponseCode::GOOD);
                 expect($avsCode->value)->toBe('Street or zip are both good (if provided)');
             } elseif ($code === 'BAD') {
-                expect($avsCode)->toBe(\Hyrograsper\LunarFortis\Enums\AvsResponseCode::BAD);
+                expect($avsCode)->toBe(AvsResponseCode::BAD);
                 expect($avsCode->value)->toBe('Both street and zip do not match');
             }
 
@@ -459,14 +461,14 @@ describe('Payment Processing Integration Tests', function () {
         $cvvTestCodes = ['M', 'N', 'P', 'S', 'U', 'X'];
 
         foreach ($cvvTestCodes as $code) {
-            $cvvCode = \Hyrograsper\LunarFortis\Enums\CvvResponseCode::fromCode($code);
+            $cvvCode = CvvResponseCode::fromCode($code);
             expect($cvvCode)->not->toBeNull();
 
             if ($code === 'M') {
-                expect($cvvCode)->toBe(\Hyrograsper\LunarFortis\Enums\CvvResponseCode::M);
+                expect($cvvCode)->toBe(CvvResponseCode::M);
                 expect($cvvCode->value)->toBe('Match');
             } elseif ($code === 'N') {
-                expect($cvvCode)->toBe(\Hyrograsper\LunarFortis\Enums\CvvResponseCode::N);
+                expect($cvvCode)->toBe(CvvResponseCode::N);
                 expect($cvvCode->value)->toBe('No Match');
             }
 
@@ -474,8 +476,8 @@ describe('Payment Processing Integration Tests', function () {
         }
 
         // Test invalid codes
-        expect(\Hyrograsper\LunarFortis\Enums\AvsResponseCode::fromCode('INVALID'))->toBeNull();
-        expect(\Hyrograsper\LunarFortis\Enums\CvvResponseCode::fromCode('INVALID'))->toBeNull();
+        expect(AvsResponseCode::fromCode('INVALID'))->toBeNull();
+        expect(CvvResponseCode::fromCode('INVALID'))->toBeNull();
 
         fwrite(STDERR, "AVS and CVV enum validation completed\n");
 
@@ -521,19 +523,19 @@ describe('Payment Processing Integration Tests', function () {
 
             // Test AVS processing
             if (isset($responseData['avs'])) {
-                $avsCode = \Hyrograsper\LunarFortis\Enums\AvsResponseCode::fromCode($responseData['avs']);
+                $avsCode = AvsResponseCode::fromCode($responseData['avs']);
                 expect($avsCode)->not->toBeNull();
 
-                $avsPass = ($avsCode == \Hyrograsper\LunarFortis\Enums\AvsResponseCode::GOOD);
+                $avsPass = ($avsCode == AvsResponseCode::GOOD);
                 fwrite(STDERR, "  AVS: {$avsCode->value} - ".($avsPass ? 'PASS' : 'FAIL')."\n");
             }
 
             // Test CVV processing
             if (isset($responseData['cvv_response'])) {
-                $cvvCode = \Hyrograsper\LunarFortis\Enums\CvvResponseCode::fromCode($responseData['cvv_response']);
+                $cvvCode = CvvResponseCode::fromCode($responseData['cvv_response']);
                 expect($cvvCode)->not->toBeNull();
 
-                $cvvPass = ($cvvCode != \Hyrograsper\LunarFortis\Enums\CvvResponseCode::N);
+                $cvvPass = ($cvvCode != CvvResponseCode::N);
                 fwrite(STDERR, "  CVV: {$cvvCode->value} - ".($cvvPass ? 'PASS' : 'FAIL')."\n");
             }
         }
