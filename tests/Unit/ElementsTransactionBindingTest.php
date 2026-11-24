@@ -195,6 +195,27 @@ describe('with the binding turned on', function () {
     });
 });
 
+describe('knowing whether a cart has issued ids', function () {
+    it('reports no issued ids for a cart that never had one', function () {
+        expect(app(ElementsTransactionBinding::class)->hasIssued($this->cart))->toBeFalse();
+    });
+
+    it('reports issued ids for a cart until the last one is released', function () {
+        $binding = app(ElementsTransactionBinding::class);
+        $first = $binding->issue($this->cart);
+        $second = $binding->issue($this->cart);
+
+        $binding->release($this->cart, $first);
+
+        expect($binding->hasIssued($this->cart))->toBeTrue()
+            ->and($binding->hasIssued($this->makeCart(1000)))->toBeFalse();
+
+        $binding->release($this->cart, $second);
+
+        expect($binding->hasIssued($this->cart))->toBeFalse();
+    });
+});
+
 describe('issuing transaction api ids', function () {
     it('issues a prefixed id with 128 bits of randomness that fits Fortis', function () {
         fakeClientTokens();

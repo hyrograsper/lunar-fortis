@@ -48,6 +48,11 @@ class ElementsTransactionBinding
         return in_array($transactionApiId, $this->issued($cart), true);
     }
 
+    public function hasIssued(Cart $cart): bool
+    {
+        return $this->issued($cart) !== [];
+    }
+
     public function release(Cart $cart, string $transactionApiId): void
     {
         $this->whileLocked($cart, function () use ($cart, $transactionApiId): void {
