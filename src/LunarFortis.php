@@ -94,6 +94,16 @@ class LunarFortis
         }
     }
 
+    /** @throws Exception */
+    public function voidTransaction(string $transactionId): array
+    {
+        try {
+            return $this->getHttpService()->voidTransaction($transactionId);
+        } catch (Exception $exception) {
+            throw new Exception("Failed to void transaction: {$exception->getMessage()}");
+        }
+    }
+
     /**
      * @param  array<int, string>|null  $expand
      *
