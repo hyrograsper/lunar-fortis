@@ -84,7 +84,7 @@ class FortisHttpService
         $response = match ($method) {
             'GET' => $httpClient->get($url, $queryParams),
             'POST' => $httpClient->post($url, $data),
-            'PUT' => $httpClient->put($url, $data),
+            'PUT' => $httpClient->put($url, $data === [] ? (object) [] : $data),
             'PATCH' => $httpClient->patch($url, $data),
             'DELETE' => $httpClient->delete($url),
             default => throw new InvalidArgumentException("Unsupported HTTP method: {$method}"),
@@ -270,6 +270,29 @@ class FortisHttpService
             ]);
 
             throw new Exception("Failed to process refund: {$exception->getMessage()}");
+        }
+    }
+
+    public function voidTransaction(string $transactionId): array
+    {
+        try {
+            $response = $this->makeRequest('PUT', "/v1/transactions/{$transactionId}/void");
+
+            if (config('lunar-fortis.debug')) {
+                Log::debug('LunarFortis: Transaction voided successfully', [
+                    'transaction_id' => $transactionId,
+                ]);
+            }
+
+            return $response;
+        } catch (RequestException $exception) {
+            Log::error('LunarFortis: Failed to void transaction', [
+                'transaction_id' => $transactionId,
+                'error' => $exception->getMessage(),
+                'response' => $exception->response->body(),
+            ]);
+
+            throw new Exception("Failed to void transaction: {$exception->getMessage()}");
         }
     }
 

@@ -9,6 +9,7 @@ use Hyrograsper\LunarFortis\Enums\ReasonCode;
 use Hyrograsper\LunarFortis\Enums\StatusCode;
 use Hyrograsper\LunarFortis\LunarFortis;
 use Hyrograsper\LunarFortis\Services\ElementsTransactionBinding;
+use Illuminate\Contracts\Cache\Lock;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Lunar\Base\DataTransferObjects\PaymentAuthorize;
@@ -22,6 +23,7 @@ use Lunar\Models\Contracts\Transaction as TransactionContract;
 use Lunar\Models\Order;
 use Lunar\Models\Transaction;
 use Lunar\PaymentTypes\AbstractPayment;
+use Throwable;
 
 class FortisPaymentType extends AbstractPayment
 {
@@ -36,7 +38,9 @@ class FortisPaymentType extends AbstractPayment
 
     public const string TRANSACTION_ID_PATTERN = '/^[A-Za-z0-9-]{1,64}$/';
 
-    private const int ELEMENTS_LOCK_SECONDS = 60;
+    private const int ELEMENTS_LOCK_FORTIS_CALLS = 2;
+
+    private const int ELEMENTS_LOCK_MARGIN_SECONDS = 30;
 
     public function __construct(
         protected LunarFortis $fortis,
@@ -68,14 +72,20 @@ class FortisPaymentType extends AbstractPayment
 
         $this->order = $this->order ?: ($this->cart->draftOrder()->first() ?: $this->cart->completedOrder()->first());
 
-        if ($this->order instanceof Order && $this->hasAuthorizedPayment($this->order)) {
-            return $this->dispatchAndReturn(false, 'This order already has an authorized payment.', $this->order->id);
+        $existingOrder = $this->order;
+
+        if ($existingOrder instanceof Order && $this->hasAuthorizedPayment($existingOrder)) {
+            $this->voidHoldIssuedForCartWhileLocked($transactionId);
+
+            return $this->dispatchAndReturn(false, 'This order already has an authorized payment.', $existingOrder->id);
         }
 
         if (! $this->order) {
             try {
                 $this->order = $this->cart->createOrder();
             } catch (DisallowMultipleCartOrdersException|CartException $exception) {
+                $this->voidHoldIssuedForCartWhileLocked($transactionId);
+
                 return $this->dispatchAndReturn(false, $exception->getMessage());
             }
         } else {
@@ -86,7 +96,7 @@ class FortisPaymentType extends AbstractPayment
             return $this->dispatchAndReturn(false, 'This order has already been placed');
         }
 
-        $lock = Cache::lock("lunar-fortis:elements-transaction:{$transactionId}", self::ELEMENTS_LOCK_SECONDS);
+        $lock = $this->elementsTransactionLock($transactionId);
 
         if (! $lock->get()) {
             return $this->dispatchAndReturn(false, 'This payment is already being processed.');
@@ -111,10 +121,7 @@ class FortisPaymentType extends AbstractPayment
         }
 
         try {
-            $data = $this->normalizeIntegerFields(
-                $this->fortis->getTransaction($transactionId, $this->verificationExpand())['data'] ?? [],
-                ['status_code', 'transaction_amount'],
-            );
+            $data = $this->lookUpElementsTransaction($transactionId);
         } catch (Exception $exception) {
             Log::error("LunarFortis: Unable to verify Elements transaction: {$exception->getMessage()}", [
                 'transaction_id' => $transactionId,
@@ -131,6 +138,8 @@ class FortisPaymentType extends AbstractPayment
                 'transaction_id' => $transactionId,
                 'order_id' => $order->id,
             ]);
+
+            $this->voidHoldIssuedForCart($transactionId, $data);
 
             return $this->dispatchAndReturn(false, $rejection);
         }
@@ -172,6 +181,145 @@ class FortisPaymentType extends AbstractPayment
         }
 
         return $this->acceptElementsTransaction($data, 'Payment Authorized');
+    }
+
+    private function elementsTransactionLock(string $transactionId): Lock
+    {
+        return Cache::lock("lunar-fortis:elements-transaction:{$transactionId}", $this->elementsLockSeconds());
+    }
+
+    private function elementsLockSeconds(): int
+    {
+        $attempts = max(1, (int) config('lunar-fortis.http.retry.attempts', 3));
+        $timeoutSeconds = max(1, (int) config('lunar-fortis.http.timeout', 30));
+        $delayMilliseconds = config('lunar-fortis.http.retry.exponential_backoff', false)
+            ? (int) config('lunar-fortis.http.retry.max_delay', 10000)
+            : (int) config('lunar-fortis.http.retry.delay', 1000);
+
+        $secondsPerCall = $attempts * $timeoutSeconds + (int) ceil(($attempts - 1) * max(0, $delayMilliseconds) / 1000);
+
+        return self::ELEMENTS_LOCK_FORTIS_CALLS * $secondsPerCall + self::ELEMENTS_LOCK_MARGIN_SECONDS;
+    }
+
+    /** @throws Exception */
+    private function lookUpElementsTransaction(string $transactionId): array
+    {
+        return $this->normalizeIntegerFields(
+            $this->fortis->getTransaction($transactionId, $this->verificationExpand())['data'] ?? [],
+            ['status_code', 'transaction_amount'],
+        );
+    }
+
+    private function voidHoldIssuedForCartWhileLocked(string $transactionId): void
+    {
+        try {
+            $this->lockAndVoidHoldIssuedForCart($transactionId);
+        } catch (Throwable $exception) {
+            Log::warning("LunarFortis: Unable to check a refused Elements transaction for an open hold: {$exception->getMessage()}", [
+                'transaction_id' => $transactionId,
+            ]);
+        }
+    }
+
+    /** @throws Throwable */
+    private function lockAndVoidHoldIssuedForCart(string $transactionId): void
+    {
+        if (! $this->cart instanceof Cart) {
+            return;
+        }
+
+        if (! $this->transactionBinding->hasIssued($this->cart)) {
+            return;
+        }
+
+        if ($this->referenceRecordedOnAnyOrder($transactionId)) {
+            return;
+        }
+
+        $lock = $this->elementsTransactionLock($transactionId);
+
+        if (! $lock->get()) {
+            return;
+        }
+
+        try {
+            $this->attemptToVoidHoldIssuedForCart($transactionId, $this->lookUpElementsTransaction($transactionId));
+        } finally {
+            $lock->release();
+        }
+    }
+
+    private function voidHoldIssuedForCart(string $transactionId, array $data): void
+    {
+        try {
+            $this->attemptToVoidHoldIssuedForCart($transactionId, $data);
+        } catch (Throwable $exception) {
+            Log::error("LunarFortis: Unable to void a refused Elements hold: {$exception->getMessage()}", [
+                'transaction_id' => $transactionId,
+            ]);
+        }
+    }
+
+    /** @throws Throwable */
+    private function attemptToVoidHoldIssuedForCart(string $transactionId, array $data): void
+    {
+        if (! $this->isOpenHoldIssuedForCart($transactionId, $data)) {
+            return;
+        }
+
+        $voided = $this->fortis->voidTransaction($transactionId)['data'] ?? null;
+
+        if (! $this->confirmsVoid($transactionId, $voided)) {
+            Log::warning('LunarFortis: Fortis did not confirm that a refused Elements hold was voided', [
+                'transaction_id' => $transactionId,
+            ]);
+
+            return;
+        }
+
+        Log::info('LunarFortis: Voided a refused Elements hold', [
+            'transaction_id' => $transactionId,
+        ]);
+
+        $this->releaseTransactionApiId($data);
+    }
+
+    private function confirmsVoid(string $transactionId, mixed $voided): bool
+    {
+        if (($voided['id'] ?? null) !== $transactionId) {
+            return false;
+        }
+
+        return $this->wholeNumberOrNull($voided['status_code'] ?? null) === StatusCode::Voided->value;
+    }
+
+    private function isOpenHoldIssuedForCart(string $transactionId, array $data): bool
+    {
+        if (($data['id'] ?? null) !== $transactionId) {
+            return false;
+        }
+
+        if (($data['status_code'] ?? null) !== StatusCode::AuthOnly->value) {
+            return false;
+        }
+
+        if (! $this->cart instanceof Cart) {
+            return false;
+        }
+
+        if ($this->referenceRecordedOnAnyOrder($transactionId)) {
+            return false;
+        }
+
+        return $this->transactionBinding->isIssued($this->cart, $data['transaction_api_id'] ?? null);
+    }
+
+    private function referenceRecordedOnAnyOrder(string $transactionId): bool
+    {
+        return Transaction::query()
+            ->useWritePdo()
+            ->where('reference', $transactionId)
+            ->exists();
     }
 
     private function isBoundToCart(array $data): bool

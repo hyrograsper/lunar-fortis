@@ -318,6 +318,16 @@ fields: {
 
 Binding needs a cache store that all your web servers share (for example Redis or the database).
 
+### Releasing holds on refused payments
+
+The Elements form authorizes the card first (`auth-only`). If the package then refuses the payment, for example because the cart total changed after the form loaded, the cart can no longer become an order, or the order already has a payment, the authorization would otherwise sit on the shopper's card until it expired. The package voids it straight away, but only when all of these are true:
+
+- Fortis reports the transaction as authorized but not captured (status 102).
+- The transaction isn't recorded against any order.
+- The transaction carries a `transaction_api_id` that was issued for this cart.
+
+The last check means the package never voids a payment that belongs to another checkout, so it works whether binding is on or off. It does need the hidden `transaction_api_id` field described above. Without that field, refused holds are left to expire as before. It also needs the same shared cache store as binding, even when binding is off. Issued ids expire from the cache after an hour, and after that a refused hold is left to expire. A failed void is logged, and the payment is still refused with the same message.
+
 ### Recovering after an Elements error
 
 A client token can only be used once. If Fortis rejects a payment inside the Elements form, for example because of a validation error, Elements emits `error` and never emits `done`.

@@ -250,6 +250,36 @@ describe('Transaction Retrieval', function () {
     });
 });
 
+describe('Voiding a transaction', function () {
+    it('voids the transaction with an empty JSON object body', function () {
+        Http::fake([
+            'api.sandbox.fortis.tech/v1/transactions/held-transaction-id/void' => Http::response([
+                'data' => [
+                    'id' => 'held-transaction-id',
+                    'status_code' => 201,
+                ],
+            ], 200),
+        ]);
+
+        $result = $this->service->voidTransaction('held-transaction-id');
+
+        expect($result['data']['status_code'])->toBe(201);
+
+        Http::assertSent(fn ($request) => $request->method() === 'PUT'
+            && str_ends_with($request->url(), '/v1/transactions/held-transaction-id/void')
+            && $request->body() === '{}');
+    });
+
+    it('throws when Fortis refuses the void', function () {
+        Http::fake([
+            'api.sandbox.fortis.tech/v1/transactions/held-transaction-id/void' => Http::response(['detail' => 'Not voidable'], 412),
+        ]);
+
+        expect(fn () => $this->service->voidTransaction('held-transaction-id'))
+            ->toThrow(Exception::class, 'Failed to void transaction');
+    });
+});
+
 describe('Terminal Management', function () {
     it('creates terminal successfully', function () {
         Http::fake([

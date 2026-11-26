@@ -559,3 +559,55 @@ describe('15/16: a second genuine payment for an order that already has one', fu
             ->and(liveRowsFor($second['id']))->toBe(0);
     });
 });
+
+describe('17: voiding refused holds', function () {
+    it('17a: voids a wrong-amount auth-only carrying an id issued for this cart', function () {
+        $cart = $this->makeCart(1910);
+        $transactionApiId = app(ElementsTransactionBinding::class)->issue($cart);
+        $fortis = LiveFortis::keyedAuthOnly(liveCartTotal($cart) + 100, $transactionApiId);
+
+        expect($fortis)->toMatchArray(['http' => 201, 'status_code' => 102, 'transaction_api_id' => $transactionApiId])
+            ->and(LiveFortis::get($fortis['id'], 'is_voidable'))->toMatchArray(['is_voidable' => true]);
+
+        $result = LiveFortis::authorizeElements($cart, ['id' => $fortis['id']], 'manual');
+
+        expect($result->success)->toBeFalse()
+            ->and($result->message)->toBe('The payment amount does not match the order total.')
+            ->and(liveRowsFor($fortis['id']))->toBe(0)
+            ->and(LiveFortis::get($fortis['id']))->toMatchArray(['status_code' => 201]);
+    });
+
+    it('17b: leaves a wrong-amount auth-only issued for another cart on hold', function () {
+        $cart = $this->makeCart(1920);
+        $otherCart = $this->makeCart(1920);
+        app(ElementsTransactionBinding::class)->issue($cart);
+        $foreignApiId = app(ElementsTransactionBinding::class)->issue($otherCart);
+        $fortis = LiveFortis::keyedAuthOnly(liveCartTotal($cart) + 100, $foreignApiId);
+
+        $result = LiveFortis::authorizeElements($cart, ['id' => $fortis['id']], 'manual');
+
+        expect($result->success)->toBeFalse()
+            ->and(LiveFortis::get($fortis['id']))->toMatchArray(['status_code' => 102]);
+
+        expect(LiveFortis::void($fortis['id'])['http'])->toBe(200);
+    });
+
+    it('17c: voids a second auth-only issued for this cart once the order is authorized', function () {
+        $cart = $this->makeCart(1930);
+        $binding = app(ElementsTransactionBinding::class);
+        $first = LiveFortis::keyedAuthOnly(liveCartTotal($cart), $binding->issue($cart));
+        $second = LiveFortis::keyedAuthOnly(liveCartTotal($cart), $binding->issue($cart));
+
+        $accepted = LiveFortis::authorizeElements($cart, ['id' => $first['id']], 'manual');
+        $refused = LiveFortis::authorizeElements($cart, ['id' => $second['id']], 'manual');
+
+        expect($accepted->success)->toBeTrue()
+            ->and($refused->success)->toBeFalse()
+            ->and($refused->message)->toBe('This order already has an authorized payment.')
+            ->and(liveOrderFor($cart)->status)->toBe('payment-authorized')
+            ->and(LiveFortis::get($first['id']))->toMatchArray(['status_code' => 102])
+            ->and(LiveFortis::get($second['id']))->toMatchArray(['status_code' => 201]);
+
+        expect(LiveFortis::void($first['id'])['http'])->toBe(200);
+    });
+});

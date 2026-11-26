@@ -270,7 +270,8 @@ describe('an order that already has an authorized payment', function () {
             ->and($order->status)->toBe('payment-authorized')
             ->and(Transaction::where('order_id', $order->id)->pluck('reference')->all())->toBe(['txn0000000000000000000001']);
 
-        Http::assertNotSent(fn (Request $request) => str_ends_with((string) parse_url($request->url(), PHP_URL_PATH), '/v1/transactions/txn0000000000000000000002'));
+        Http::assertNotSent(fn (Request $request) => $request->method() !== 'GET'
+            && str_contains((string) parse_url($request->url(), PHP_URL_PATH), '/v1/transactions/txn0000000000000000000002'));
     });
 
     it('accepts a new payment after a declined attempt on the same order', function () {
