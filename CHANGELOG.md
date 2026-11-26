@@ -2,6 +2,37 @@
 
 All notable changes to `lunar-fortis` will be documented in this file.
 
+## v2.4.2 - 2026-11-26
+
+### What's Changed
+
+**Bug Fixes 🐛**
+
+- If a verified Elements payment is refused after Fortis has authorized it, the card hold is now voided. Before, it stayed open until it expired. This applies to:
+  
+  - a payment whose amount doesn't match the cart;
+  - a cart that fails validation when the order is created;
+  - a second payment on an order that already has an authorized one.
+  
+- A hold is voided only when all of these are true:
+  
+  - Fortis returns the submitted transaction id with status 102 (authorized, not captured);
+  - no Lunar transaction already records that id;
+  - the id's `transaction_api_id` was issued to this cart.
+  
+  Captured sales, payments already recorded and ids the cart didn't issue are never voided.
+  
+- The Elements transaction lock now lasts long enough for two Fortis calls, using the configured timeout and retries, plus a margin. With the default settings that's 214 seconds instead of 60, so the lock no longer runs out during slow retries.
+  
+
+**Upgrade Notes 📝**
+
+- No view changes are needed. Voiding relies on the hidden `transaction_api_id` field that shipped in 2.4.1.
+- Voiding uses the shared cache to check which ids a cart was issued, even when `require_transaction_binding` is off. Issued ids expire after an hour.
+- If a void fails, the error is logged and the shopper still sees the same refusal message. See "Releasing holds on refused payments" in the README.
+
+**Full Changelog**: https://github.com/hyrograsper/lunar-fortis/compare/v2.4.1...v2.4.2
+
 ## v2.4.1 - 2026-11-17
 
 ### What's Changed
@@ -222,6 +253,7 @@ Added missing configuration keys:
 
 
 
+
 ```
 ##### **Environment Variables**
 
@@ -236,6 +268,7 @@ FORTIS_LOCATION_ID=your_fortis_location_id
 FORTIS_PRODUCT_TRANSACTION_ID=your_product_transaction_id                     # ✅ Added
 FORTIS_TERMINAL_PRODUCT_TRANSACTION_ID=your_terminal_product_transaction_id   # ✅ Added
 FORTIS_ENVIRONMENT=sandbox  # or 'production'
+
 
 
 
@@ -264,12 +297,14 @@ composer update hyrograsper/lunar-fortis
 
 
 
+
 ```
 Then add the missing environment variables to your `.env` file:
 
 ```env
 FORTIS_PRODUCT_TRANSACTION_ID=your_product_transaction_id
 FORTIS_TERMINAL_PRODUCT_TRANSACTION_ID=your_terminal_product_transaction_id
+
 
 
 
@@ -837,6 +872,7 @@ Co-Authored-By: Claude [noreply@anthropic.com](mailto:noreply@anthropic.com)
 FORTIS_HTTP_RETRY_STATUS_CODES="429,502,503,504"
 FORTIS_HTTP_RETRY_EXPONENTIAL=false
 FORTIS_HTTP_RETRY_MAX_DELAY=10000
+
 
 
 
